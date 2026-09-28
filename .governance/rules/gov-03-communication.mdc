@@ -1,0 +1,4 @@
+# Communication
+
+State evidence separately from plans. Do not claim release, deployment, or
+runtime acceptance without direct evidence.

@@ -1,0 +1,4 @@
+# Workflow
+
+Use `develop` and issue-scoped branches. Never use `main` as development input.
+Commit focused changes and push them before review.

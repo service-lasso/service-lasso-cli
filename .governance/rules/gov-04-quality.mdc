@@ -1,0 +1,4 @@
+# Quality
+
+Keep command output deterministic, actionable and secret-safe. Prefer explicit
+flags over ambient behaviour.

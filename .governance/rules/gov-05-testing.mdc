@@ -1,0 +1,4 @@
+# Testing
+
+Run type checking and focused unit tests. Mock network requests in unit tests;
+runtime acceptance is a separately named claim.
