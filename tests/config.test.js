@@ -3,12 +3,18 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { configPath, loadConfig, normalizeCoreUrl, resolveCoreUrl, saveConfig } from "../dist/config.js";
+import { configPath, loadConfig, normalizeCoreUrl, resolveCoreToken, resolveCoreUrl, saveConfig } from "../dist/config.js";
 
 test("normalizes a safe Core origin", () => {
   assert.equal(normalizeCoreUrl("https://core.example/"), "https://core.example");
   assert.throws(() => normalizeCoreUrl("https://user:pass@core.example"), { code: "invalid_core_url" });
   assert.throws(() => normalizeCoreUrl("ftp://core.example"), { code: "invalid_core_url" });
+});
+
+test("uses an environment-only Core token and rejects unsafe token values", () => {
+  assert.equal(resolveCoreToken({ SERVICE_LASSO_CORE_TOKEN: "ci-token" }), "ci-token");
+  assert.equal(resolveCoreToken({}), undefined);
+  assert.throws(() => resolveCoreToken({ SERVICE_LASSO_CORE_TOKEN: "bad token" }), { code: "invalid_core_token" });
 });
 
 test("environment wins over saved config and config persists atomically", async () => {

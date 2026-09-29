@@ -61,3 +61,14 @@ export function resolveCoreUrl(options: { cliValue?: string; environment?: NodeJ
   const candidate = options.cliValue ?? options.environment?.SERVICE_LASSO_CORE_URL ?? options.config.coreUrl ?? DEFAULT_CORE_URL;
   return normalizeCoreUrl(candidate);
 }
+
+/**
+ * Core accepts a local-admin token as a Bearer credential. Keep it environment
+ * only so CI can inject a secret without adding it to arguments or config.
+ */
+export function resolveCoreToken(environment: NodeJS.ProcessEnv = process.env): string | undefined {
+  const token = environment.SERVICE_LASSO_CORE_TOKEN;
+  if (token === undefined || token.length === 0) return undefined;
+  if (/\s/.test(token)) throw new CliError("invalid_core_token", "SERVICE_LASSO_CORE_TOKEN must not contain whitespace.");
+  return token;
+}

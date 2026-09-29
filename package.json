@@ -6,7 +6,7 @@
   "license": "Apache-2.0",
   "type": "module",
   "bin": {
-    "service-lasso": "./dist/index.js"
+    "service-lassoctl": "./dist/index.js"
   },
   "engines": {
     "node": ">=22"

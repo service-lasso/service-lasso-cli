@@ -8,8 +8,8 @@ external-CLI/Core command boundary and the missing integration contracts.
 
 | Workflow | Status | Contract and boundary |
 | --- | --- | --- |
-| Configured Core origin | Implemented | Flag > `SERVICE_LASSO_CORE_URL` > saved config > local default; origins reject credentials, paths and non-HTTP(S) schemes. |
-| Read Core health | Implemented | `GET /api/health`; JSON-only response and safe HTTP-status errors. |
+| Configured Core origin and token | Implemented | Flag > `SERVICE_LASSO_CORE_URL` > saved config > local default; origins reject credentials, paths and non-HTTP(S) schemes. `SERVICE_LASSO_CORE_TOKEN` is an environment-only Bearer credential and is never saved or printed. |
+| Read Core health, identity and capabilities | Implemented | `GET /api/health`, `GET /api/runtime/instance`, and `GET /api/runtime/capabilities`; JSON-only response and safe HTTP-status errors. |
 | List services | Implemented | `GET /api/services`; safe, read-only discovery. |
 | Start, stop, restart | Implemented foundation | `POST /api/services/{id}/{action}` only after local `--confirm`; server-side permission and confirmation contracts remain authoritative. |
 | Local authoring scaffold | Implemented foundation | Creates only a caller-selected absent directory; `--dry-run` has no writes. Generated manifest is a starter and must be completed against the versioned service-template before registration. |

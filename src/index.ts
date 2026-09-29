@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { pathToFileURL } from "node:url";
-import { configPath, loadConfig, resolveCoreUrl, saveConfig } from "./config.js";
+import { configPath, loadConfig, resolveCoreToken, resolveCoreUrl, saveConfig } from "./config.js";
 import { CoreClient } from "./core-client.js";
 import { asCliError, CliError } from "./errors.js";
 import { createServiceScaffold } from "./scaffold.js";
@@ -21,7 +21,10 @@ function print(value: unknown, json: boolean, sink = output): void {
 
 async function client(coreUrl?: string): Promise<CoreClient> {
   const config = await loadConfig();
-  return new CoreClient({ baseUrl: resolveCoreUrl({ cliValue: coreUrl, environment: process.env, config }) });
+  return new CoreClient({
+    baseUrl: resolveCoreUrl({ cliValue: coreUrl, environment: process.env, config }),
+    token: resolveCoreToken(),
+  });
 }
 
 function requireConfirmation(options: { confirm?: boolean }): void {
@@ -31,7 +34,7 @@ function requireConfirmation(options: { confirm?: boolean }): void {
 export function createProgram(): Command {
   const program = new Command();
   program
-    .name("service-lasso")
+    .name("service-lassoctl")
     .description("Automation-first service authoring and Service Lasso Core operations.")
     .version("0.1.0")
     .option("--core-url <url>", "Service Lasso Core origin; overrides environment and saved config")
@@ -54,6 +57,10 @@ export function createProgram(): Command {
   instance.command("status").description("Read Core health.").option("--json", "print JSON").action(async (options: { json?: boolean }) => {
     const { coreUrl } = program.opts<{ coreUrl?: string }>();
     print(await (await client(coreUrl)).health(), Boolean(options.json));
+  });
+  instance.command("inspect").description("Read Core health, instance identity and API capabilities.").option("--json", "print JSON").action(async (options: { json?: boolean }) => {
+    const { coreUrl } = program.opts<{ coreUrl?: string }>();
+    print(await (await client(coreUrl)).inspect(), Boolean(options.json));
   });
 
   const service = program.command("service").description("Scaffold and manage services.");
