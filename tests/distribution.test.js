@@ -34,7 +34,12 @@ test("candidate workflow is manual develop-only and publishes a prerelease only 
   assert.match(workflow, /GH_TOKEN: \$\{\{ github\.token \}\}/);
   assert.match(workflow, /persist-credentials: true/);
   assert.match(workflow, /refs\/tags\/\$\{tag\}\^\{\}/);
-  assert.equal((workflow.match(/verify-candidate-release\.mjs/g) ?? []).length, 2);
+  assert.equal((workflow.match(/verify-candidate-release\.mjs/g) ?? []).length, 1);
+  assert.equal((workflow.match(/readback_release_assets/g) ?? []).length, 3);
+  assert.match(workflow, /readback_release_assets\(\)/);
+  assert.match(workflow, /while \[ "\$attempt" -le 3 \]/);
+  assert.match(workflow, /grep -Eq 'HTTP 5\[0-9\]\[0-9\]'/);
+  assert.match(workflow, /rm -rf release-verify release-download\.err/);
   assert.doesNotMatch(workflow, /softprops\/action-gh-release/);
 });
 
