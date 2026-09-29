@@ -15,13 +15,13 @@ tool replaces the other, and this package does not import Core internals.
 
 ## Migration and aliases
 
-The external CLI has one published portable release:
-[`2026.9.28-03ebee0`](https://github.com/service-lasso/service-lasso-cli/releases/tag/2026.9.28-03ebee0).
-It targets exact `develop` commit `03ebee0a2b7dea2d7fbc62fa485c5e57c31f4203`
-and contains the Node 22 archive `service-lasso-cli-node22.tar.gz`
-(`sha256:501a0ac038dca411cdf164ccf22b08aea8cc352efe04f6d6e99b9a0224da6aac`).
-That release is a portable archive, not an npm package publication or a
-cross-platform runtime qualification.
+Issue #6 introduces manually dispatched `develop` candidates rather than an
+automatic published release. Each candidate is a versioned Node 22 package
+archive with a `candidate.json` record and `SHA256SUMS.txt`; its source commit,
+candidate tag, package name, command, supported platforms, archive name and
+SHA-256 are bound together. After all three clean-consumer smoke jobs pass, the
+manual dispatch publishes those exact files as a clearly labelled GitHub
+prerelease for Core review. It never publishes npm or claims Core qualification.
 
 There is no earlier external executable name to migrate. The package provides
 no `service-lasso` alias because an alias would recreate the installation-order
@@ -55,13 +55,34 @@ The Core staging script records that package as
 `service-lasso-package-<version>` and verifies that `cli.js` reports the
 staged package version.
 
-This external package's released archive identity is the Node 22 release above;
-its future npm package contract is `@service-lasso/cli`, bin
-`service-lassoctl`, entrypoint `dist/index.js`. Core must add it only through a
-versioned operator-tools manifest containing the exact source tag, commit,
-asset digest, installed path, command name and supported platform. Core must
-reject mutable latest downloads, wrong identities, malformed manifests, path
-traversal and checksum mismatches.
+This external package's candidate archive identity is supplied by its immutable
+candidate record; its package contract is `@service-lasso/cli`, bin
+`service-lassoctl`, entrypoint `dist/index.js`, and Node 22 runtime requirement.
+Core must add it only through a versioned operator-tools manifest containing
+the exact source tag, commit, asset digest, installed path, command name and
+supported platform. Core must reject mutable latest downloads, wrong
+identities, malformed manifests, path traversal and checksum mismatches.
+
+### Core #1461 handoff record
+
+Core packaging must consume a reviewed candidate by reading `candidate.json`
+and `SHA256SUMS.txt`, then verifying all of the following before staging:
+
+| Field | Required value |
+| --- | --- |
+| Source repository | `service-lasso/service-lasso-cli` |
+| Candidate source | Exact 40-character `develop` commit recorded in `candidate.json` |
+| Candidate tag | `cli-v<package-version>-candidate-<short-sha>` recorded in `candidate.json` |
+| Archive | `service-lassoctl-<candidate-version>.tgz`, named in both manifests |
+| SHA-256 | Exact archive digest in `candidate.json` and `SHA256SUMS.txt` |
+| Command | `service-lassoctl` only; reject `service-lasso` and preserve Core's bin |
+| Runtime | Node 22 or newer; no standalone binary is claimed |
+| Platforms | `win32`, `linux`, and `darwin` with the documented Node 22 requirement |
+
+The candidate workflow smoke proves a fresh client package can make safe
+health/identity reads against a local fixture. It is surrogate-only evidence
+for Core #1461: Core still needs its own exact packaged-instance qualification,
+operator-tools manifest, and independent review.
 
 ## Required Core-owned contract before workflow expansion
 

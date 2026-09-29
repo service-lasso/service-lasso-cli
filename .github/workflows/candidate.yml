@@ -1,0 +1,120 @@
+name: Build CLI candidate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/develop'
+    name: Build exact develop candidate
+    runs-on: ubuntu-latest
+    outputs:
+      candidate_version: ${{ steps.identity.outputs.candidate_version }}
+      source_sha: ${{ steps.identity.outputs.source_sha }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_version="$(node -p \"require('./package.json').version\")"
+          candidate_version="${package_version}-dev.${GITHUB_SHA::7}"
+          echo "candidate_version=${candidate_version}" >> "$GITHUB_OUTPUT"
+          echo "source_sha=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - name: Build immutable candidate archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run package:candidate -- --output release-assets --version "${{ steps.identity.outputs.candidate_version }}" --source-sha "${GITHUB_SHA}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: service-lassoctl-${{ steps.identity.outputs.candidate_version }}
+          path: release-assets/
+          if-no-files-found: error
+          retention-days: 90
+
+  smoke:
+    needs: build
+    name: Clean-consumer smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: service-lassoctl-${{ needs.build.outputs.candidate_version }}
+          path: release-assets
+      - name: Verify exact archive in a fresh consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run smoke:candidate -- --directory release-assets --expected-version "${{ needs.build.outputs.candidate_version }}" --expected-source-sha "${{ needs.build.outputs.source_sha }}"
+
+  publish-candidate:
+    needs: [build, smoke]
+    name: Publish exact prerelease candidate after smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.build.outputs.source_sha }}
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: service-lassoctl-${{ needs.build.outputs.candidate_version }}
+          path: release-assets
+      - name: Verify candidate identity and publish the tested bytes
+        shell: bash
+        env:
+          CANDIDATE_VERSION: ${{ needs.build.outputs.candidate_version }}
+          SOURCE_SHA: ${{ needs.build.outputs.source_sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          node -e 'const fs=require("fs"); const record=JSON.parse(fs.readFileSync("release-assets/candidate.json", "utf8")); if(record.source.commit!==process.env.SOURCE_SHA || record.version!==process.env.CANDIDATE_VERSION) process.exit(1)'
+          tag="cli-v${CANDIDATE_VERSION}-candidate-${SOURCE_SHA:0:7}"
+          existing="$(git ls-remote origin "refs/tags/${tag}^{}" | awk '{print $1}')"
+          if [ -z "$existing" ]; then
+            existing="$(git ls-remote --refs origin "refs/tags/${tag}" | awk '{print $1}')"
+          fi
+          if [ -n "$existing" ]; then
+            test "$existing" = "$SOURCE_SHA"
+          else
+            git tag --annotate "$tag" "$SOURCE_SHA" --message "Service Lasso CLI candidate ${CANDIDATE_VERSION}"
+            git push origin "refs/tags/${tag}"
+          fi
+          if gh release view "$tag" --json tagName,targetCommitish,isPrerelease,isDraft >/tmp/release.json 2>/dev/null; then
+            TAG="$tag" node -e 'const fs=require("fs"); const release=JSON.parse(fs.readFileSync("/tmp/release.json", "utf8")); if(release.tagName!==process.env.TAG || release.targetCommitish!==process.env.SOURCE_SHA || !release.isPrerelease || release.isDraft) process.exit(1)'
+            mkdir release-verify
+            gh release download "$tag" --dir release-verify --pattern "service-lassoctl-*.tgz" --pattern candidate.json --pattern SHA256SUMS.txt
+            node scripts/verify-candidate-release.mjs --expected release-assets --actual release-verify
+            exit 0
+          fi
+          gh release create "$tag" release-assets/service-lassoctl-*.tgz release-assets/candidate.json release-assets/SHA256SUMS.txt \
+            --target "$SOURCE_SHA" \
+            --title "Service Lasso CLI candidate ${CANDIDATE_VERSION}" \
+            --prerelease \
+            --notes "Checksum-bound Node 22 candidate for Core #1461 review. This prerelease is not GA, npm publication, deployment, or Core qualification."
+          mkdir release-verify
+          gh release download "$tag" --dir release-verify --pattern "service-lassoctl-*.tgz" --pattern candidate.json --pattern SHA256SUMS.txt
+          node scripts/verify-candidate-release.mjs --expected release-assets --actual release-verify

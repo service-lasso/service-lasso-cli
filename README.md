@@ -48,8 +48,31 @@ This first slice implements deterministic local configuration, non-destructive
 authoring scaffolds, read-only Core status/service discovery, and explicitly
 confirmed lifecycle requests. It deliberately does not claim authenticated
 remote registration, artifact transfer, durable operation polling, service
-removal, or distribution binaries. See the [capability matrix](docs/capability-matrix.md)
+removal, or standalone distribution binaries. The candidate package archive
+requires Node 22 or newer; see the [capability matrix](docs/capability-matrix.md)
 for the exact boundary.
+
+## Candidate distribution
+
+An explicit GitHub Actions dispatch from `develop` can build a reviewable
+candidate archive. It produces `service-lassoctl-<version>.tgz`,
+`candidate.json`, and `SHA256SUMS.txt`, then runs clean-consumer smoke on
+Windows, Linux, and macOS against a local fixture. This is surrogate client
+evidence, not a packaged-Core runtime check. The record pins the source commit
+and candidate tag; never select an asset called `latest` for Core packaging.
+These artifacts do
+do not publish npm, deploy anything, or establish GA. If all three smoke jobs
+pass, the workflow creates the recorded candidate Git tag and a clearly marked
+GitHub prerelease on that exact source commit. The prerelease is durable review
+material for Core #1461, not a GA release.
+
+Extracting the archive alone is insufficient because this is a Node package.
+Install it with Node 22 or newer, for example:
+
+```sh
+npm install --global ./service-lassoctl-<version>.tgz
+service-lassoctl --version
+```
 
 For `--json` command results, JSON is written to stdout. Diagnostics and errors
 are written to stderr; the initial error format is a stable `Error [code]:`

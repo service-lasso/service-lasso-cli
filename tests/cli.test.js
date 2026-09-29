@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 const cli = [process.execPath, "dist/index.js"];
 
@@ -18,6 +19,12 @@ test("help is keyboard-oriented and discoverable", () => {
 test("package exposes a command distinct from Core's service-lasso executable", async () => {
   const manifest = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
   assert.deepEqual(manifest.bin, { "service-lassoctl": "./dist/index.js" });
+});
+
+test("installed package bin executes through the Unix-compatible entrypoint path", () => {
+  const result = spawnSync(process.execPath, [fileURLToPath(new URL("../dist/index.js", import.meta.url)), "--version"], { encoding: "utf8" });
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout.trim(), "0.1.0");
 });
 
 test("mutations require explicit confirmation before Core is contacted", () => {
