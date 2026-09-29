@@ -20,6 +20,13 @@ test("package exposes a command distinct from Core's service-lasso executable", 
   assert.deepEqual(manifest.bin, { "service-lassoctl": "./dist/index.js" });
 });
 
+test("installed package bin executes through the Unix-compatible entrypoint path", () => {
+  const packageRoot = new URL("..", import.meta.url);
+  const result = spawnSync(process.execPath, [new URL("dist/index.js", packageRoot).pathname, "--version"], { encoding: "utf8" });
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout.trim(), "0.1.0");
+});
+
 test("mutations require explicit confirmation before Core is contacted", () => {
   const result = spawnSync(cli[0], [...cli.slice(1), "service", "start", "example-service"], { encoding: "utf8" });
   assert.equal(result.status, 1);
