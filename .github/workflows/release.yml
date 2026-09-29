@@ -27,7 +27,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          package_version="$(node -p \"require('./package.json').version\")"
+          package_version="$(node -p 'require("./package.json").version')"
           candidate_version="${package_version}-dev.${GITHUB_SHA::7}"
           echo "candidate_version=${candidate_version}" >> "$GITHUB_OUTPUT"
           echo "source_sha=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
