@@ -28,10 +28,12 @@ service-lassoctl service init <service-id> --directory ./lasso-example
 `SERVICE_LASSO_CORE_URL` overrides the saved Core URL. Mutation commands always
 require `--confirm`; the CLI does not prompt or silently mutate Core.
 
-For a remote Core with local-admin-token authentication, inject
-`SERVICE_LASSO_CORE_TOKEN` through the CI secret mechanism. It is sent as a
-Bearer credential, is never accepted as a command-line argument, and is never
-saved in the local config file or printed by the CLI. `instance inspect` reads
+For a remote Core whose policy accepts local-admin-token authentication, inject
+`SERVICE_LASSO_CORE_TOKEN` through the CI secret mechanism and use an HTTPS
+Core URL. The token is sent as a Bearer credential, is never accepted as a
+command-line argument, and is never saved in the local config file or printed
+by the CLI. The CLI rejects a token for non-loopback HTTP origins; its local
+`http://127.0.0.1:17883` default remains supported. `instance inspect` reads
 the documented Core health, instance, and capability endpoints without
 mutation.
 

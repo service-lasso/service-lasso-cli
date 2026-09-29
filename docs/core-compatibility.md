@@ -15,11 +15,19 @@ tool replaces the other, and this package does not import Core internals.
 
 ## Migration and aliases
 
-There is no published external binary to preserve: this repository's baseline
-has not released a package. The package provides no `service-lasso` alias,
-because an alias would recreate the installation-order collision. Scripts must
-invoke `service-lassoctl` explicitly. A future migration from a released name
-requires a versioned deprecation plan and must retain Core's command ownership.
+The external CLI has one published portable release:
+[`2026.9.28-03ebee0`](https://github.com/service-lasso/service-lasso-cli/releases/tag/2026.9.28-03ebee0).
+It targets exact `develop` commit `03ebee0a2b7dea2d7fbc62fa485c5e57c31f4203`
+and contains the Node 22 archive `service-lasso-cli-node22.tar.gz`
+(`sha256:501a0ac038dca411cdf164ccf22b08aea8cc352efe04f6d6e99b9a0224da6aac`).
+That release is a portable archive, not an npm package publication or a
+cross-platform runtime qualification.
+
+There is no earlier external executable name to migrate. The package provides
+no `service-lasso` alias because an alias would recreate the installation-order
+collision. Scripts must invoke `service-lassoctl` explicitly. Future releases
+must retain Core's command ownership and use a versioned deprecation plan if an
+external command name ever changes.
 
 ## Current contract evidence
 
@@ -29,7 +37,7 @@ requires a versioned deprecation plan and must retain Core's command ownership.
 | `GET /api/services` | Core source route; dependency-injected client test | No live Core response-schema or permission evidence. |
 | `GET /api/runtime/instance` and `GET /api/runtime/capabilities` | Core source routes; dependency-injected client test | No packaged-Core or remote-auth qualification. |
 | `POST /api/services/{id}/{action}` | Core source route; unit transport test; local `--confirm` gate | No durable-operation or idempotency evidence. |
-| `SERVICE_LASSO_CORE_TOKEN` Bearer credential | Core accepts a local-admin token from the Bearer header; token is environment-only in this client | Named profiles and non-local-admin identity-provider contracts remain unimplemented. |
+| `SERVICE_LASSO_CORE_TOKEN` Bearer credential | Core `develop` source accepts the local-admin secret from `Authorization: Bearer`; this client keeps it environment-only and sends it only to HTTPS origins or loopback HTTP. | Remote token authentication depends on Core policy: it is unavailable when Core enforces SSO. Named profiles and non-local-admin identity-provider contracts remain unimplemented. |
 | Authoring scaffold | Local filesystem tests | Starter manifest is not a Core registration contract. |
 
 Core exposes `GET /api/runtime/actions/importService/plan`, but the current
@@ -47,12 +55,13 @@ The Core staging script records that package as
 `service-lasso-package-<version>` and verifies that `cli.js` reports the
 staged package version.
 
-This external package has no released identity yet. Its future package
-contract is `@service-lasso/cli`, bin `service-lassoctl`, entrypoint
-`dist/index.js`. Core must add it only through a versioned operator-tools
-manifest containing the exact source tag, commit, asset digest, installed path,
-command name and supported platform. Core must reject mutable latest downloads,
-wrong identities, malformed manifests, path traversal and checksum mismatches.
+This external package's released archive identity is the Node 22 release above;
+its future npm package contract is `@service-lasso/cli`, bin
+`service-lassoctl`, entrypoint `dist/index.js`. Core must add it only through a
+versioned operator-tools manifest containing the exact source tag, commit,
+asset digest, installed path, command name and supported platform. Core must
+reject mutable latest downloads, wrong identities, malformed manifests, path
+traversal and checksum mismatches.
 
 ## Required Core-owned contract before workflow expansion
 

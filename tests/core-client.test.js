@@ -20,6 +20,22 @@ test("uses public read routes, carries an environment token and URL-encodes life
   assert.equal(calls[2].init.headers.authorization, "Bearer ci-token");
 });
 
+test("fails before making a request when a token would cross a cleartext remote connection", () => {
+  let called = false;
+  assert.throws(
+    () => new CoreClient({
+      baseUrl: "http://core.example",
+      token: "secret-token-value",
+      fetch: async () => {
+        called = true;
+        return new Response();
+      },
+    }),
+    (error) => error.code === "insecure_core_token_transport" && !error.message.includes("secret-token-value"),
+  );
+  assert.equal(called, false);
+});
+
 test("inspects Core health, instance identity and capabilities without mutation", async () => {
   const calls = [];
   const client = new CoreClient({

@@ -3,7 +3,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { configPath, loadConfig, normalizeCoreUrl, resolveCoreToken, resolveCoreUrl, saveConfig } from "../dist/config.js";
+import { assertCoreTokenTransport, configPath, loadConfig, normalizeCoreUrl, resolveCoreToken, resolveCoreUrl, saveConfig } from "../dist/config.js";
 
 test("normalizes a safe Core origin", () => {
   assert.equal(normalizeCoreUrl("https://core.example/"), "https://core.example");
@@ -15,6 +15,18 @@ test("uses an environment-only Core token and rejects unsafe token values", () =
   assert.equal(resolveCoreToken({ SERVICE_LASSO_CORE_TOKEN: "ci-token" }), "ci-token");
   assert.equal(resolveCoreToken({}), undefined);
   assert.throws(() => resolveCoreToken({ SERVICE_LASSO_CORE_TOKEN: "bad token" }), { code: "invalid_core_token" });
+});
+
+test("allows a Core token over HTTPS or loopback HTTP but rejects cleartext remote origins without exposing it", () => {
+  assert.doesNotThrow(() => assertCoreTokenTransport("https://core.example", "ci-token"));
+  assert.doesNotThrow(() => assertCoreTokenTransport("http://127.0.0.1:17883", "ci-token"));
+  assert.doesNotThrow(() => assertCoreTokenTransport("http://localhost:17883", "ci-token"));
+  assert.doesNotThrow(() => assertCoreTokenTransport("http://[::1]:17883", "ci-token"));
+  assert.throws(
+    () => assertCoreTokenTransport("http://core.example", "secret-token-value"),
+    (error) => error.code === "insecure_core_token_transport" && !error.message.includes("secret-token-value"),
+  );
+  assert.throws(() => assertCoreTokenTransport("http://127.example", "ci-token"), { code: "insecure_core_token_transport" });
 });
 
 test("environment wins over saved config and config persists atomically", async () => {

@@ -1,4 +1,5 @@
 import { CliError } from "./errors.js";
+import { assertCoreTokenTransport } from "./config.js";
 
 export type FetchLike = typeof fetch;
 
@@ -11,6 +12,7 @@ export interface CoreClientOptions {
 export class CoreClient {
   private readonly requestFetch: FetchLike;
   public constructor(private readonly options: CoreClientOptions) {
+    assertCoreTokenTransport(options.baseUrl, options.token);
     this.requestFetch = options.fetch ?? fetch;
   }
 
