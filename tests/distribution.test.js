@@ -31,8 +31,10 @@ test("candidate workflow is manual develop-only and publishes a prerelease only 
   assert.match(workflow, /needs: \[build, smoke\]/);
   assert.match(workflow, /gh release create/);
   assert.match(workflow, /--prerelease/);
+  assert.match(workflow, /GH_TOKEN: \$\{\{ github\.token \}\}/);
+  assert.match(workflow, /persist-credentials: true/);
   assert.match(workflow, /refs\/tags\/\$\{tag\}\^\{\}/);
-  assert.match(workflow, /verify-candidate-release\.mjs/);
+  assert.equal((workflow.match(/verify-candidate-release\.mjs/g) ?? []).length, 2);
   assert.doesNotMatch(workflow, /softprops\/action-gh-release/);
 });
 
