@@ -38,6 +38,10 @@ test("candidate workflow is manual develop-only and publishes a prerelease only 
   assert.doesNotMatch(workflow, /softprops\/action-gh-release/);
 });
 
+test("candidate workflow identity shell block parses when bash is available", () => {
+  execFileSync(node, ["scripts/check-candidate-workflow-shell.mjs"], { encoding: "utf8" });
+});
+
 test("existing prerelease verification rejects bytes that differ from the tested candidate", async () => {
   const expected = await mkdtemp(join(tmpdir(), "service-lassoctl-expected-"));
   const actual = await mkdtemp(join(tmpdir(), "service-lassoctl-actual-"));
