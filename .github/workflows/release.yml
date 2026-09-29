@@ -114,8 +114,9 @@ jobs:
                 node scripts/verify-candidate-release.mjs --expected release-assets --actual release-verify
                 rm -f release-download.err
                 return 0
+              else
+                status=$?
               fi
-              status=$?
               rm -rf release-verify
               if ! grep -Eq 'HTTP 5[0-9][0-9]' release-download.err; then
                 cat release-download.err >&2

@@ -47,6 +47,10 @@ test("candidate workflow identity shell block parses when bash is available", ()
   execFileSync(node, ["scripts/check-candidate-workflow-shell.mjs"], { encoding: "utf8" });
 });
 
+test("candidate readback shell fails closed and retries only transient failures", () => {
+  execFileSync(node, ["scripts/test-candidate-readback-shell.mjs"], { encoding: "utf8" });
+});
+
 test("existing prerelease verification rejects bytes that differ from the tested candidate", async () => {
   const expected = await mkdtemp(join(tmpdir(), "service-lassoctl-expected-"));
   const actual = await mkdtemp(join(tmpdir(), "service-lassoctl-actual-"));
