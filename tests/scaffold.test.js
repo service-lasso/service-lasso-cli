@@ -20,7 +20,7 @@ test("plans a scaffold without writes and refuses overwrite", async () => {
   const created = await createServiceScaffold({ id: "example-service", directory: destination });
   assert.equal(created.files.includes("service.json"), true);
   await assert.rejects(() => createServiceScaffold({ id: "example-service", directory: destination }), { code: "target_exists" });
-  assert.match(scaffoldFiles({ id: "example-service", directory: destination })["service.json"], /"enabled": true/);
+  assert.match(scaffoldFiles({ id: "example-service", directory: destination })["service.json"], /"enabled": false/);
 });
 
 test("pins the canonical template identity and emits required lifecycle declarations", () => {
@@ -30,7 +30,10 @@ test("pins the canonical template identity and emits required lifecycle declarat
   assert.equal(JSON.parse(files[".service-lasso-template.json"]).commit, SERVICE_TEMPLATE_IDENTITY.commit);
   assert.equal(manifest.id, "example-service");
   assert.equal(manifest.name, "Example Service");
-  assert.equal(manifest.artifact.source.channel, reviewed.artifact.source.channel);
+  assert.equal(manifest.enabled, false);
+  assert.equal(manifest.artifact, undefined);
+  assert.equal(JSON.stringify(manifest).includes("latest"), false);
+  assert.equal(reviewed.artifact.source.channel, "latest");
   assert.deepEqual(manifest.actions, reviewed.actions);
   assert.equal(manifest.execconfig.healthcheck.type, "process");
   assert.deepEqual(manifest.execconfig.depend_on, []);

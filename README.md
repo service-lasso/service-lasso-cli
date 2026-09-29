@@ -49,8 +49,9 @@ mutation.
 writes the reviewed source identity and canonical manifest SHA-256 to
 `.service-lasso-template.json`. The generated manifest is a documented local
 authoring baseline informed by that released template; it is not a byte-for-byte
-copy or a Core registration assertion. The released sample's artifact selection
-remains present and must be reviewed and replaced before
+copy or a Core registration assertion. It applies only identity substitution,
+`enabled: false`, and removal of the released sample's mutable artifact source.
+An exact artifact source and checksum must be supplied before
 registration. It makes an absent local directory only; it does not register,
 install, or start a service. Registration remains subject to Core's contract in
 issue #1463.

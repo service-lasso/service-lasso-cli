@@ -5,7 +5,14 @@ const REVIEWED_TEMPLATE_BASE64 = "ewogICJpZCI6ICJlY2hvLXNlcnZpY2UiLAogICJuYW1lIj
 
 export const SERVICE_TEMPLATE_IDENTITY = Object.freeze({ repository: "service-lasso/service-template", tag: "2026.5.8-d2241fe", commit: "d2241fe9b5fc477f14e99adb1836825de2c7a767", serviceJsonSha256: "535b939b39d96b3e72750c8a4c404d88f68e7f94150bc8d42ae6695baf9e1fd4" });
 export function authoringTemplateManifest(): Record<string, unknown> { return JSON.parse(Buffer.from(REVIEWED_TEMPLATE_BASE64, "base64").toString("utf8")) as Record<string, unknown>; }
-export function canonicalTemplateManifest(id: string, name: string): Record<string, unknown> { return { ...authoringTemplateManifest(), id, name }; }
+/**
+ * Bounded safe transforms from the reviewed baseline: personalize identity,
+ * disable the sample, and remove its mutable sample artifact source.
+ */
+export function canonicalTemplateManifest(id: string, name: string): Record<string, unknown> {
+  const { artifact: _sampleArtifact, ...baseline } = authoringTemplateManifest();
+  return { ...baseline, id, name, enabled: false };
+}
 export function assertCanonicalTemplateManifest(manifest: Record<string, unknown>): void {
   const actions = manifest.actions as Record<string, unknown> | undefined; const execconfig = manifest.execconfig as Record<string, unknown> | undefined;
   if (!manifest.id || !manifest.name || !manifest.version || !actions?.install || !actions.config || !actions.start || !actions.stop || !Array.isArray(execconfig?.depend_on) || !execconfig.healthcheck) throw new CliError("invalid_template_manifest", "The pinned service template is missing required identity, lifecycle, or runtime declarations.");

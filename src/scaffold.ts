@@ -35,7 +35,7 @@ export function scaffoldFiles(options: ServiceScaffoldOptions): Record<string, s
   return {
     "service.json": `${JSON.stringify(manifest, null, 2)}\n`,
     ".service-lasso-template.json": `${JSON.stringify(SERVICE_TEMPLATE_IDENTITY, null, 2)}\n`,
-    "README.md": `# ${name}\n\nThis project was authored from the exact Service Lasso template release \`${SERVICE_TEMPLATE_IDENTITY.tag}\` at \`${SERVICE_TEMPLATE_IDENTITY.commit}\`. Its canonical \`service.json\` SHA-256 is \`${SERVICE_TEMPLATE_IDENTITY.serviceJsonSha256}\`.\n\nBefore enabling or registering it, replace every \`REPLACE-ME\` value, provide the real runtime package, declare supported release artifacts and checksums, and prove install/start/health in a clean consumer workspace. This command creates files only: it does not register, install, start, or contact Core.\n`,
+    "README.md": `# ${name}\n\nThis project was authored from the reviewed Service Lasso template release \`${SERVICE_TEMPLATE_IDENTITY.tag}\` at \`${SERVICE_TEMPLATE_IDENTITY.commit}\`. Its canonical source \`service.json\` SHA-256 is \`${SERVICE_TEMPLATE_IDENTITY.serviceJsonSha256}\`. The scaffold applies only these safe transforms: \`id\` and \`name\`, \`enabled: false\`, and removal of the sample's mutable artifact source.\n\nBefore enabling or registering it, define an exact service artifact source and checksum, provide the real runtime package, and prove install/start/health in a clean consumer workspace. This command creates files only: it does not register, install, start, or contact Core.\n`,
     "runtime/.gitkeep": "",
   };
 }
