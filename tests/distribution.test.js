@@ -24,7 +24,7 @@ test("candidate packager creates a checksum-bound Node 22 archive and clean-cons
 });
 
 test("candidate workflow is manual develop-only and publishes a prerelease only after smoke", async () => {
-  const workflow = await readFile(new URL("../.github/workflows/candidate.yml", import.meta.url), "utf8");
+  const workflow = await readFile(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /github\.ref == 'refs\/heads\/develop'/);
   assert.match(workflow, /publish-candidate:/);

@@ -66,6 +66,11 @@ pass, the workflow creates the recorded candidate Git tag and a clearly marked
 GitHub prerelease on that exact source commit. The prerelease is durable review
 material for Core #1461, not a GA release.
 
+The dispatch workflow remains at `.github/workflows/release.yml` so GitHub can
+resolve the workflow identity that was registered on the default branch. A
+`workflow candidate.yml not found` response occurs before a candidate job
+starts; it creates no tag, prerelease, or asset.
+
 Extracting the archive alone is insufficient because this is a Node package.
 Install it with Node 22 or newer, for example:
 
