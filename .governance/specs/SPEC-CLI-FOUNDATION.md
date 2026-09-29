@@ -16,7 +16,7 @@ is complete.
 | CLI-REGISTRATION | Validate and register local or remote package input. | Blocked on Core registration/import, remote acquisition and duplicate-identity contracts. |
 | CLI-OPERATIONS | Read status and services; invoke supported lifecycle actions with local confirmation. | Read and lifecycle routes are unit-tested transport adapters only until Core publishes the exact API/version/permission contract. |
 | CLI-AUTOMATION | Never prompt, separate stdout from stderr and keep errors secret-safe, including when a transport implementation throws an error. | Implemented for this slice; durable operation identifiers, waits, cancellation and idempotency await Core. |
-| CLI-DISTRIBUTION | Avoid collision with Core's local-runtime executable. | The external CLI command is `service-lassoctl`; package/release binaries remain deferred. |
+| CLI-DISTRIBUTION | Produce an exact, checksum-bound candidate that a clean Node 22 consumer can install without colliding with Core's local-runtime executable. | Implemented for manually dispatched `develop` candidates. The portable package archive contains the `service-lassoctl` entrypoint and requires Node 22; standalone native binaries remain deferred. |
 
 The capability matrix is the operation-to-contract record. The Core compatibility
 note records the command ownership decision and the dependencies that must close
@@ -34,3 +34,11 @@ before a complete create-to-running-service workflow can be implemented.
    mutation confirmation.
 7. The installed external command does not shadow Core's `service-lasso`
    executable.
+8. A manually dispatched workflow from the exact `develop` revision creates a
+   versioned package archive, a SHA-256 manifest, and an immutable candidate
+   record that bind the candidate version, commit, entrypoint, supported
+   platforms, and Node 22 requirement.
+9. Windows, Linux, and macOS each install the produced archive in a clean
+   consumer directory and verify `service-lassoctl --help`, `--version`, and
+   safe Core health/identity reads against a local fixture. This is candidate
+   evidence only; it does not publish a release or qualify a packaged Core.

@@ -17,7 +17,8 @@ external-CLI/Core command boundary and the missing integration contracts.
 | Validate, register, transfer and install | Planned | Requires Core/template registration and remote-acquisition contracts; no shared-path assumption is made. |
 | Durable operation wait/reconcile | Planned | Requires Core durable-operation API and idempotency contract. |
 | Remove, inbox/history and logs | Planned | Requires the owning Core API and data-access contracts. |
-| Shell completion and standalone binaries | Planned | Deferred to the hardening/distribution slice after the command/API contract settles. |
+| Checksum-bound CLI candidate distribution | Implemented | A manual workflow dispatch from `develop` produces an exact-version Node 22 package archive, immutable candidate record, and SHA-256 manifest. The archive is smoke-tested by clean consumers on Windows, Linux, and macOS. |
+| Shell completion and standalone binaries | Planned | Standalone native binaries remain deferred; the distribution candidate requires Node 22. |
 | Core executable compatibility | Implemented foundation | This package installs `service-lassoctl`; Core retains `service-lasso` for its in-process, local-runtime CLI. |
 
 ## Safety properties in this slice
