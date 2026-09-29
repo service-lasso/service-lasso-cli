@@ -54,12 +54,12 @@ assert.match(sums, new RegExp(`^${asset.sha256}  ${asset.name}$`, "m"));
 
 const consumer = await mkdtemp(join(tmpdir(), "service-lassoctl-consumer-"));
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
-const npx = process.platform === "win32" ? "npx.cmd" : "npx";
+const command = join(consumer, "node_modules", ".bin", process.platform === "win32" ? "service-lassoctl.cmd" : "service-lassoctl");
 try {
   run(npm, ["init", "--yes"], consumer);
   run(npm, ["install", "--ignore-scripts", "--no-audit", "--no-fund", join(directory, asset.name)], consumer);
-  assert.match(run(npx, ["--no-install", "service-lassoctl", "--help"], consumer), /service-lassoctl/);
-  assert.equal(run(npx, ["--no-install", "service-lassoctl", "--version"], consumer).trim(), expectedVersion);
+  assert.match(run(command, ["--help"], consumer), /service-lassoctl/);
+  assert.equal(run(command, ["--version"], consumer).trim(), expectedVersion);
 
   const server = createServer((request, response) => {
     const bodies = {
@@ -75,7 +75,7 @@ try {
   try {
     const address = server.address();
     assert(address && typeof address !== "string");
-    const result = JSON.parse(await runAsync(npx, ["--no-install", "service-lassoctl", "--core-url", `http://127.0.0.1:${address.port}`, "instance", "inspect", "--json"], consumer));
+    const result = JSON.parse(await runAsync(command, ["--core-url", `http://127.0.0.1:${address.port}`, "instance", "inspect", "--json"], consumer));
     assert.deepEqual(result, { health: { ok: true }, instance: { instance: "fixture" }, capabilities: { readOnly: true } });
   } finally {
     await new Promise((resolveClose, rejectClose) => server.close((error) => error ? rejectClose(error) : resolveClose()));
