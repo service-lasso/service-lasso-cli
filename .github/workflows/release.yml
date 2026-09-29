@@ -1,4 +1,4 @@
-name: Build CLI candidate
+name: Release CLI candidate
 
 on:
   workflow_dispatch:
