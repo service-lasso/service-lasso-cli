@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -31,5 +31,26 @@ test("candidate workflow is manual develop-only and publishes a prerelease only 
   assert.match(workflow, /needs: \[build, smoke\]/);
   assert.match(workflow, /gh release create/);
   assert.match(workflow, /--prerelease/);
+  assert.match(workflow, /refs\/tags\/\$\{tag\}\^\{\}/);
+  assert.match(workflow, /verify-candidate-release\.mjs/);
   assert.doesNotMatch(workflow, /softprops\/action-gh-release/);
+});
+
+test("existing prerelease verification rejects bytes that differ from the tested candidate", async () => {
+  const expected = await mkdtemp(join(tmpdir(), "service-lassoctl-expected-"));
+  const actual = await mkdtemp(join(tmpdir(), "service-lassoctl-actual-"));
+  const sourceSha = "0123456789abcdef0123456789abcdef01234567";
+  const version = "0.1.0-dev.0123456";
+  try {
+    execFileSync(node, ["scripts/package-candidate.mjs", "--output", expected, "--version", version, "--source-sha", sourceSha], { encoding: "utf8" });
+    await cp(expected, actual, { recursive: true });
+    execFileSync(node, ["scripts/verify-candidate-release.mjs", "--expected", expected, "--actual", actual], { encoding: "utf8" });
+    await writeFile(join(actual, "SHA256SUMS.txt"), "different\n");
+    assert.throws(
+      () => execFileSync(node, ["scripts/verify-candidate-release.mjs", "--expected", expected, "--actual", actual], { stdio: "ignore" }),
+      (error) => error.status === 1,
+    );
+  } finally {
+    await Promise.all([rm(expected, { recursive: true, force: true }), rm(actual, { recursive: true, force: true })]);
+  }
 });

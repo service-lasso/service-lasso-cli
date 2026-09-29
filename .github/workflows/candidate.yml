@@ -91,7 +91,10 @@ jobs:
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
           node -e 'const fs=require("fs"); const record=JSON.parse(fs.readFileSync("release-assets/candidate.json", "utf8")); if(record.source.commit!==process.env.SOURCE_SHA || record.version!==process.env.CANDIDATE_VERSION) process.exit(1)'
           tag="cli-v${CANDIDATE_VERSION}-candidate-${SOURCE_SHA:0:7}"
-          existing="$(git ls-remote --refs origin "refs/tags/${tag}" | awk '{print $1}')"
+          existing="$(git ls-remote origin "refs/tags/${tag}^{}" | awk '{print $1}')"
+          if [ -z "$existing" ]; then
+            existing="$(git ls-remote --refs origin "refs/tags/${tag}" | awk '{print $1}')"
+          fi
           if [ -n "$existing" ]; then
             test "$existing" = "$SOURCE_SHA"
           else
@@ -102,7 +105,7 @@ jobs:
             TAG="$tag" node -e 'const fs=require("fs"); const release=JSON.parse(fs.readFileSync("/tmp/release.json", "utf8")); if(release.tagName!==process.env.TAG || release.targetCommitish!==process.env.SOURCE_SHA || !release.isPrerelease || release.isDraft) process.exit(1)'
             mkdir release-verify
             gh release download "$tag" --dir release-verify --pattern "service-lassoctl-*.tgz" --pattern candidate.json --pattern SHA256SUMS.txt
-            (cd release-verify && sha256sum --check SHA256SUMS.txt)
+            node scripts/verify-candidate-release.mjs --expected release-assets --actual release-verify
             exit 0
           fi
           gh release create "$tag" release-assets/service-lassoctl-*.tgz release-assets/candidate.json release-assets/SHA256SUMS.txt \

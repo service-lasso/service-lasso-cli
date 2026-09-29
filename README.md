@@ -57,8 +57,10 @@ for the exact boundary.
 An explicit GitHub Actions dispatch from `develop` can build a reviewable
 candidate archive. It produces `service-lassoctl-<version>.tgz`,
 `candidate.json`, and `SHA256SUMS.txt`, then runs clean-consumer smoke on
-Windows, Linux, and macOS. The record pins the source commit and candidate tag;
-never select an asset called `latest` for Core packaging. These artifacts do
+Windows, Linux, and macOS against a local fixture. This is surrogate client
+evidence, not a packaged-Core runtime check. The record pins the source commit
+and candidate tag; never select an asset called `latest` for Core packaging.
+These artifacts do
 do not publish npm, deploy anything, or establish GA. If all three smoke jobs
 pass, the workflow creates the recorded candidate Git tag and a clearly marked
 GitHub prerelease on that exact source commit. The prerelease is durable review
