@@ -18,6 +18,31 @@ test("uses public read routes, carries an environment token and URL-encodes life
   assert.equal(calls[2].init.method, "POST");
   assert.equal(calls[2].init.body, '{"confirm":true}');
   assert.equal(calls[2].init.headers.authorization, "Bearer ci-token");
+  assert.equal(calls.every((call) => call.init.redirect === "error"), true);
+});
+
+test("rejects redirects before a lifecycle mutation can be replayed at another origin", async () => {
+  const token = "redirect-test-token";
+  const calls = [];
+  const client = new CoreClient({
+    baseUrl: "https://core.example",
+    token,
+    fetch: async (url, init) => {
+      calls.push({ url: String(url), init });
+      throw new Error(`redirect to https://other.example rejected with ${init.headers.authorization}`);
+    },
+  });
+
+  await assert.rejects(
+    () => client.lifecycle("service-a", "restart"),
+    (error) => error.code === "core_unreachable"
+      && error.message === "Could not reach Service Lasso Core."
+      && !error.message.includes(token),
+  );
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, "https://core.example/api/services/service-a/restart");
+  assert.equal(calls[0].init.redirect, "error");
+  assert.equal(calls[0].init.headers.authorization, `Bearer ${token}`);
 });
 
 test("fails before making a request when a token would cross a cleartext remote connection", () => {
