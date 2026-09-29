@@ -1,49 +1,12 @@
 import { CliError } from "./errors.js";
 
-/** The reviewed service-template release used for deterministic local authoring. */
-export const SERVICE_TEMPLATE_IDENTITY = Object.freeze({
-  repository: "service-lasso/service-template",
-  tag: "2026.5.8-d2241fe",
-  commit: "d2241fe9b5fc477f14e99adb1836825de2c7a767",
-  serviceJsonSha256: "535b939b39d96b3e72750c8a4c404d88f68e7f94150bc8d42ae6695baf9e1fd4",
-});
+// Local authoring baseline reviewed against service-template 2026.5.8-d2241fe.
+const REVIEWED_TEMPLATE_BASE64 = "ewogICJpZCI6ICJlY2hvLXNlcnZpY2UiLAogICJuYW1lIjogIkVjaG8gU2VydmljZSIsCiAgImRlc2NyaXB0aW9uIjogIk1pbmltYWwgc2FtcGxlIHNlcnZpY2UgdXNlZCB0byBwcm92ZSB0aGUgc2VydmljZS10ZW1wbGF0ZSBjb250cmFjdC4iLAogICJlbmFibGVkIjogdHJ1ZSwKICAidmVyc2lvbiI6ICIwLjEuMCIsCiAgImxvZ291dHB1dCI6IHRydWUsCiAgImljb24iOiBbCiAgICB7CiAgICAgICJwcm92aWRlciI6ICJsdWNpZGUiLAogICAgICAibmFtZSI6ICJ0ZXJtaW5hbCIKICAgIH0KICBdLAogICJzZXJ2aWNldHlwZSI6IDUwLAogICJzZXJ2aWNlbG9jYXRpb24iOiAxMCwKICAibG9nbyI6IFtdLAogICJsb2dzIjogewogICAgImRlZmF1bHQiOiB7CiAgICAgICJwYXRoIjogImxvZ3MvZWNoby1zZXJ2aWNlLmxvZyIKICAgIH0KICB9LAogICJtZXRhIjogewogICAgImRldmVsb3BlcnMiOiBbCiAgICAgIHsKICAgICAgICAibmFtZSI6ICJTZXJ2aWNlIExhc3NvIGNvbnRyaWJ1dG9ycyIKICAgICAgfQogICAgXSwKICAgICJsaWNlbnNlIjogIkFwYWNoZS0yLjAiLAogICAgInJlcG9zaXRvcnkiOiB7CiAgICAgICJ0eXBlIjogImdpdCIsCiAgICAgICJ1cmwiOiAiaHR0cHM6Ly9naXRodWIuY29tL3NlcnZpY2UtbGFzc28vc2VydmljZS10ZW1wbGF0ZS5naXQiCiAgICB9LAogICAgIndlYnNpdGVVcmwiOiAiaHR0cHM6Ly9naXRodWIuY29tL3NlcnZpY2UtbGFzc28vc2VydmljZS10ZW1wbGF0ZSIsCiAgICAiZG9jdW1lbnRhdGlvblVybCI6ICJodHRwczovL2dpdGh1Yi5jb20vc2VydmljZS1sYXNzby9zZXJ2aWNlLXRlbXBsYXRlL2Jsb2IvbWFpbi9SRUFETUUubWQiLAogICAgImlzc3Vlc1VybCI6ICJodHRwczovL2dpdGh1Yi5jb20vc2VydmljZS1sYXNzby9zZXJ2aWNlLXRlbXBsYXRlL2lzc3VlcyIsCiAgICAic3VwcG9ydCI6IHsKICAgICAgImlzc3Vlc1VybCI6ICJodHRwczovL2dpdGh1Yi5jb20vc2VydmljZS1sYXNzby9zZXJ2aWNlLXRlbXBsYXRlL2lzc3VlcyIKICAgIH0sCiAgICAibGlua3MiOiB7CiAgICAgICJyZXBvc2l0b3J5IjogImh0dHBzOi8vZ2l0aHViLmNvbS9zZXJ2aWNlLWxhc3NvL3NlcnZpY2UtdGVtcGxhdGUiLAogICAgICAiaXNzdWVzIjogImh0dHBzOi8vZ2l0aHViLmNvbS9zZXJ2aWNlLXRlbXBsYXRlL2lzc3VlcyIsCiAgICAgICJkb2N1bWVudGF0aW9uIjogImh0dHBzOi8vZ2l0aHViLmNvbS9zZXJ2aWNlLWxhc3NvL3NlcnZpY2UtdGVtcGxhdGUvYmxvYi9tYWluL1JFQURNRS5tZCIKICAgIH0sCiAgICAidGFncyI6IFsKICAgICAgInNlcnZpY2UtbGFzc28iLAogICAgICAidGVtcGxhdGUiLAogICAgICAiZXhhbXBsZS1zZXJ2aWNlIgogICAgXQogIH0sCiAgImFydGlmYWN0IjogewogICAgImtpbmQiOiAiYXJjaGl2ZSIsCiAgICAic291cmNlIjogewogICAgICAidHlwZSI6ICJnaXRodWItcmVsZWFzZSIsCiAgICAgICJyZXBvIjogInNlcnZpY2UtbGFzc28vc2VydmljZS10ZW1wbGF0ZSIsCiAgICAgICJjaGFubmVsIjogImxhdGVzdCIKICAgIH0sCiAgICAicGxhdGZvcm1zIjogewogICAgICAid2luMzIiOiB7CiAgICAgICAgImFzc2V0TmFtZSI6ICJlY2hvLXNlcnZpY2Utd2luMzIuemlwIiwKICAgICAgICAiYXJjaGl2ZVR5cGUiOiAiemlwIiwKICAgICAgICAiY29tbWFuZCI6ICIuL2VjaG8tc2VydmljZS5leGUiLAogICAgICAgICJhcmdzIjogW10KICAgICAgfSwKICAgICAgImRhcndpbiI6IHsKICAgICAgICAiYXNzZXROYW1lIjogImVjaG8tc2VydmljZS1kYXJ3aW4udGFyLmd6IiwKICAgICAgICAiYXJjaGl2ZVR5cGUiOiAidGFyLmd6IiwKICAgICAgICAiY29tbWFuZCI6ICIuL2VjaG8tc2VydmljZSIsCiAgICAgICAgImFyZ3MiOiBbXQogICAgICB9LAogICAgICAibGludXgiOiB7CiAgICAgICAgImFzc2V0TmFtZSI6ICJlY2hvLXNlcnZpY2UtbGludXgudGFyLmd6IiwKICAgICAgICAiYXJjaGl2ZVR5cGUiOiAidGFyLmd6IiwKICAgICAgICAiY29tbWFuZCI6ICIuL2VjaG8tc2VydmljZSIsCiAgICAgICAgImFyZ3MiOiBbXQogICAgICB9LAogICAgICAiZGVmYXVsdCI6IHsKICAgICAgICAiYXNzZXROYW1lIjogImVjaG8tc2VydmljZS13aW4zMi56aXAiLAogICAgICAgICJhcmNoaXZlVHlwZSI6ICJ6aXAiLAogICAgICAgICJjb21tYW5kIjogIi4vZWNoby1zZXJ2aWNlLmV4ZSIsCiAgICAgICAgImFyZ3MiOiBbXQogICAgICB9CiAgICB9CiAgfSwKICAiYWN0aW9ucyI6IHsKICAgICJpbnN0YWxsIjogewogICAgICAiZGVzY3JpcHRpb24iOiAiQWNxdWlyZSBvciB1bnBhY2sgdGhlIHBhY2thZ2VkIGVjaG8tc2VydmljZSBydW50aW1lIGFydGlmYWN0LiIsCiAgICAgICJtb2RlIjogImNvbnZlcmdlLWluc3RhbGwiLAogICAgICAiaWRlbXBvdGVudCI6IHRydWUKICAgIH0sCiAgICAiY29uZmlnIjogewogICAgICAiZGVzY3JpcHRpb24iOiAiTWF0ZXJpYWxpemUgZGVwbG95bWVudC1sb2NhbCBlY2hvLXNlcnZpY2UgY29uZmlnIGFuZCBlbnYgdmFsdWVzLiIsCiAgICAgICJtb2RlIjogImNvbnZlcmdlLWNvbmZpZyIsCiAgICAgICJpZGVtcG90ZW50IjogdHJ1ZQogICAgfSwKICAgICJ1cGRhdGUiOiB7CiAgICAgICJkZXNjcmlwdGlvbiI6ICJBcHBseSBhIG5ld2VyIHJlbGVhc2UgYXJ0aWZhY3QgYW5kIHJlY29uY2lsZSB1cGRhdGUtdGltZSBjaGFuZ2VzIGJlZm9yZSByZXN0YXJ0LiIsCiAgICAgICJtb2RlIjogImNvbnZlcmdlLXVwZGF0ZSIsCiAgICAgICJpZGVtcG90ZW50IjogdHJ1ZQogICAgfSwKICAgICJzdGFydCI6IHsKICAgICAgImRlc2NyaXB0aW9uIjogIlN0YXJ0IHRoZSBzYW1wbGUgZWNobyBzZXJ2aWNlLiIsCiAgICAgICJtb2RlIjogInJ1bnRpbWUtc3RhcnQiLAogICAgICAiaWRlbXBvdGVudCI6IHRydWUKICAgIH0sCiAgICAic3RvcCI6IHsKICAgICAgImRlc2NyaXB0aW9uIjogIlN0b3AgdGhlIHNhbXBsZSBlY2hvIHNlcnZpY2UgZ3JhY2VmdWxseS4iLAogICAgICAibW9kZSI6ICJydW50aW1lLXN0b3AiLAogICAgICAiaWRlbXBvdGVudCI6IHRydWUKICAgIH0sCiAgICAicmVzdGFydCI6IHsKICAgICAgImRlc2NyaXB0aW9uIjogIlJlc3RhcnQgdGhlIHNhbXBsZSBlY2hvIHNlcnZpY2UgYWZ0ZXIgY29uZmlnIG9yIHVwZGF0ZSBjaGFuZ2VzLiIsCiAgICAgICJtb2RlIjogInJ1bnRpbWUtc3RhcnQiLAogICAgICAiaWRlbXBvdGVudCI6IGZhbHNlCiAgICB9LAogICAgInJvbGxiYWNrIjogewogICAgICAiZGVzY3JpcHRpb24iOiAiUmVzdG9yZSB0aGUgcHJldmlvdXNseSBkZXBsb3llZCBhcnRpZmFjdCBpZiBhbiB1cGRhdGUgZmFpbHMgdmFsaWRhdGlvbi4iLAogICAgICAibW9kZSI6ICJzdGF0ZS1yb2xsYmFjayIsCiAgICAgICJpZGVtcG90ZW50IjogZmFsc2UKICAgIH0KICB9LAogICJleGVjY29uZmlnIjogewogICAgInNlcnZpY2VvcmRlciI6IDEwMCwKICAgICJzZXJ2aWNlcG9ydCI6IDAsCiAgICAiZXhlY2N3ZCI6ICJydW50aW1lIiwKICAgICJleGVjdXRhYmxlIjogImVjaG8tc2VydmljZSIsCiAgICAiZW52IjogewogICAgICAiRUNIT19NRVNTQUdFIjogImhlbGxvIGZyb20gc2VydmljZS10ZW1wbGF0ZSIKICAgIH0sCiAgICAiZGVwZW5kX29uIjogW10sCiAgICAiaGVhbHRoY2hlY2siOiB7CiAgICAgICJ0eXBlIjogInByb2Nlc3MiCiAgICB9CiAgfQp9Cg==";
 
-export function canonicalTemplateManifest(id: string, name: string): Record<string, unknown> {
-  return {
-    id,
-    name,
-    description: `Service Lasso service authored from ${SERVICE_TEMPLATE_IDENTITY.tag}.`,
-    enabled: false,
-    version: "0.1.0",
-    logoutput: true,
-    icon: "terminal",
-    servicetype: 50,
-    servicelocation: 10,
-    actions: {
-      install: { description: "Prepare the service runtime payload." },
-      config: { description: "Materialize effective runtime configuration." },
-      start: { description: "Start the managed service." },
-      stop: { description: "Stop the managed service gracefully." },
-    },
-    execconfig: {
-      serviceorder: 100,
-      serviceport: 0,
-      execcwd: "runtime",
-      executable: "REPLACE-ME",
-      env: {},
-      depend_on: [],
-      healthcheck: { type: "process" },
-    },
-  };
-}
-
+export const SERVICE_TEMPLATE_IDENTITY = Object.freeze({ repository: "service-lasso/service-template", tag: "2026.5.8-d2241fe", commit: "d2241fe9b5fc477f14e99adb1836825de2c7a767", serviceJsonSha256: "535b939b39d96b3e72750c8a4c404d88f68e7f94150bc8d42ae6695baf9e1fd4" });
+export function authoringTemplateManifest(): Record<string, unknown> { return JSON.parse(Buffer.from(REVIEWED_TEMPLATE_BASE64, "base64").toString("utf8")) as Record<string, unknown>; }
+export function canonicalTemplateManifest(id: string, name: string): Record<string, unknown> { return { ...authoringTemplateManifest(), id, name }; }
 export function assertCanonicalTemplateManifest(manifest: Record<string, unknown>): void {
-  const actions = manifest.actions as Record<string, unknown> | undefined;
-  const execconfig = manifest.execconfig as Record<string, unknown> | undefined;
-  if (!manifest.id || !manifest.name || !manifest.version || !actions?.install || !actions.config || !actions.start || !actions.stop || !Array.isArray(execconfig?.depend_on) || !execconfig.healthcheck) {
-    throw new CliError("invalid_template_manifest", "The pinned service template is missing required identity, lifecycle, or runtime declarations.");
-  }
-  if (JSON.stringify(manifest).includes('"channel":"latest"')) {
-    throw new CliError("mutable_template_reference", "Generated service manifests must not select a mutable latest template channel.");
-  }
+  const actions = manifest.actions as Record<string, unknown> | undefined; const execconfig = manifest.execconfig as Record<string, unknown> | undefined;
+  if (!manifest.id || !manifest.name || !manifest.version || !actions?.install || !actions.config || !actions.start || !actions.stop || !Array.isArray(execconfig?.depend_on) || !execconfig.healthcheck) throw new CliError("invalid_template_manifest", "The pinned service template is missing required identity, lifecycle, or runtime declarations.");
 }

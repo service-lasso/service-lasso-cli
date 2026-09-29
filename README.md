@@ -46,11 +46,14 @@ mutation.
 
 `service init` is based on the pinned `service-template` release
 `2026.5.8-d2241fe` (commit `d2241fe9b5fc477f14e99adb1836825de2c7a767`) and
-writes its identity and canonical manifest SHA-256 to
-`.service-lasso-template.json`. It makes an absent local directory only; it does
-not register, install, or start a service. The generated manifest has explicit
-lifecycle, dependency, and process-health declarations, but registration remains
-subject to Core's contract in issue #1463.
+writes the reviewed source identity and canonical manifest SHA-256 to
+`.service-lasso-template.json`. The generated manifest is a documented local
+authoring baseline informed by that released template; it is not a byte-for-byte
+copy or a Core registration assertion. The released sample's artifact selection
+remains present and must be reviewed and replaced before
+registration. It makes an absent local directory only; it does not register,
+install, or start a service. Registration remains subject to Core's contract in
+issue #1463.
 
 Service Lasso Core retains the `service-lasso` executable for its local-runtime
 operator workflows. This package intentionally installs `service-lassoctl` and

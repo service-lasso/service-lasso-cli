@@ -123,9 +123,11 @@ export function resolveConnectionName(options: { cliValue?: string; environment?
 }
 
 export function resolveCoreUrl(options: { cliValue?: string; connection?: string; environment?: NodeJS.ProcessEnv; config: CliConfig }): string {
+  const explicitOrigin = options.cliValue ?? options.environment?.SERVICE_LASSO_CORE_URL;
+  if (explicitOrigin) return normalizeCoreUrl(explicitOrigin);
   const connection = resolveConnectionName({ cliValue: options.connection, environment: options.environment, config: options.config });
   if (connection && !options.config.connections?.[connection]) throw new CliError("unknown_connection", "The selected Core connection is not saved locally.");
-  const candidate = options.cliValue ?? options.environment?.SERVICE_LASSO_CORE_URL ?? (connection ? options.config.connections?.[connection]?.coreUrl : undefined) ?? options.config.coreUrl ?? DEFAULT_CORE_URL;
+  const candidate = (connection ? options.config.connections?.[connection]?.coreUrl : undefined) ?? options.config.coreUrl ?? DEFAULT_CORE_URL;
   return normalizeCoreUrl(candidate);
 }
 

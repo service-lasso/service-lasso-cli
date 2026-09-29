@@ -47,6 +47,8 @@ test("selects saved named connections after flags and environment without persis
   assert.equal(resolveConnectionName({ environment: { SERVICE_LASSO_CONNECTION: "remote" }, config: saved }), "remote");
   assert.equal(resolveCoreUrl({ connection: "local", environment: { SERVICE_LASSO_CORE_URL: "https://override.example" }, config: saved }), "https://override.example");
   assert.equal(resolveCoreUrl({ environment: { SERVICE_LASSO_CONNECTION: "remote" }, config: saved }), "https://core.example");
+  assert.equal(resolveCoreUrl({ cliValue: "https://flag.example", connection: "missing", config: saved }), "https://flag.example");
+  assert.equal(resolveCoreUrl({ connection: "missing", environment: { SERVICE_LASSO_CORE_URL: "https://environment.example" }, config: saved }), "https://environment.example");
   await writeFile(path, JSON.stringify({ connections: { remote: { coreUrl: "https://core.example", token: "secret" } } }), "utf8");
   await assert.rejects(() => loadConfig(path), { code: "invalid_config" });
 });
