@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 
-const workflow = await readFile(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
+const workflow = (await readFile(new URL("../.github/workflows/release.yml", import.meta.url), "utf8")).replace(/\r\n/g, "\n");
 const match = workflow.match(/- id: identity\n\s+shell: bash\n\s+run: \|\n(?<script>(?: {10}.*\n)+?) {6}- name: Build immutable candidate archive/);
 if (!match?.groups?.script) throw new Error("Candidate identity shell block was not found.");
 const script = match.groups.script.replace(/^ {10}/gm, "");
