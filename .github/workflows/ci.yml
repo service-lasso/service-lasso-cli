@@ -11,8 +11,12 @@ permissions:
 
 jobs:
   test:
-    name: Node 22 CLI checks
-    runs-on: ubuntu-latest
+    name: Node 22 CLI checks (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5

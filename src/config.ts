@@ -29,6 +29,27 @@ export function normalizeCoreUrl(value: string): string {
   return url.origin;
 }
 
+function isLoopbackHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (host === "localhost" || host === "::1" || host === "0:0:0:0:0:0:0:1") return true;
+  const octets = host.split(".");
+  return octets.length === 4 && octets[0] === "127" && octets.every((octet) => /^\d{1,3}$/.test(octet) && Number(octet) <= 255);
+}
+
+/**
+ * A local-admin token must never cross a cleartext network connection. HTTP is
+ * retained only for the local Core defaults and other explicit loopback use.
+ */
+export function assertCoreTokenTransport(baseUrl: string, token: string | undefined): void {
+  if (!token) return;
+  const normalized = new URL(normalizeCoreUrl(baseUrl));
+  if (normalized.protocol === "https:" || isLoopbackHost(normalized.hostname)) return;
+  throw new CliError(
+    "insecure_core_token_transport",
+    "SERVICE_LASSO_CORE_TOKEN requires an HTTPS Core URL unless the HTTP origin is loopback.",
+  );
+}
+
 export async function loadConfig(path = configPath()): Promise<CliConfig> {
   try {
     const raw = await readFile(path, "utf8");
@@ -60,4 +81,15 @@ export async function saveConfig(config: CliConfig, path = configPath()): Promis
 export function resolveCoreUrl(options: { cliValue?: string; environment?: NodeJS.ProcessEnv; config: CliConfig }): string {
   const candidate = options.cliValue ?? options.environment?.SERVICE_LASSO_CORE_URL ?? options.config.coreUrl ?? DEFAULT_CORE_URL;
   return normalizeCoreUrl(candidate);
+}
+
+/**
+ * Core accepts a local-admin token as a Bearer credential. Keep it environment
+ * only so CI can inject a secret without adding it to arguments or config.
+ */
+export function resolveCoreToken(environment: NodeJS.ProcessEnv = process.env): string | undefined {
+  const token = environment.SERVICE_LASSO_CORE_TOKEN;
+  if (token === undefined || token.length === 0) return undefined;
+  if (/\s/.test(token)) throw new CliError("invalid_core_token", "SERVICE_LASSO_CORE_TOKEN must not contain whitespace.");
+  return token;
 }

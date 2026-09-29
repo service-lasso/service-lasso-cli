@@ -1,6 +1,6 @@
 # Service Lasso CLI
 
-`service-lasso` is an automation-first client for scaffolding service packages
+`service-lassoctl` is an automation-first client for scaffolding service packages
 and operating a running Service Lasso Core instance through its public HTTP
 API.
 
@@ -15,17 +15,32 @@ npm run start -- --help
 ## Commands
 
 ```text
-service-lasso config path
-service-lasso config get core-url
-service-lasso config set core-url http://127.0.0.1:17883
-service-lasso instance status
-service-lasso service list
-service-lasso service start <service-id> --confirm
-service-lasso service init <service-id> --directory ./lasso-example
+service-lassoctl config path
+service-lassoctl config get core-url
+service-lassoctl config set core-url http://127.0.0.1:17883
+service-lassoctl instance status
+service-lassoctl instance inspect --json
+service-lassoctl service list
+service-lassoctl service start <service-id> --confirm
+service-lassoctl service init <service-id> --directory ./lasso-example
 ```
 
 `SERVICE_LASSO_CORE_URL` overrides the saved Core URL. Mutation commands always
 require `--confirm`; the CLI does not prompt or silently mutate Core.
+
+For a remote Core whose policy accepts local-admin-token authentication, inject
+`SERVICE_LASSO_CORE_TOKEN` through the CI secret mechanism and use an HTTPS
+Core URL. The token is sent as a Bearer credential, is never accepted as a
+command-line argument, and is never saved in the local config file or printed
+by the CLI. The CLI rejects a token for non-loopback HTTP origins; its local
+`http://127.0.0.1:17883` default remains supported. `instance inspect` reads
+the documented Core health, instance, and capability endpoints without
+mutation.
+
+Service Lasso Core retains the `service-lasso` executable for its local-runtime
+operator workflows. This package intentionally installs `service-lassoctl` and
+does not provide a `service-lasso` alias. See the [Core compatibility
+contract](docs/core-compatibility.md).
 
 ## Foundation scope and machine contract
 

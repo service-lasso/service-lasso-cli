@@ -1,15 +1,18 @@
 import { CliError } from "./errors.js";
+import { assertCoreTokenTransport } from "./config.js";
 
 export type FetchLike = typeof fetch;
 
 export interface CoreClientOptions {
   baseUrl: string;
+  token?: string;
   fetch?: FetchLike;
 }
 
 export class CoreClient {
   private readonly requestFetch: FetchLike;
   public constructor(private readonly options: CoreClientOptions) {
+    assertCoreTokenTransport(options.baseUrl, options.token);
     this.requestFetch = options.fetch ?? fetch;
   }
 
@@ -19,6 +22,15 @@ export class CoreClient {
 
   public async services(): Promise<unknown> {
     return this.request("/api/services");
+  }
+
+  public async inspect(): Promise<unknown> {
+    const [health, instance, capabilities] = await Promise.all([
+      this.health(),
+      this.request("/api/runtime/instance"),
+      this.request("/api/runtime/capabilities"),
+    ]);
+    return { health, instance, capabilities };
   }
 
   public async lifecycle(serviceId: string, action: "start" | "stop" | "restart"): Promise<unknown> {
@@ -33,10 +45,21 @@ export class CoreClient {
   private async request(path: string, init?: RequestInit): Promise<unknown> {
     let response: Response;
     try {
-      response = await this.requestFetch(new URL(path, this.options.baseUrl), init);
+      response = await this.requestFetch(new URL(path, this.options.baseUrl), {
+        ...init,
+        // A redirect can change the origin after the token transport check.
+        // Reject it rather than allowing fetch to replay a request elsewhere.
+        redirect: "error",
+        headers: {
+          accept: "application/json",
+          ...(this.options.token ? { authorization: `Bearer ${this.options.token}` } : {}),
+          ...init?.headers,
+        },
+      });
     } catch (error) {
-      const detail = error instanceof Error ? error.message : "network request failed";
-      throw new CliError("core_unreachable", `Could not reach Service Lasso Core: ${detail}`, "Set SERVICE_LASSO_CORE_URL or run `service-lasso config set core-url <url>`.");
+      // Fetch implementations can include request headers in their errors. Do
+      // not expose their detail because it may contain the configured token.
+      throw new CliError("core_unreachable", "Could not reach Service Lasso Core.", "Set SERVICE_LASSO_CORE_URL or run `service-lassoctl config set core-url <url>`.");
     }
     const raw = await response.text();
     if (!response.ok) {
