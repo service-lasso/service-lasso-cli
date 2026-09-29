@@ -68,9 +68,9 @@ jobs:
           set -euo pipefail
           npm run smoke:candidate -- --directory release-assets --expected-version "${{ needs.build.outputs.candidate_version }}" --expected-source-sha "${{ needs.build.outputs.source_sha }}"
 
-  tag-candidate:
+  publish-candidate:
     needs: [build, smoke]
-    name: Create exact candidate tag after smoke
+    name: Publish exact prerelease candidate after smoke
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -81,7 +81,7 @@ jobs:
         with:
           name: service-lassoctl-${{ needs.build.outputs.candidate_version }}
           path: release-assets
-      - name: Verify candidate identity and tag the tested commit
+      - name: Verify candidate identity and publish the tested bytes
         shell: bash
         env:
           CANDIDATE_VERSION: ${{ needs.build.outputs.candidate_version }}
@@ -94,7 +94,19 @@ jobs:
           existing="$(git ls-remote --refs origin "refs/tags/${tag}" | awk '{print $1}')"
           if [ -n "$existing" ]; then
             test "$existing" = "$SOURCE_SHA"
+          else
+            git tag --annotate "$tag" "$SOURCE_SHA" --message "Service Lasso CLI candidate ${CANDIDATE_VERSION}"
+            git push origin "refs/tags/${tag}"
+          fi
+          if gh release view "$tag" --json tagName,targetCommitish,isPrerelease,isDraft >/tmp/release.json 2>/dev/null; then
+            TAG="$tag" node -e 'const fs=require("fs"); const release=JSON.parse(fs.readFileSync("/tmp/release.json", "utf8")); if(release.tagName!==process.env.TAG || release.targetCommitish!==process.env.SOURCE_SHA || !release.isPrerelease || release.isDraft) process.exit(1)'
+            mkdir release-verify
+            gh release download "$tag" --dir release-verify --pattern "service-lassoctl-*.tgz" --pattern candidate.json --pattern SHA256SUMS.txt
+            (cd release-verify && sha256sum --check SHA256SUMS.txt)
             exit 0
           fi
-          git tag --annotate "$tag" "$SOURCE_SHA" --message "Service Lasso CLI candidate ${CANDIDATE_VERSION}"
-          git push origin "refs/tags/${tag}"
+          gh release create "$tag" release-assets/service-lassoctl-*.tgz release-assets/candidate.json release-assets/SHA256SUMS.txt \
+            --target "$SOURCE_SHA" \
+            --title "Service Lasso CLI candidate ${CANDIDATE_VERSION}" \
+            --prerelease \
+            --notes "Checksum-bound Node 22 candidate for Core #1461 review. This prerelease is not GA, npm publication, deployment, or Core qualification."

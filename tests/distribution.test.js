@@ -23,10 +23,13 @@ test("candidate packager creates a checksum-bound Node 22 archive and clean-cons
   }
 });
 
-test("candidate workflow is manual develop-only and never creates a GitHub release", async () => {
+test("candidate workflow is manual develop-only and publishes a prerelease only after smoke", async () => {
   const workflow = await readFile(new URL("../.github/workflows/candidate.yml", import.meta.url), "utf8");
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /github\.ref == 'refs\/heads\/develop'/);
-  assert.match(workflow, /tag-candidate:/);
-  assert.doesNotMatch(workflow, /action-gh-release|gh release|softprops\/action-gh-release/);
+  assert.match(workflow, /publish-candidate:/);
+  assert.match(workflow, /needs: \[build, smoke\]/);
+  assert.match(workflow, /gh release create/);
+  assert.match(workflow, /--prerelease/);
+  assert.doesNotMatch(workflow, /softprops\/action-gh-release/);
 });

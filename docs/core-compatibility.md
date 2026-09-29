@@ -19,9 +19,9 @@ Issue #6 introduces manually dispatched `develop` candidates rather than an
 automatic published release. Each candidate is a versioned Node 22 package
 archive with a `candidate.json` record and `SHA256SUMS.txt`; its source commit,
 candidate tag, package name, command, supported platforms, archive name and
-SHA-256 are bound together. The workflow uploads those files as run artifacts
-for review. It never creates a GitHub release, publishes npm, or claims Core
-qualification.
+SHA-256 are bound together. After all three clean-consumer smoke jobs pass, the
+manual dispatch publishes those exact files as a clearly labelled GitHub
+prerelease for Core review. It never publishes npm or claims Core qualification.
 
 There is no earlier external executable name to migrate. The package provides
 no `service-lasso` alias because an alias would recreate the installation-order

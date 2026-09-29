@@ -59,9 +59,10 @@ candidate archive. It produces `service-lassoctl-<version>.tgz`,
 `candidate.json`, and `SHA256SUMS.txt`, then runs clean-consumer smoke on
 Windows, Linux, and macOS. The record pins the source commit and candidate tag;
 never select an asset called `latest` for Core packaging. These artifacts do
-not create a GitHub release, publish npm, deploy anything, or establish GA. If
-all three smoke jobs pass, the workflow creates the recorded candidate Git tag
-on that exact source commit; it is an identity marker, not a release.
+do not publish npm, deploy anything, or establish GA. If all three smoke jobs
+pass, the workflow creates the recorded candidate Git tag and a clearly marked
+GitHub prerelease on that exact source commit. The prerelease is durable review
+material for Core #1461, not a GA release.
 
 Extracting the archive alone is insufficient because this is a Node package.
 Install it with Node 22 or newer, for example:
