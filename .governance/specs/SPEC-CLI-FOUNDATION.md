@@ -42,3 +42,6 @@ before a complete create-to-running-service workflow can be implemented.
    consumer directory and verify `service-lassoctl --help`, `--version`, and
    safe Core health/identity reads against a local fixture. This is candidate
    evidence only; it does not publish a release or qualify a packaged Core.
+10. After all smoke jobs pass, the publish job configures the GitHub Actions bot
+    identity locally before it creates the annotated candidate tag; no runner
+    global Git identity is required.

@@ -11,3 +11,6 @@ if (result.error?.code === "ENOENT") {
 } else if (result.status !== 0) {
   throw new Error(`Candidate identity shell syntax is invalid: ${result.stderr || result.stdout}`);
 }
+
+const tagger = workflow.match(/else\n\s+git config user\.name "github-actions\[bot\]"\n\s+git config user\.email "41898282\+github-actions\[bot\]@users\.noreply\.github\.com"\n\s+git tag --annotate/);
+if (!tagger) throw new Error("Candidate publish must configure the GitHub Actions bot identity immediately before creating an annotated tag.");
