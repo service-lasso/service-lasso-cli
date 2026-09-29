@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { access, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { createServiceScaffold, scaffoldFiles, validateServiceId } from "../dist/scaffold.js";
-import { SERVICE_TEMPLATE_IDENTITY, authoringTemplateManifest } from "../dist/template.js";
+import { SERVICE_TEMPLATE_IDENTITY, assertReviewedTemplateChecksum, authoringTemplateManifest, reviewedTemplateBytes } from "../dist/template.js";
 
 test("rejects unsafe service identifiers", () => {
   assert.throws(() => validateServiceId("Bad_ID"), { code: "invalid_service_id" });
@@ -24,6 +25,8 @@ test("plans a scaffold without writes and refuses overwrite", async () => {
 });
 
 test("pins the canonical template identity and emits required lifecycle declarations", () => {
+  assert.doesNotThrow(() => assertReviewedTemplateChecksum());
+  assert.equal(createHash("sha256").update(reviewedTemplateBytes()).digest("hex"), "535b939b39d96b3e72750c8a4c404d88f68e7f94150bc8d42ae6695baf9e1fd4");
   const files = scaffoldFiles({ id: "example-service", directory: "unused" });
   const manifest = JSON.parse(files["service.json"]);
   const reviewed = authoringTemplateManifest();
