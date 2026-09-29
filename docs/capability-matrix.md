@@ -3,7 +3,8 @@
 This matrix binds issue [#1](https://github.com/service-lasso/service-lasso-cli/issues/1)
 to the active `SPEC-CLI-FOUNDATION` slice. "Implemented" means covered by this
 repository's focused tests, not a release or a claim that a remote runtime has
-been qualified.
+been qualified. See [Core compatibility](core-compatibility.md) for the
+external-CLI/Core command boundary and the missing integration contracts.
 
 | Workflow | Status | Contract and boundary |
 | --- | --- | --- |
@@ -17,6 +18,7 @@ been qualified.
 | Durable operation wait/reconcile | Planned | Requires Core durable-operation API and idempotency contract. |
 | Remove, inbox/history and logs | Planned | Requires the owning Core API and data-access contracts. |
 | Shell completion and standalone binaries | Planned | Deferred to the hardening/distribution slice after the command/API contract settles. |
+| Core executable compatibility | Implemented foundation | This package installs `service-lassoctl`; Core retains `service-lasso` for its in-process, local-runtime CLI. |
 
 ## Safety properties in this slice
 
