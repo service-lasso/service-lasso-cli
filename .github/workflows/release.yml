@@ -105,11 +105,31 @@ jobs:
             git tag --annotate "$tag" "$SOURCE_SHA" --message "Service Lasso CLI candidate ${CANDIDATE_VERSION}"
             git push origin "refs/tags/${tag}"
           fi
+          readback_release_assets() {
+            local attempt=1
+            while [ "$attempt" -le 3 ]; do
+              rm -rf release-verify release-download.err
+              mkdir release-verify
+              if gh release download "$tag" --dir release-verify --pattern "service-lassoctl-*.tgz" --pattern candidate.json --pattern SHA256SUMS.txt 2>release-download.err; then
+                node scripts/verify-candidate-release.mjs --expected release-assets --actual release-verify
+                rm -f release-download.err
+                return 0
+              else
+                status=$?
+              fi
+              rm -rf release-verify
+              if ! grep -Eq 'HTTP 5[0-9][0-9]' release-download.err; then
+                cat release-download.err >&2
+                return "$status"
+              fi
+              attempt=$((attempt + 1))
+            done
+            cat release-download.err >&2
+            return 1
+          }
           if gh release view "$tag" --json tagName,targetCommitish,isPrerelease,isDraft >/tmp/release.json 2>/dev/null; then
             TAG="$tag" node -e 'const fs=require("fs"); const release=JSON.parse(fs.readFileSync("/tmp/release.json", "utf8")); if(release.tagName!==process.env.TAG || release.targetCommitish!==process.env.SOURCE_SHA || !release.isPrerelease || release.isDraft) process.exit(1)'
-            mkdir release-verify
-            gh release download "$tag" --dir release-verify --pattern "service-lassoctl-*.tgz" --pattern candidate.json --pattern SHA256SUMS.txt
-            node scripts/verify-candidate-release.mjs --expected release-assets --actual release-verify
+            readback_release_assets
             exit 0
           fi
           gh release create "$tag" release-assets/service-lassoctl-*.tgz release-assets/candidate.json release-assets/SHA256SUMS.txt \
@@ -117,6 +137,4 @@ jobs:
             --title "Service Lasso CLI candidate ${CANDIDATE_VERSION}" \
             --prerelease \
             --notes "Checksum-bound Node 22 candidate for Core #1461 review. This prerelease is not GA, npm publication, deployment, or Core qualification."
-          mkdir release-verify
-          gh release download "$tag" --dir release-verify --pattern "service-lassoctl-*.tgz" --pattern candidate.json --pattern SHA256SUMS.txt
-          node scripts/verify-candidate-release.mjs --expected release-assets --actual release-verify
+          readback_release_assets

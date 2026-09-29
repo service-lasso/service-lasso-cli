@@ -45,6 +45,9 @@ before a complete create-to-running-service workflow can be implemented.
 10. After all smoke jobs pass, the publish job configures the GitHub Actions bot
     identity locally before it creates the annotated candidate tag; no runner
     global Git identity is required.
-11. Named connection selection is deterministic and never stores or prints
+11. Post-publication readback retries only a transient HTTP 5xx asset-download
+    failure, clears partial files before each attempt, and accepts assets only
+    after exact candidate manifest and archive equality verification.
+12. Named connection selection is deterministic and never stores or prints
     credentials; local authoring records a pinned template tag, commit and
     manifest checksum without registration or runtime mutation.

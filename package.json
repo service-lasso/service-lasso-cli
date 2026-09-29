@@ -17,7 +17,8 @@
     "test": "npm run build && node --test tests/**/*.test.js",
     "start": "node dist/index.js",
     "package:candidate": "node scripts/package-candidate.mjs",
-    "smoke:candidate": "node scripts/smoke-candidate.mjs"
+    "smoke:candidate": "node scripts/smoke-candidate.mjs",
+    "test:readback-shell": "node scripts/test-candidate-readback-shell.mjs"
   },
   "files": [
     "dist",
