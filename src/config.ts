@@ -5,12 +5,21 @@ import { CliError } from "./errors.js";
 
 export interface CliConfig {
   coreUrl?: string;
+  defaultConnection?: string;
+  connections?: Record<string, { coreUrl: string }>;
 }
 
 export const DEFAULT_CORE_URL = "http://127.0.0.1:17883";
 
 export function configPath(home = homedir()): string {
   return join(home, ".service-lasso-cli", "config.json");
+}
+
+export function validateConnectionName(name: string): string {
+  if (!/^[a-z][a-z0-9-]{1,63}$/.test(name)) {
+    throw new CliError("invalid_connection_name", "Connection names must use lowercase letters, numbers, and hyphens (2-64 characters).");
+  }
+  return name;
 }
 
 export function normalizeCoreUrl(value: string): string {
@@ -57,11 +66,30 @@ export async function loadConfig(path = configPath()): Promise<CliConfig> {
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       throw new CliError("invalid_config", `Config file is not an object: ${path}`);
     }
-    const coreUrl = (parsed as CliConfig).coreUrl;
+    const config = parsed as CliConfig;
+    const coreUrl = config.coreUrl;
     if (coreUrl !== undefined && typeof coreUrl !== "string") {
       throw new CliError("invalid_config", `Config coreUrl must be a string: ${path}`);
     }
-    return coreUrl ? { coreUrl: normalizeCoreUrl(coreUrl) } : {};
+    if (config.defaultConnection !== undefined && typeof config.defaultConnection !== "string") {
+      throw new CliError("invalid_config", `Config defaultConnection must be a string: ${path}`);
+    }
+    const connections: Record<string, { coreUrl: string }> = {};
+    if (config.connections !== undefined) {
+      if (!config.connections || typeof config.connections !== "object" || Array.isArray(config.connections)) {
+        throw new CliError("invalid_config", `Config connections must be an object: ${path}`);
+      }
+      for (const [name, connection] of Object.entries(config.connections)) {
+        validateConnectionName(name);
+        if (!connection || typeof connection !== "object" || Array.isArray(connection) || Object.keys(connection).length !== 1 || typeof connection.coreUrl !== "string") {
+          throw new CliError("invalid_config", `Config connection entries must contain only coreUrl: ${path}`);
+        }
+        connections[name] = { coreUrl: normalizeCoreUrl(connection.coreUrl) };
+      }
+    }
+    const defaultConnection = config.defaultConnection ? validateConnectionName(config.defaultConnection) : undefined;
+    if (defaultConnection && !connections[defaultConnection]) throw new CliError("invalid_config", `Config defaultConnection must name a saved connection: ${path}`);
+    return { ...(coreUrl ? { coreUrl: normalizeCoreUrl(coreUrl) } : {}), ...(defaultConnection ? { defaultConnection } : {}), ...(Object.keys(connections).length ? { connections } : {}) };
   } catch (error) {
     if (typeof error === "object" && error && "code" in error && (error as { code: string }).code === "ENOENT") return {};
     if (error instanceof CliError) throw error;
@@ -71,15 +99,35 @@ export async function loadConfig(path = configPath()): Promise<CliConfig> {
 }
 
 export async function saveConfig(config: CliConfig, path = configPath()): Promise<void> {
-  const normalized: CliConfig = config.coreUrl ? { coreUrl: normalizeCoreUrl(config.coreUrl) } : {};
+  const normalized: CliConfig = {};
+  if (config.coreUrl) normalized.coreUrl = normalizeCoreUrl(config.coreUrl);
+  if (config.connections) {
+    normalized.connections = {};
+    for (const [name, connection] of Object.entries(config.connections)) {
+      normalized.connections[validateConnectionName(name)] = { coreUrl: normalizeCoreUrl(connection.coreUrl) };
+    }
+  }
+  if (config.defaultConnection) {
+    normalized.defaultConnection = validateConnectionName(config.defaultConnection);
+    if (!normalized.connections?.[normalized.defaultConnection]) throw new CliError("invalid_config", "Default connection must name a saved connection.");
+  }
   await mkdir(dirname(path), { recursive: true });
   const temporary = `${path}.tmp`;
   await writeFile(temporary, `${JSON.stringify(normalized, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
   await rename(temporary, path);
 }
 
-export function resolveCoreUrl(options: { cliValue?: string; environment?: NodeJS.ProcessEnv; config: CliConfig }): string {
-  const candidate = options.cliValue ?? options.environment?.SERVICE_LASSO_CORE_URL ?? options.config.coreUrl ?? DEFAULT_CORE_URL;
+export function resolveConnectionName(options: { cliValue?: string; environment?: NodeJS.ProcessEnv; config: CliConfig }): string | undefined {
+  const candidate = options.cliValue ?? options.environment?.SERVICE_LASSO_CONNECTION ?? options.config.defaultConnection;
+  return candidate ? validateConnectionName(candidate) : undefined;
+}
+
+export function resolveCoreUrl(options: { cliValue?: string; connection?: string; environment?: NodeJS.ProcessEnv; config: CliConfig }): string {
+  const explicitOrigin = options.cliValue ?? options.environment?.SERVICE_LASSO_CORE_URL;
+  if (explicitOrigin) return normalizeCoreUrl(explicitOrigin);
+  const connection = resolveConnectionName({ cliValue: options.connection, environment: options.environment, config: options.config });
+  if (connection && !options.config.connections?.[connection]) throw new CliError("unknown_connection", "The selected Core connection is not saved locally.");
+  const candidate = (connection ? options.config.connections?.[connection]?.coreUrl : undefined) ?? options.config.coreUrl ?? DEFAULT_CORE_URL;
   return normalizeCoreUrl(candidate);
 }
 

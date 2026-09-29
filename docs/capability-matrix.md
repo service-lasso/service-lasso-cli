@@ -8,12 +8,12 @@ external-CLI/Core command boundary and the missing integration contracts.
 
 | Workflow | Status | Contract and boundary |
 | --- | --- | --- |
-| Configured Core origin and token | Implemented | Flag > `SERVICE_LASSO_CORE_URL` > saved config > local default; origins reject credentials, paths and non-HTTP(S) schemes. `SERVICE_LASSO_CORE_TOKEN` is environment-only, never saved or printed, and may travel only over HTTPS or loopback HTTP. |
+| Configured Core origin and token | Implemented | `--core-url` > `SERVICE_LASSO_CORE_URL` > `--connection` / `SERVICE_LASSO_CONNECTION` / saved default > legacy saved config > local default. Saved connections contain only origins; `SERVICE_LASSO_CORE_TOKEN` is environment-only, never saved or printed, and may travel only over HTTPS or loopback HTTP. |
 | Read Core health, identity and capabilities | Implemented | `GET /api/health`, `GET /api/runtime/instance`, and `GET /api/runtime/capabilities`; JSON-only response and safe HTTP-status errors. |
 | List services | Implemented | `GET /api/services`; safe, read-only discovery. |
 | Start, stop, restart | Implemented foundation | `POST /api/services/{id}/{action}` only after local `--confirm`; server-side permission and confirmation contracts remain authoritative. |
-| Local authoring scaffold | Implemented foundation | Creates only a caller-selected absent directory; `--dry-run` has no writes. Generated manifest is a starter and must be completed against the versioned service-template before registration. |
-| Authentication and named connections | Planned | Requires an agreed Core auth/profile contract; credentials will not be placed in arguments or output. |
+| Local authoring scaffold | Implemented foundation | Creates only a caller-selected absent directory; `--dry-run` has no writes. It records the reviewed `service-template` tag, commit and manifest SHA-256, and emits required lifecycle/dependency/health fields. Core registration is still required before runtime use. |
+| Authentication and named connections | Partial | Named local and remote origin profiles are implemented. Credentials remain environment-only; Core identity-provider profile contracts remain required. |
 | Validate, register, transfer and install | Planned | Requires Core/template registration and remote-acquisition contracts; no shared-path assumption is made. |
 | Durable operation wait/reconcile | Planned | Requires Core durable-operation API and idempotency contract. |
 | Remove, inbox/history and logs | Planned | Requires the owning Core API and data-access contracts. |

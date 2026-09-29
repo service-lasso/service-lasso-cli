@@ -3,7 +3,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { assertCoreTokenTransport, configPath, loadConfig, normalizeCoreUrl, resolveCoreToken, resolveCoreUrl, saveConfig } from "../dist/config.js";
+import { assertCoreTokenTransport, configPath, loadConfig, normalizeCoreUrl, resolveConnectionName, resolveCoreToken, resolveCoreUrl, saveConfig } from "../dist/config.js";
 
 test("normalizes a safe Core origin", () => {
   assert.equal(normalizeCoreUrl("https://core.example/"), "https://core.example");
@@ -36,5 +36,19 @@ test("environment wins over saved config and config persists atomically", async 
   assert.deepEqual(await loadConfig(path), { coreUrl: "https://saved.example" });
   assert.equal(resolveCoreUrl({ environment: { SERVICE_LASSO_CORE_URL: "https://env.example" }, config: await loadConfig(path) }), "https://env.example");
   await writeFile(path, "{bad", "utf8");
+  await assert.rejects(() => loadConfig(path), { code: "invalid_config" });
+});
+
+test("selects saved named connections after flags and environment without persisting credentials", async () => {
+  const home = await mkdtemp(join(tmpdir(), "lasso-cli-profiles-"));
+  const path = configPath(home);
+  await saveConfig({ connections: { local: { coreUrl: "http://127.0.0.1:17883" }, remote: { coreUrl: "https://core.example" } }, defaultConnection: "local" }, path);
+  const saved = await loadConfig(path);
+  assert.equal(resolveConnectionName({ environment: { SERVICE_LASSO_CONNECTION: "remote" }, config: saved }), "remote");
+  assert.equal(resolveCoreUrl({ connection: "local", environment: { SERVICE_LASSO_CORE_URL: "https://override.example" }, config: saved }), "https://override.example");
+  assert.equal(resolveCoreUrl({ environment: { SERVICE_LASSO_CONNECTION: "remote" }, config: saved }), "https://core.example");
+  assert.equal(resolveCoreUrl({ cliValue: "https://flag.example", connection: "missing", config: saved }), "https://flag.example");
+  assert.equal(resolveCoreUrl({ connection: "missing", environment: { SERVICE_LASSO_CORE_URL: "https://environment.example" }, config: saved }), "https://environment.example");
+  await writeFile(path, JSON.stringify({ connections: { remote: { coreUrl: "https://core.example", token: "secret" } } }), "utf8");
   await assert.rejects(() => loadConfig(path), { code: "invalid_config" });
 });
