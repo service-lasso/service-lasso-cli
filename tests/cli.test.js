@@ -13,6 +13,7 @@ test("help is keyboard-oriented and discoverable", () => {
   assert.equal(service.status, 0);
   assert.match(root.stdout, /instance/);
   assert.match(root.stdout, /service-lassoctl/);
+  assert.match(root.stdout, /connection/);
   assert.match(service.stdout, /init/);
 });
 

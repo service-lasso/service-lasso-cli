@@ -1,6 +1,7 @@
 import { access, mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { CliError } from "./errors.js";
+import { assertCanonicalTemplateManifest, canonicalTemplateManifest, SERVICE_TEMPLATE_IDENTITY } from "./template.js";
 
 export interface ServiceScaffoldOptions {
   id: string;
@@ -29,33 +30,12 @@ function titleCase(id: string): string {
 export function scaffoldFiles(options: ServiceScaffoldOptions): Record<string, string> {
   const id = validateServiceId(options.id);
   const name = options.name?.trim() || titleCase(id);
+  const manifest = canonicalTemplateManifest(id, name);
+  assertCanonicalTemplateManifest(manifest);
   return {
-    "service.json": `${JSON.stringify({
-      id,
-      name,
-      description: `Service Lasso package for ${name}.`,
-      enabled: false,
-      version: "0.1.0",
-      logoutput: true,
-      icon: [{ provider: "lucide", name: "box" }],
-      meta: {
-        repository: { type: "git", url: "https://github.com/service-lasso/lasso-REPLACE-ME.git" },
-        tags: ["service-lasso", id],
-      },
-      actions: {
-        install: { description: "Prepare the package runtime." },
-        config: { description: "Materialize local runtime configuration." },
-        start: { description: "Start the managed service." },
-        stop: { description: "Stop the managed service gracefully." },
-      },
-      execconfig: {
-        execcwd: "runtime",
-        executable: "REPLACE-ME",
-        depend_on: [],
-      },
-      healthchecks: [{ id: "process-ready", type: "process" }],
-    }, null, 2)}\n`,
-    "README.md": `# ${name}\n\nThis is a Service Lasso package scaffolded by \`service-lasso service init\`.\n\nBefore enabling it, replace every \`REPLACE-ME\` value, provide the real runtime package, declare supported release artifacts and checksums, and prove install/start/health in a clean consumer workspace.\n`,
+    "service.json": `${JSON.stringify(manifest, null, 2)}\n`,
+    ".service-lasso-template.json": `${JSON.stringify(SERVICE_TEMPLATE_IDENTITY, null, 2)}\n`,
+    "README.md": `# ${name}\n\nThis project was authored from the exact Service Lasso template release \`${SERVICE_TEMPLATE_IDENTITY.tag}\` at \`${SERVICE_TEMPLATE_IDENTITY.commit}\`. Its canonical \`service.json\` SHA-256 is \`${SERVICE_TEMPLATE_IDENTITY.serviceJsonSha256}\`.\n\nBefore enabling or registering it, replace every \`REPLACE-ME\` value, provide the real runtime package, declare supported release artifacts and checksums, and prove install/start/health in a clean consumer workspace. This command creates files only: it does not register, install, start, or contact Core.\n`,
     "runtime/.gitkeep": "",
   };
 }

@@ -2,7 +2,7 @@
 import { Command } from "commander";
 import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { configPath, loadConfig, resolveCoreToken, resolveCoreUrl, saveConfig } from "./config.js";
+import { configPath, loadConfig, resolveCoreToken, resolveCoreUrl, saveConfig, validateConnectionName } from "./config.js";
 import { CoreClient } from "./core-client.js";
 import { asCliError, CliError } from "./errors.js";
 import { createServiceScaffold } from "./scaffold.js";
@@ -20,10 +20,10 @@ function print(value: unknown, json: boolean, sink = output): void {
   else sink.write(`${JSON.stringify(value, null, 2)}\n`);
 }
 
-async function client(coreUrl?: string): Promise<CoreClient> {
+async function client(coreUrl?: string, connection?: string): Promise<CoreClient> {
   const config = await loadConfig();
   return new CoreClient({
-    baseUrl: resolveCoreUrl({ cliValue: coreUrl, environment: process.env, config }),
+    baseUrl: resolveCoreUrl({ cliValue: coreUrl, connection, environment: process.env, config }),
     token: resolveCoreToken(),
   });
 }
@@ -39,6 +39,7 @@ export function createProgram(): Command {
     .description("Automation-first service authoring and Service Lasso Core operations.")
     .version("0.1.0")
     .option("--core-url <url>", "Service Lasso Core origin; overrides environment and saved config")
+    .option("--connection <name>", "saved Core connection; overrides environment and default connection")
     .showSuggestionAfterError();
 
   const config = program.command("config").description("Read and write local CLI configuration.");
@@ -54,26 +55,48 @@ export function createProgram(): Command {
     print({ key, value: (await loadConfig()).coreUrl, path: configPath() }, Boolean(options.json));
   });
 
+  const connection = program.command("connection").description("Manage named local Core origins without credentials.");
+  connection.command("list").option("--json", "print JSON").description("List saved connection names and origins.").action(async (options: { json?: boolean }) => {
+    const saved = await loadConfig();
+    const values = Object.entries(saved.connections ?? {}).sort(([left], [right]) => left.localeCompare(right)).map(([name, value]) => ({ name, coreUrl: value.coreUrl, default: saved.defaultConnection === name }));
+    print(values, Boolean(options.json));
+  });
+  connection.command("set").argument("<name>", "connection name").argument("<core-url>", "Core origin").option("--json", "print JSON").description("Save a named Core origin; credentials are never accepted.").action(async (name: string, coreUrl: string, options: { json?: boolean }) => {
+    const saved = await loadConfig();
+    const safeName = validateConnectionName(name);
+    const connections = { ...(saved.connections ?? {}), [safeName]: { coreUrl } };
+    await saveConfig({ ...saved, connections, defaultConnection: saved.defaultConnection ?? safeName });
+    const updated = await loadConfig();
+    print({ name: safeName, coreUrl: updated.connections?.[safeName]?.coreUrl, default: updated.defaultConnection === safeName }, Boolean(options.json));
+  });
+  connection.command("use").argument("<name>", "saved connection name").option("--json", "print JSON").description("Set the default saved Core connection.").action(async (name: string, options: { json?: boolean }) => {
+    const saved = await loadConfig();
+    const safeName = validateConnectionName(name);
+    if (!saved.connections?.[safeName]) throw new CliError("unknown_connection", "The selected Core connection is not saved locally.");
+    await saveConfig({ ...saved, defaultConnection: safeName });
+    print({ name: safeName, default: true }, Boolean(options.json));
+  });
+
   const instance = program.command("instance").description("Read a configured Core instance.");
   instance.command("status").description("Read Core health.").option("--json", "print JSON").action(async (options: { json?: boolean }) => {
-    const { coreUrl } = program.opts<{ coreUrl?: string }>();
-    print(await (await client(coreUrl)).health(), Boolean(options.json));
+    const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
+    print(await (await client(coreUrl, connection)).health(), Boolean(options.json));
   });
   instance.command("inspect").description("Read Core health, instance identity and API capabilities.").option("--json", "print JSON").action(async (options: { json?: boolean }) => {
-    const { coreUrl } = program.opts<{ coreUrl?: string }>();
-    print(await (await client(coreUrl)).inspect(), Boolean(options.json));
+    const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
+    print(await (await client(coreUrl, connection)).inspect(), Boolean(options.json));
   });
 
   const service = program.command("service").description("Scaffold and manage services.");
   service.command("list").description("List services from Core.").option("--json", "print JSON").action(async (options: { json?: boolean }) => {
-    const { coreUrl } = program.opts<{ coreUrl?: string }>();
-    print(await (await client(coreUrl)).services(), Boolean(options.json));
+    const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
+    print(await (await client(coreUrl, connection)).services(), Boolean(options.json));
   });
   for (const action of ["start", "stop", "restart"] as const) {
     service.command(action).argument("<service-id>", "managed service id").option("--confirm", "confirm this mutation").option("--json", "print JSON").description(`${action[0].toUpperCase()}${action.slice(1)} a managed service.`).action(async (serviceId: string, options: { confirm?: boolean; json?: boolean }) => {
       requireConfirmation(options);
-      const { coreUrl } = program.opts<{ coreUrl?: string }>();
-      print(await (await client(coreUrl)).lifecycle(serviceId, action), Boolean(options.json));
+      const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
+      print(await (await client(coreUrl, connection)).lifecycle(serviceId, action), Boolean(options.json));
     });
   }
   service.command("init").argument("<service-id>", "lowercase service id").option("--directory <path>", "new package directory").option("--name <name>", "display name").option("--dry-run", "show files without creating them").option("--json", "print JSON").description("Create a non-destructive service-package starter.").action(async (serviceId: string, options: { directory?: string; name?: string; dryRun?: boolean; json?: boolean }) => {

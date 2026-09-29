@@ -18,6 +18,10 @@ npm run start -- --help
 service-lassoctl config path
 service-lassoctl config get core-url
 service-lassoctl config set core-url http://127.0.0.1:17883
+service-lassoctl connection set local http://127.0.0.1:17883
+service-lassoctl connection set remote https://core.example
+service-lassoctl connection use remote
+service-lassoctl --connection local instance status
 service-lassoctl instance status
 service-lassoctl instance inspect --json
 service-lassoctl service list
@@ -25,7 +29,10 @@ service-lassoctl service start <service-id> --confirm
 service-lassoctl service init <service-id> --directory ./lasso-example
 ```
 
-`SERVICE_LASSO_CORE_URL` overrides the saved Core URL. Mutation commands always
+Core resolution is deterministic: `--core-url`, then `SERVICE_LASSO_CORE_URL`, then
+the selected `--connection` / `SERVICE_LASSO_CONNECTION` / saved default, then the
+legacy saved origin and local default. Named connections store only Core origins;
+credentials remain environment-only. Mutation commands always
 require `--confirm`; the CLI does not prompt or silently mutate Core.
 
 For a remote Core whose policy accepts local-admin-token authentication, inject
@@ -36,6 +43,14 @@ by the CLI. The CLI rejects a token for non-loopback HTTP origins; its local
 `http://127.0.0.1:17883` default remains supported. `instance inspect` reads
 the documented Core health, instance, and capability endpoints without
 mutation.
+
+`service init` is based on the pinned `service-template` release
+`2026.5.8-d2241fe` (commit `d2241fe9b5fc477f14e99adb1836825de2c7a767`) and
+writes its identity and canonical manifest SHA-256 to
+`.service-lasso-template.json`. It makes an absent local directory only; it does
+not register, install, or start a service. The generated manifest has explicit
+lifecycle, dependency, and process-health declarations, but registration remains
+subject to Core's contract in issue #1463.
 
 Service Lasso Core retains the `service-lasso` executable for its local-runtime
 operator workflows. This package intentionally installs `service-lassoctl` and
