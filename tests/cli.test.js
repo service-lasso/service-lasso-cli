@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 const cli = [process.execPath, "dist/index.js"];
 
@@ -21,8 +22,7 @@ test("package exposes a command distinct from Core's service-lasso executable", 
 });
 
 test("installed package bin executes through the Unix-compatible entrypoint path", () => {
-  const packageRoot = new URL("..", import.meta.url);
-  const result = spawnSync(process.execPath, [new URL("dist/index.js", packageRoot).pathname, "--version"], { encoding: "utf8" });
+  const result = spawnSync(process.execPath, [fileURLToPath(new URL("../dist/index.js", import.meta.url)), "--version"], { encoding: "utf8" });
   assert.equal(result.status, 0);
   assert.equal(result.stdout.trim(), "0.1.0");
 });
