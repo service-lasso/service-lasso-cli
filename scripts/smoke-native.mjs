@@ -14,8 +14,14 @@ function nodeFreeEnvironment(extra = {}) {
   const environment = { ...process.env, ...extra };
   delete environment.NODE_OPTIONS;
   delete environment.NODE_PATH;
-  if (process.platform === "win32") environment.Path = `${process.env.SystemRoot}\\System32;${process.env.SystemRoot}`;
-  else environment.PATH = "/usr/bin:/bin";
+  if (process.platform === "win32") {
+    // Windows environment variable names are case-insensitive. Retaining an
+    // inherited PATH alongside Path lets Node resolve the former, leaving
+    // `node` available to the smoke process on hosted Windows runners.
+    delete environment.PATH;
+    delete environment.Path;
+    environment.Path = `${process.env.SystemRoot}\\System32;${process.env.SystemRoot}`;
+  } else environment.PATH = "/usr/bin:/bin";
   return environment;
 }
 
