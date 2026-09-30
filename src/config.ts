@@ -141,3 +141,15 @@ export function resolveCoreToken(environment: NodeJS.ProcessEnv = process.env): 
   if (/\s/.test(token)) throw new CliError("invalid_core_token", "SERVICE_LASSO_CORE_TOKEN must not contain whitespace.");
   return token;
 }
+
+/**
+ * The released-service registration API uses Core's local-admin header rather
+ * than the general Bearer-token adapter. Keep the value environment-only so a
+ * CI secret never becomes a command argument or saved connection property.
+ */
+export function resolveLocalAdminToken(environment: NodeJS.ProcessEnv = process.env): string | undefined {
+  const token = environment.SERVICE_LASSO_CLI_LOCAL_ADMIN_TOKEN;
+  if (token === undefined || token.length === 0) return undefined;
+  if (/\s/.test(token)) throw new CliError("invalid_local_admin_token", "SERVICE_LASSO_CLI_LOCAL_ADMIN_TOKEN must not contain whitespace.");
+  return token;
+}

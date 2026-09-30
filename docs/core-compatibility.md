@@ -37,14 +37,16 @@ external command name ever changes.
 | `GET /api/services` | Source-built Core route; dependency-injected client test | No live Core response-schema or permission evidence. |
 | `GET /api/runtime/instance` and `GET /api/runtime/capabilities` | Source-built Core routes; dependency-injected client test | No packaged-Core or remote-auth qualification. |
 | `POST /api/services/{id}/{action}` | Core source route; unit transport test; local `--confirm` gate | No durable-operation or idempotency evidence. |
+| `POST /api/runtime/actions/importService` and `GET /api/operator/operations/{operationId}` | Core `develop` `387726b` / merged #1464; Issue #18 focused CLI transport fixture checks | `service register` accepts only release references and has no caller-path, bytes, transfer, install or lifecycle behavior. Packaged external-CLI and hosted exact-head qualification remain open. |
 | `SERVICE_LASSO_CORE_TOKEN` Bearer credential | Core `develop` source accepts the local-admin secret from `Authorization: Bearer`; this client keeps it environment-only and sends it only to HTTPS origins or loopback HTTP. | Remote token authentication depends on Core policy: it is unavailable when Core enforces SSO. Named profiles and non-local-admin identity-provider contracts remain unimplemented. |
 | Named origin profiles and authoring scaffold | Local configuration/filesystem tests; pinned `service-template` tag `2026.5.8-d2241fe`, commit and canonical manifest checksum | Profiles do not supply an identity-provider credential flow. Generated projects are not registered; Core #1463 owns the registration/import contract. |
 
-Core exposes `GET /api/runtime/actions/importService/plan`, but the current
-`POST /api/runtime/actions/*` implementation does not accept `importService`.
-The plan route neither transfers a caller-local artifact nor performs
-registration. This CLI therefore deliberately has no `service register` or
-`service install` command.
+Core `develop` `387726b` now accepts released-service registration at
+`POST /api/runtime/actions/importService` and exposes actor-scoped durable
+readback at `GET /api/operator/operations/{operationId}`. This CLI consumes
+only that release-reference contract with the environment-only
+`SERVICE_LASSO_CLI_LOCAL_ADMIN_TOKEN` header. It deliberately has no caller
+filesystem, staged-byte, transfer, install or lifecycle workflow.
 
 Issue #16 is source-built CLI-to-source-built Core evidence only: it starts the
 pinned Core source in a disposable loopback runtime and uses the compiled CLI
@@ -116,11 +118,11 @@ integration test against a supported running instance.
 | Framework evaluation | Implemented in ADR-001 | None for the foundation decision. |
 | Noninteractive versioned-template project creation | Partial | Local scaffold is deterministic, safe, and pins the reviewed template tag/commit/checksum; direct Core registration validation still requires #1463. |
 | Preserve existing files and reject invalid inputs | Implemented foundation | Local scaffold tests cover absence and invalid IDs; no runtime mutation occurs. |
-| Add service through supported API | Blocked | No Core HTTP registration/import mutation exists. |
+| Add released service through supported API | Partial | Issue #18 consumes the approved release-reference registration route. Full generated/existing local-service input remains outside the contract. |
 | Remote client-local input transfer | Blocked | No acquisition/upload contract exists. |
 | Registration, install, setup, start and health independently composable | Partial | Health, list and start/stop/restart adapters exist; registration/install/setup contract remains unimplemented. |
-| Duplicate identity and retry safety | Blocked | Requires registration conflict, idempotency and reconciliation contract. |
-| Authentication, permission and confirmation | Partial | Environment-only local-admin Bearer token and named origin profiles exist; identity-provider client flow remains absent. |
+| Duplicate identity and retry safety | Partial | Core's registration idempotency, conflict result and actor-scoped operation readback are exposed by Issue #18. Lifecycle and full workflow retry semantics remain open. |
+| Authentication, permission and confirmation | Partial | Registration uses the environment-only `x-service-lasso-admin-token` contract; the existing general Core adapter uses an environment-only Bearer token. Identity-provider client flow remains absent. |
 | JSON, stdout/stderr, exits and no-prompt behavior | Implemented foundation | Local focused tests; no packaged consumer evidence. |
 | Durable IDs, bounded wait and reconciliation | Blocked | No agreed lifecycle durable-operation API. |
 | Removal and retained-data effects | Blocked | No agreed public deregistration/removal contract. |

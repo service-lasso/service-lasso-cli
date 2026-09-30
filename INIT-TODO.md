@@ -17,7 +17,8 @@
   service while startup is suppressed. The source-built CLI-to-Core proof is
   separate from checksum-bound CLI candidate distribution evidence and creates
   no registration, lifecycle, credentials, or retained runtime state.
-- [ ] Complete Issue #1's roadmap epic after Core publishes the registration,
-  authentication, remote-acquisition and durable-operation contracts. The
-  foundation slice is tracked in `SPEC-CLI-FOUNDATION.md`; its exact boundaries
-  are maintained in `docs/capability-matrix.md`.
+- [ ] Complete Issue #1 through bounded slices. Issue #18 implements the
+  released-service registration/readback contract; transfer, install,
+  lifecycle, distribution qualification and GA remain open. The active
+  boundaries are maintained in `SPEC-CLI-FOUNDATION.md` and
+  `docs/capability-matrix.md`.
