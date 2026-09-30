@@ -23,4 +23,7 @@
   boundaries are maintained in `SPEC-CLI-FOUNDATION.md` and
   `docs/capability-matrix.md`.
 - [ ] Issue #22: implement `SPEC-CLI-DURABLE-OPERATIONS` external durable
-  operator slice; record fixture evidence separately from real-Core acceptance.
+  operator slice against provisional Core `454d1590698a36194847755a4aabc4a59d6c5ec4`.
+  Record compiled external-CLI to source-built Core evidence with disposable
+  JWT-authenticated fixtures separately from merged-Core, packaged-Core,
+  release, deployment, and GA qualification.
