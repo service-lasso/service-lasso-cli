@@ -30,4 +30,8 @@
 - [x] Evaluate the Issue #1 framework/language candidates in child Issue #20 and record the foundation decision in `docs/decisions/ADR-001-cli-framework.md`.
 - [x] Complete Issue #24 `CLI-COMPLETION`: deterministic Commander-derived PowerShell, bash and zsh completion source, safe `--` handling, concise install/CI examples and focused shell evidence. This is a bounded Issue #1 automation/documentation acceptance; no native binary, release or full workflow claim follows.
 - [ ] Issue #26: directly validate checksum-bound Node 22.23.2 SEA binaries on Windows x64, Linux x64 and macOS arm64. Each target needs a native no-Node fixture journey; Linux additionally runs the native executable against the pinned actual guarded Core lifecycle route. The portable archive remains separate.
+- [ ] Issue #30 pre-code: maintain `SPEC-CLI-PROTECTED-NATIVE-CANDIDATE.md`,
+  Project #1 lifecycle, and the concrete `.github` settings proposal while
+  preparing the source-only publisher. Do not mutate settings, dispatch,
+  release assets, tags, deployment, or Core packaging in this work unit.
 - [ ] Complete the remaining Issue #1 workflow and automation-contract acceptance recorded in `.governance/project/BACKLOG.md` and `docs/capability-matrix.md`.

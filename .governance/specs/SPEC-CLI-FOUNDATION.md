@@ -19,7 +19,7 @@ is complete.
 | CLI-REAL-CORE-LOCAL-READ | Exercise the compiled CLI against a pinned actual Core runtime using only loopback public read routes. | Issue #16 starts a disposable Core at port `0` with temporary workspace and service roots, then verifies `instance inspect --json` and `service list --json`. It is direct local read proof only: no service is started, registered, installed, or mutated; no remote identity-provider flow, release, deployment, or GA claim follows. |
 | CLI-AUTOMATION | Never prompt, separate stdout from stderr and keep errors secret-safe, including when a transport implementation throws an error. | Implemented for this slice; durable operation identifiers, waits, cancellation and idempotency await Core. |
 | CLI-COMPLETION | Emit deterministic, read-only PowerShell, bash and zsh completion source for the declared CLI command tree. | Issue #24 owns static completion generation. Candidates derive from Commander declarations, never inspect Core, configuration, credentials, service identifiers or the filesystem, and stop suggesting options after `--`. |
-| CLI-DISTRIBUTION | Produce an exact, checksum-bound candidate that a clean Node 22 consumer can install without colliding with Core's local-runtime executable. | Issue #26 owns standalone `service-lassoctl` SEA executables. The portable package archive remains a separate Node 22 candidate and is not native-binary proof. |
+| CLI-DISTRIBUTION | Produce an exact, checksum-bound candidate that a clean Node 22 consumer can install without colliding with Core's local-runtime executable. | Issue #26 owns standalone `service-lassoctl` SEA executables. Issue #30 owns the source-only protected development-candidate publisher that combines the portable package archive and those three native archives without rebuilding after acceptance. Provider settings, dispatch, public release bytes, Core packaging, deployment and GA remain separate evidence gates. |
 
 The capability matrix is the operation-to-contract record. The Core compatibility
 note records the command ownership decision and the dependencies that must close
@@ -102,6 +102,16 @@ before a complete create-to-running-service workflow can be implemented.
     and response details. Linux also runs that native executable against the
     separately pinned source-built guarded Core. Fixture and direct-Core proof
     remain distinct from portable-candidate, release, deployment and GA gates.
+18. Issue #30 consumes the portable candidate and Issue #26 native packaging
+    contracts to construct one full-SHA, closed-asset development candidate.
+    Every target-host job executes the matching native executable with Node
+    absent from its child `PATH`; the publisher only downloads, verifies and
+    uploads those accepted bytes. It fails closed on a non-exact existing
+    release, tag, asset, manifest, provenance, checksum, version, SHA or public
+    redirect. A complete immutable collision is readback-only. This source
+    requirement is not evidence that settings are protected, a workflow ran,
+    any bytes are public, Core can consume the assets, a release occurred, or
+    GA is qualified.
 
 ## Framework decision traceability
 
