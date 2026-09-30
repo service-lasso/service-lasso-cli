@@ -5,11 +5,11 @@
 | Field | Value |
 | --- | --- |
 | Record version | `service-lasso-cli.issue-22.evidence.v1` |
-| CLI revision | `af6eae418b1076345da1a67d83c5c0ad24f985cc` |
+| Tested implementation revision | `1458c5167fd5c525fb85744f68002cfec762b011` |
 | Core source revision | `d6dc5558307f13c654194ddc944e3be40c940675` |
 | Core review-tree relation | `tree-equal:454d1590698a36194847755a4aabc4a59d6c5ec4` |
 | Evidence class | `hosted-linux-direct-source-built-core` |
-| CI record | `36780507321` |
+| CI record | `36782380749` |
 | Direct-Core outcome | `passed` |
 | Direct-Core test budget | `4 total; 4 passed; 0 failed; 0 skipped` |
 | Covered tests | `durable-journey`, `durable-pin`, `read-journey`, `read-pin` |
@@ -23,6 +23,11 @@
 This record intentionally contains no raw stdout, assertion text, credentials,
 paths, URLs, or service-control values. It records observed class and result,
 not a reconstruction of unretained output or cleanup.
+
+The tested implementation is `1458c5167fd5c525fb85744f68002cfec762b011`.
+Any later documentation-only commit that records this binding is distinct from
+that tested implementation and is not itself claimed as tested until its
+separate natural CI terminal record exists.
 
 ## Future record contract
 
