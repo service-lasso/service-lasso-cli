@@ -33,6 +33,7 @@ Issue [#20](https://github.com/service-lasso/service-lasso-cli/issues/20) record
 | Released-service registration and readback | Implemented contract slice | `service register` sends only allowlisted repo/tag/full commit/manifest SHA-256/idempotency key plus server confirmation to Core `POST /api/runtime/actions/importService`; `service operation` reads the actor-scoped durable operation. Core owns allowlisting, provenance, duplicate/conflict semantics, permission, audit and durable state. |
 | Validate, transfer and install | Planned | Caller-local paths, staged bytes, remote acquisition, install/setup and lifecycle are outside the released-service registration route; no shared-path assumption is made. |
 | Durable operation wait/reconcile | Partial | The registration operation can be read by id after a timeout or disconnect. Bounded waits, cancellation and lifecycle operation reconciliation remain planned. |
+| Durable external lifecycle operations | Issue #22 in review | CI `36780507321` passed the four-test Ubuntu direct source-built Core job at exact CLI `af6eae418b1076345da1a67d83c5c0ad24f985cc` against merged Core `d6dc5558307f13c654194ddc944e3be40c940675` (tree-equal to reviewed `454d1590698a36194847755a4aabc4a59d6c5ec4`). It covers the durable journey/pin and read journey/pin. The fixed 10-second Windows local attempt is incomplete; terminal receipt and cleanup are unobserved. Packaged-Core, release, deployment, and independent qualification remain open. |
 | Remove, inbox/history and logs | Planned | Requires the owning Core API and data-access contracts. |
 | Checksum-bound CLI candidate distribution | Implemented | A manual workflow dispatch from `develop` produces an exact-version Node 22 package archive, immutable candidate record, and SHA-256 manifest. The archive is smoke-tested by clean consumers on Windows, Linux, and macOS. |
 | Shell completion | Implemented | Issue #24 provides deterministic static-safe PowerShell, bash and zsh source derived from declared Commander commands/options. Its zsh bootstrap uses `compinit -i -D`, preserving insecure-path denial and suppressing `.zcompdump` writes; `-D` may still read an existing dump. It is separate from native binaries, distribution and full Issue #1 completion. |
@@ -47,3 +48,5 @@ Issue [#20](https://github.com/service-lasso/service-lasso-cli/issues/20) record
 - Scaffolding refuses an existing destination and does not contact Core.
 - A client-side confirmation never substitutes for Core authentication,
   permissions, or server-issued confirmation requirements.
+- Core #1541 / PR #1545 is a retained wrong-repository attempt, superseded by
+  CLI Issue #22. Core #1538, #1542, #1543 and #1544 remain dependencies.
