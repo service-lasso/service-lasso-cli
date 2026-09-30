@@ -218,7 +218,10 @@ export async function run(argv = process.argv): Promise<void> {
   await createProgram().parseAsync(argv);
 }
 
-if (process.argv[1] && basename(process.argv[1]) === "index.js") {
+// npm may invoke the bin through its POSIX `service-lassoctl` symlink, while
+// Windows invokes the underlying `index.js`. The SEA entry imports this module
+// through `sea-entry`, so neither form matches the native executable itself.
+if (process.argv[1] && ["index.js", "service-lassoctl"].includes(basename(process.argv[1]))) {
   run().catch((error) => {
     const safe = asCliError(error);
     output.error(`Error [${safe.code}]: ${safe.message}\n`);
