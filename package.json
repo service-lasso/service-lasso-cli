@@ -20,7 +20,11 @@
     "smoke:candidate": "node scripts/smoke-candidate.mjs",
     "test:readback-shell": "node scripts/test-candidate-readback-shell.mjs",
     "package:native": "npm run build && node scripts/package-native.mjs",
-    "smoke:native": "node scripts/smoke-native.mjs"
+    "smoke:native": "node scripts/smoke-native.mjs",
+    "archive:native": "node scripts/archive-native-candidate.mjs",
+    "assemble:protected-candidate": "node scripts/assemble-protected-candidate.mjs",
+    "verify:protected-candidate": "node scripts/verify-protected-candidate.mjs",
+    "publish:protected-candidate": "node scripts/publish-protected-candidate.mjs"
   },
   "files": [
     "dist",

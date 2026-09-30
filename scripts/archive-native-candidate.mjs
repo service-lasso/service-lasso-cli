@@ -1,0 +1,24 @@
+import { createHash } from "node:crypto";
+import { readFile, rm } from "node:fs/promises";
+import { basename, join, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
+
+function option(name) { const index = process.argv.indexOf(name); if (index < 0 || !process.argv[index + 1]) throw new Error(`Missing ${name}.`); return process.argv[index + 1]; }
+function sha256(bytes) { return createHash("sha256").update(bytes).digest("hex"); }
+const directory = resolve(option("--directory"));
+const output = resolve(option("--output"));
+const version = option("--version");
+const sourceSha = option("--source-sha");
+if (!/^\d+\.\d+\.\d+-dev\.[0-9a-f]{7}$/i.test(version) || !/^[0-9a-f]{40}$/i.test(sourceSha)) throw new Error("Version or source SHA is invalid.");
+const provenance = JSON.parse(await readFile(join(directory, "provenance.json"), "utf8"));
+const target = `${provenance?.executable?.platform}-${provenance?.executable?.architecture}`;
+if (!new Set(["win32-x64", "linux-x64", "darwin-arm64"]).has(target) || provenance?.source?.commit !== sourceSha) throw new Error("Native provenance does not match the frozen target identity.");
+const executable = provenance.executable.name;
+const executableBytes = await readFile(join(directory, executable));
+if (sha256(executableBytes) !== provenance.executable.sha256) throw new Error("Native executable does not match its provenance digest.");
+const archive = `service-lassoctl-${version}-${target}.tar.gz`;
+const archivePath = join(output, archive);
+await rm(archivePath, { force: true });
+const result = spawnSync("tar", ["-czf", archivePath, "-C", directory, "--", executable, "provenance.json"], { encoding: "utf8" });
+if (result.status !== 0 || result.error) throw new Error(`Native archive failed: ${result.error?.message ?? result.stderr ?? result.stdout}`);
+process.stdout.write(`${JSON.stringify({ archive, sha256: sha256(await readFile(archivePath)), executable: basename(executable), target })}\n`);
