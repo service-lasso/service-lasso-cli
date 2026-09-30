@@ -44,6 +44,15 @@ by the CLI. The CLI rejects a token for non-loopback HTTP origins; its local
 the documented Core health, instance, and capability endpoints without
 mutation.
 
+Issue #14 adds an executable fixture-contract acceptance check for these
+operator reads and `service list`: it runs the compiled CLI against an explicit
+loopback HTTP fixture with `SERVICE_LASSO_CORE_TOKEN`, verifies the Bearer
+request, and verifies that an authentication rejection exposes neither a token
+nor a response body. This is direct evidence for the CLI-to-HTTP fixture
+contract only. It is not live Core, remote-authentication, release, or GA
+acceptance; that needs a supported authenticated Core endpoint and separately
+authorised credentials.
+
 `service init` is based on the pinned `service-template` release
 `2026.5.8-d2241fe` (commit `d2241fe9b5fc477f14e99adb1836825de2c7a767`) and
 writes the reviewed source identity and canonical manifest SHA-256 to

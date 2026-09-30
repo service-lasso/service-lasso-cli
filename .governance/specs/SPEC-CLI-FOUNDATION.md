@@ -15,6 +15,7 @@ is complete.
 | CLI-AUTHORING | Create a non-destructive, caller-selected package starter from a pinned service-template identity. | Implemented against the reviewed `2026.5.8-d2241fe` template tag, commit and canonical manifest SHA-256; Core registration remains blocked on #1463. |
 | CLI-REGISTRATION | Validate and register local or remote package input. | Blocked on Core registration/import, remote acquisition and duplicate-identity contracts. |
 | CLI-OPERATIONS | Read status and services; invoke supported lifecycle actions with local confirmation. | Read and lifecycle routes are unit-tested transport adapters only until Core publishes the exact API/version/permission contract. |
+| CLI-REAL-CORE-ACCEPTANCE | Exercise the compiled CLI against an explicitly selected authenticated Core-shaped HTTP endpoint using only public read routes, and classify fixture proof separately from live-Core proof. | Issue #14 adds a loopback fixture contract for `instance inspect` and `service list`. The fixture proves environment-only Bearer transport and secret-safe failures, but no live Core credential or supported runtime is available in this repository. |
 | CLI-AUTOMATION | Never prompt, separate stdout from stderr and keep errors secret-safe, including when a transport implementation throws an error. | Implemented for this slice; durable operation identifiers, waits, cancellation and idempotency await Core. |
 | CLI-DISTRIBUTION | Produce an exact, checksum-bound candidate that a clean Node 22 consumer can install without colliding with Core's local-runtime executable. | Implemented for manually dispatched `develop` candidates. The portable package archive contains the `service-lassoctl` entrypoint and requires Node 22; standalone native binaries remain deferred. |
 
@@ -51,3 +52,10 @@ before a complete create-to-running-service workflow can be implemented.
 12. Named connection selection is deterministic and never stores or prints
     credentials; local authoring records a pinned template tag, commit and
     manifest checksum without registration or runtime mutation.
+13. The compiled CLI can use an environment-only local-admin Bearer credential
+    against an explicit loopback Core-shaped fixture to read health, identity,
+    capabilities, and services. A rejected credential returns a stable,
+    secret-safe status error without copying the token or response body. This
+    is fixture-contract evidence only; direct authenticated real-Core
+    acceptance requires a supported endpoint and credential outside this
+    repository.
