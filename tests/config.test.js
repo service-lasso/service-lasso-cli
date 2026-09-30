@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { assertCoreTokenTransport, configPath, loadConfig, normalizeCoreUrl, resolveConnectionName, resolveCoreToken, resolveCoreUrl, saveConfig } from "../dist/config.js";
+import { asCliError } from "../dist/errors.js";
 
 test("normalizes a safe Core origin", () => {
   assert.equal(normalizeCoreUrl("https://core.example/"), "https://core.example");
@@ -36,7 +37,18 @@ test("environment wins over saved config and config persists atomically", async 
   assert.deepEqual(await loadConfig(path), { coreUrl: "https://saved.example" });
   assert.equal(resolveCoreUrl({ environment: { SERVICE_LASSO_CORE_URL: "https://env.example" }, config: await loadConfig(path) }), "https://env.example");
   await writeFile(path, "{bad", "utf8");
-  await assert.rejects(() => loadConfig(path), { code: "invalid_config" });
+  await assert.rejects(() => loadConfig(path), (error) => error.code === "invalid_config" && error.message === "CLI configuration is invalid." && !error.message.includes(path));
+});
+
+test("configuration and unexpected diagnostics never expose path or environment sentinels", async () => {
+  const home = await mkdtemp(join(tmpdir(), "lasso-cli-safe-config-"));
+  const path = join(home, "private-token-sentinel.json");
+  await writeFile(path, JSON.stringify({ coreUrl: 7 }), "utf8");
+  await assert.rejects(() => loadConfig(path), (error) => error.code === "invalid_config" && error.message === "CLI configuration is invalid." && !error.message.includes("private-token-sentinel"));
+  const unexpected = asCliError(new Error("https://private.example/token=environment-secret-sentinel"));
+  assert.equal(unexpected.code, "unexpected_error");
+  assert.equal(unexpected.message, "The command could not be completed.");
+  assert.equal(unexpected.message.includes("environment-secret-sentinel"), false);
 });
 
 test("selects saved named connections after flags and environment without persisting credentials", async () => {
