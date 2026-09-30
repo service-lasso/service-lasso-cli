@@ -12,7 +12,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const cliRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const coreRoot = process.env.SERVICE_LASSO_CORE_DIR;
-const coreRevision = "454d1590698a36194847755a4aabc4a59d6c5ec4";
+const coreRevision = "d6dc5558307f13c654194ddc944e3be40c940675";
 
 function run(args, env) {
   return new Promise((resolve, reject) => {
@@ -42,7 +42,7 @@ async function startJwksServer(coreRequire) {
   return { privateKey, url: `http://127.0.0.1:${address.port}/jwks`, async stop() { const closed = once(server, "close"); server.close(); await closed; } };
 }
 
-test("compiled external CLI exercises provisional actual Core durable lifecycle contract safely", { skip: !coreRoot }, async () => {
+test("compiled external CLI exercises merged actual Core durable lifecycle contract safely", { skip: !coreRoot }, async () => {
   assert.equal(execFileSync("git", ["-C", coreRoot, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(), coreRevision);
   const coreRequire = createRequire(path.join(coreRoot, "package.json"));
   const { SignJWT } = coreRequire("jose");
@@ -136,5 +136,5 @@ test("compiled external CLI exercises provisional actual Core durable lifecycle 
 });
 
 test("real durable acceptance pin remains explicit", () => {
-  assert.equal(coreRevision, "454d1590698a36194847755a4aabc4a59d6c5ec4");
+  assert.equal(coreRevision, "d6dc5558307f13c654194ddc944e3be40c940675");
 });

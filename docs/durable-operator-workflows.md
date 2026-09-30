@@ -4,7 +4,8 @@
 store lifecycle state. Set `SERVICE_LASSO_CORE_URL` and, when required by Core,
 `SERVICE_LASSO_CORE_TOKEN`; credentials are never accepted as command flags.
 
-Every result is JSON on stdout. Diagnostics are JSON on stderr. Exit `0` means
+With `--json`, result records are JSON on stdout. Diagnostics and errors are
+stable text on stderr in the form `Error [code]: message`. Exit `0` means
 the requested read or terminal operation succeeded; `2` accepted, `3` failed,
 `4` cancelled, `5` timeout, `6` uncertain, and `1` invalid input or API error.
 An accepted operation has not succeeded yet.
@@ -23,7 +24,14 @@ On disconnect the CLI reports `uncertain`; do not submit a new mutation. Read
 the returned operation ID, or repeat the identical request with the same server
 idempotency key only when the server contract makes replay safe.
 
-The test fixture proves client transport behavior only. The dependency contract
-is frozen Core `cf0b1b8eb24120479f86b8e6f9bc8e219c7396f3`, reviewed but not
-merged, published, or direct-runtime-qualified. Cancel, update, removal and
+The durable dependency is frozen at merged Core `develop`
+`d6dc5558307f13c654194ddc944e3be40c940675`. Its tree is identical to the
+reviewed `454d1590698a36194847755a4aabc4a59d6c5ec4` source. The focused transport fixture
+proves only the CLI's request and safe-output boundary. Separately, the
+repository's real-core acceptance test constructs a guarded Core with a scoped
+signed JWT and JWKS, then runs the compiled CLI through preview, changed-context
+rejection, start, same-key replay, inspection, unsupported cancellation, and
+unrelated-service preservation. That is direct evidence against this merged
+source-built Core only. It is not packaged-Core, release, deployment, or GA
+qualification. Cancel, update, removal and
 inbox coverage remain tracked by Core #1538, #1542, #1543 and #1544.

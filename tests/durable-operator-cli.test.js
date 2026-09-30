@@ -19,7 +19,8 @@ function run(args, env) {
   });
 }
 
-test("compiled CLI allowlists the actual durable contract shape and never spreads caller parameters", async () => {
+test("compiled CLI allowlists the actual durable contract shape, validates availability, and never spreads caller parameters", async () => {
+  await assertAvailabilityValidation();
   const state = { mutations: 0, confirmation: "confirm service-start fixture-1234567890abcdef", cancellationPosts: 0 };
   const server = createServer(async (request, response) => {
     const url = new URL(request.url, "http://127.0.0.1");
@@ -65,3 +66,43 @@ test("compiled CLI allowlists the actual durable contract shape and never spread
     await once(server, "close");
   }
 });
+
+async function assertAvailabilityValidation() {
+  const validActions = [
+    { action: "start", available: true, reason: null, permission: "service-lasso:lifecycle:write", requiresConfirmation: true, privateDiagnostic: "must-not-print" },
+    { action: "reload", available: false, reason: "durable_operation_unavailable", permission: "service-lasso:lifecycle:write", requiresConfirmation: true },
+  ];
+  const cases = [
+    { name: "null entry", actions: [null] },
+    { name: "truncated entry", actions: [{ action: "start" }] },
+    { name: "duplicate action", actions: [{ action: "start", available: true }, { action: "start", available: false }] },
+    { name: "unsupported action", actions: [{ action: "delete", available: true }] },
+  ];
+  let payload = { contractVersion: "service-lasso-durable-lifecycle-operation.v1", actions: validActions };
+  const server = createServer((request, response) => {
+    if (request.headers.authorization !== "Bearer fixture-token") { response.writeHead(401, { "content-type": "application/json" }); response.end(JSON.stringify({ secret: "fixture-token" })); return; }
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify(payload));
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  const environment = { SERVICE_LASSO_CORE_URL: `http://127.0.0.1:${address.port}`, SERVICE_LASSO_CORE_TOKEN: "fixture-token" };
+  try {
+    const extended = await run(["operator", "availability", "demo", "--json"], environment);
+    assert.equal(extended.code, 0, extended.stderr);
+    assert.deepEqual(JSON.parse(extended.stdout), { contractVersion: "service-lasso-durable-lifecycle-operation.v1", actions: [{ action: "start", available: true }, { action: "reload", available: false }] });
+    assert.equal(extended.stdout.includes("must-not-print"), false);
+    for (const malformed of cases) {
+      payload = { contractVersion: "service-lasso-durable-lifecycle-operation.v1", actions: malformed.actions };
+      const result = await run(["operator", "availability", "demo", "--json"], environment);
+      assert.equal(result.code, 1, malformed.name);
+      assert.equal(result.stdout, "", malformed.name);
+      assert.match(result.stderr, /Error \[invalid_core_response\]: Core returned an invalid durable lifecycle availability response\./, malformed.name);
+      assert.equal(result.stderr.includes("fixture-token"), false, malformed.name);
+    }
+  } finally {
+    server.close();
+    await once(server, "close");
+  }
+}

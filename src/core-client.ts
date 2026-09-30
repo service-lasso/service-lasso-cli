@@ -51,11 +51,20 @@ export class CoreClient {
 
   public async availability(serviceId: string): Promise<LifecycleAvailability> {
     const result = await this.request(`/api/operator/lifecycle/services/${this.serviceId(serviceId)}/availability`);
-    if (!isAvailability(result)) throw new CliError("unsupported_core_contract", "Core did not advertise the durable lifecycle operation contract.");
+    if (!isAvailability(result)) throw new CliError("invalid_core_response", "Core returned an invalid durable lifecycle availability response.");
     if (result.contractVersion !== "service-lasso-durable-lifecycle-operation.v1") {
       throw new CliError("unsupported_core_contract", "Core advertised an unsupported durable lifecycle contract version.");
     }
-    return result;
+    // Core may add server-only availability metadata. Return only the public
+    // contract fields so the CLI never prints an unreviewed response field.
+    return {
+      contractVersion: result.contractVersion,
+      actions: result.actions.map((entry) => ({
+        action: entry.action,
+        available: entry.available,
+        ...(entry.cancellationSupported === undefined ? {} : { cancellationSupported: entry.cancellationSupported }),
+      })),
+    };
   }
 
   public async previewLifecycle(serviceId: string, action: LifecycleAction): Promise<LifecyclePreview> {
@@ -175,9 +184,28 @@ export class CoreClient {
 
 export type LifecycleAction = "install" | "config" | "start" | "stop" | "restart";
 export interface LifecycleExecute { action: LifecycleAction; serviceId: string; idempotencyKey: string; confirmationId: string; confirmationPhrase: string; }
-export interface LifecycleAvailability { contractVersion: string; actions: Array<{ action: string; available: boolean; cancellationSupported?: boolean }>; }
+type AvailabilityAction = LifecycleAction | "reload";
+export interface LifecycleAvailability { contractVersion: string; actions: Array<{ action: AvailabilityAction; available: boolean; cancellationSupported?: boolean }>; }
 function isAvailability(value: unknown): value is LifecycleAvailability {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value) && typeof (value as { contractVersion?: unknown }).contractVersion === "string" && Array.isArray((value as { actions?: unknown }).actions));
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const response = value as { contractVersion?: unknown; actions?: unknown };
+  if (typeof response.contractVersion !== "string" || !Array.isArray(response.actions) || response.actions.length === 0) return false;
+  const seen = new Set<AvailabilityAction>();
+  return response.actions.every((candidate) => {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return false;
+    const action = candidate as { action?: unknown; available?: unknown; cancellationSupported?: unknown };
+    if (!isAvailabilityAction(action.action) || typeof action.available !== "boolean" || (action.cancellationSupported !== undefined && typeof action.cancellationSupported !== "boolean") || seen.has(action.action)) return false;
+    seen.add(action.action);
+    return true;
+  });
+}
+
+function isLifecycleAction(value: unknown): value is LifecycleAction {
+  return value === "install" || value === "config" || value === "start" || value === "stop" || value === "restart";
+}
+
+function isAvailabilityAction(value: unknown): value is AvailabilityAction {
+  return isLifecycleAction(value) || value === "reload";
 }
 
 export interface LifecyclePreview {

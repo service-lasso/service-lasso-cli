@@ -3,10 +3,10 @@
 ## Scope
 
 Issue #22 implements the external `service-lassoctl` adapter for the reviewed
-Core durable lifecycle HTTP contract at frozen provisional Core commit
-`454d1590698a36194847755a4aabc4a59d6c5ec4`. This is Development work. The
-contract is a dependency under review, not evidence that it is merged,
-published, or qualified in a real Core runtime.
+Core durable lifecycle HTTP contract at frozen merged Core `develop` commit
+`d6dc5558307f13c654194ddc944e3be40c940675`. This is Development work. The
+contract is a dependency, not evidence that it is packaged, released, deployed,
+or qualified in a real Core runtime.
 
 ## Requirements
 
@@ -22,7 +22,7 @@ published, or qualified in a real Core runtime.
 - `CLI-DURABLE-009`: The client never retries or resubmits a mutation. A transport loss is `uncertain` and is reconciled by operation ID or the same server idempotency key.
 - `CLI-DURABLE-010`: JSON result records go to stdout and diagnostics go to stderr without credentials or response-body echoes. The server-issued confirmation phrase is the sole deliberate display exception and appears only in the validated preview record because execution requires operator re-entry of that phrase.
 - `CLI-DURABLE-011`: Noninteractive missing values fail deterministically; `--confirm` does not bypass server authentication or confirmation.
-- `CLI-DURABLE-012`: The compiled binary is tested against the actual source-built provisional Core on an owned disposable loopback fixture with a scoped signed JWT, actor/client identity, required profile and scopes. Evidence includes preview, one mutation, idempotent same-key replay, changed-context rejection, error redaction, operation inspection, unavailable cancellation, and unrelated-service preservation.
+- `CLI-DURABLE-012`: The compiled binary is tested against the actual source-built merged Core dependency on an owned disposable loopback fixture with a scoped signed JWT, actor/client identity, required profile and scopes. Evidence includes preview, one mutation, idempotent same-key replay, changed-context rejection, error redaction, operation inspection, unavailable cancellation, and unrelated-service preservation.
 
 ## Dependencies and non-goals
 
