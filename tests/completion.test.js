@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { chmodSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 const cli = [process.execPath, "dist/index.js"];
@@ -21,6 +24,8 @@ test("completion source is deterministic, read-safe and derived from declared co
   assert.match(first.stdout, /service\/register/);
   assert.match(first.stdout, /--expected-manifest-sha256/);
   assert.doesNotMatch(first.stdout, /SERVICE_LASSO_CORE_TOKEN|SERVICE_LASSO_CLI_LOCAL_ADMIN_TOKEN|service-id|filesystem/i);
+  assert.match(complete("zsh").stdout, /compinit -i -D/);
+  assert.doesNotMatch(complete("zsh").stdout, /compinit -u|compinit -C/);
 });
 
 test("invalid completion shell keeps the stable error contract and emits no script", () => {
@@ -42,17 +47,35 @@ test("bash completion follows subcommands, option value positions and --", { ski
 
 test("PowerShell completion follows subcommands and --", { skip: !hasCommand("pwsh") }, () => {
   const source = complete("powershell").stdout;
-  const result = spawnSync("pwsh", ["-NoProfile", "-Command", "-"], {
-    encoding: "utf8",
-    input: `${source}\n_ServiceLassoCtlComplete -Words @('service-lassoctl','service') -WordToComplete 'st'\n$after = _ServiceLassoCtlComplete -Words @('service-lassoctl','service','--') -WordToComplete ''; Write-Output \"after--:$($after.Count)\"\n`,
-  });
+  const script = `${source}\n_ServiceLassoCtlComplete -Words @('service-lassoctl','service') -WordToComplete 'st'\n$after = _ServiceLassoCtlComplete -Words @('service-lassoctl','service','--') -WordToComplete ''; Write-Output \"after--:$($after.Count)\"\n`;
+  const result = spawnSync("pwsh", ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script], { encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(result.stdout.trim().split(/\r?\n/), ["start", "stop", "after--:0"]);
 });
 
 test("zsh completion parses and computes static candidates", { skip: !hasCommand("zsh") }, () => {
   const source = complete("zsh").stdout;
-  const result = spawnSync("zsh", ["-fc", `${source}\nwords=(service-lassoctl service st); CURRENT=3; _service_lassoctl_completion; print -l -- $reply`], { encoding: "utf8" });
+  const result = spawnSync("zsh", ["-fc", `${source}\nwords=(service-lassoctl service st); CURRENT=3; _service_lassoctl_completion; print -l -- $reply\nwords=(service-lassoctl service init --directory value -- ''); CURRENT=7; _service_lassoctl_completion; print \"after--:$#reply\"`], { encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
-  assert.deepEqual(result.stdout.trim().split("\n"), ["start", "stop"]);
+  assert.deepEqual(result.stdout.trim().split("\n"), ["start", "stop", "after--:0"]);
+});
+
+test("zsh bootstrap ignores insecure fpath entries and writes no completion dump", { skip: !hasCommand("zsh") }, () => {
+  const temp = mkdtempSync(join(tmpdir(), "service-lassoctl-completion-"));
+  const insecure = join(temp, "insecure");
+  mkdirSync(insecure);
+  writeFileSync(join(insecure, "_service_lassoctl_probe"), "#compdef service-lassoctl-probe\n");
+  chmodSync(insecure, 0o777);
+
+  try {
+    const source = complete("zsh").stdout;
+    const script = `fpath=(${JSON.stringify(insecure)} $fpath)\n${source}\n[[ -z \${_comps[service-lassoctl-probe]-} ]] || exit 42\n[[ ! -e \"$HOME/.zcompdump\" && ! -e \"$ZDOTDIR/.zcompdump\" ]] || exit 43`;
+    const result = spawnSync("zsh", ["-fc", script], {
+      encoding: "utf8",
+      env: { ...process.env, HOME: temp, ZDOTDIR: temp },
+    });
+    assert.equal(result.status, 0, result.stderr);
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+  }
 });

@@ -54,10 +54,10 @@ function posixSource(shell: "bash" | "zsh", entries: CompletionEntry[]): string 
   const quotedRows = rows.map(quotePosix).join(" ");
   const setup = shell === "bash"
     ? "complete -F _service_lassoctl_completion service-lassoctl"
-    : "if ! (( $+functions[compdef] )); then\n  autoload -Uz compinit\n  compinit -i\nfi\ncompdef _service_lassoctl_completion service-lassoctl";
+    : "if ! (( $+functions[compdef] )); then\n  autoload -Uz compinit\n  compinit -i -D\nfi\ncompdef _service_lassoctl_completion service-lassoctl";
   const wordSource = shell === "bash"
     ? "${COMP_WORDS[@]:1:COMP_CWORD}"
-    : "${words[@]:2:CURRENT-2}";
+    : "${words[@]:2:$(( CURRENT - 2 ))}";
   const current = shell === "bash" ? "${COMP_WORDS[COMP_CWORD]}" : "${words[CURRENT]}";
   const reset = shell === "bash" ? "  COMPREPLY=()" : "  reply=()";
   const emit = shell === "bash"
