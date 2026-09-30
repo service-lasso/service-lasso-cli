@@ -10,6 +10,58 @@ permissions:
   contents: read
 
 jobs:
+  native-sea:
+    name: Native SEA direct execution (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64
+            os: windows-latest
+            expected_platform: win32
+            expected_architecture: x64
+          - name: Linux x64
+            os: ubuntu-latest
+            expected_platform: linux
+            expected_architecture: x64
+          - name: macOS arm64
+            os: macos-14
+            expected_platform: darwin
+            expected_architecture: arm64
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22.23.2
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Build host-native executable and provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run package:native -- --output native-assets --source-sha "$GITHUB_SHA"
+      - name: Execute native binary with Node absent from PATH
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run smoke:native -- --directory native-assets --expected-source-sha "$GITHUB_SHA"
+      - name: Verify declared host target
+        shell: bash
+        run: |
+          set -euo pipefail
+          node -e 'const p=require("./native-assets/provenance.json"); if(p.executable.platform!==process.env.EXPECTED_PLATFORM || p.executable.architecture!==process.env.EXPECTED_ARCHITECTURE) process.exit(1)'
+        env:
+          EXPECTED_PLATFORM: ${{ matrix.expected_platform }}
+          EXPECTED_ARCHITECTURE: ${{ matrix.expected_architecture }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: service-lassoctl-sea-${{ matrix.expected_platform }}-${{ matrix.expected_architecture }}-${{ github.sha }}
+          path: native-assets/
+          if-no-files-found: error
+          retention-days: 90
+
   test:
     name: Node 22 CLI checks (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

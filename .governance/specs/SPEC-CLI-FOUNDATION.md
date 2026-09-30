@@ -18,7 +18,7 @@ is complete.
 | CLI-REAL-CORE-ACCEPTANCE | Exercise the compiled CLI against an explicitly selected authenticated Core-shaped HTTP endpoint using only public read routes, and classify fixture proof separately from live-Core proof. | Issue #14 adds a loopback fixture contract for `instance inspect` and `service list`. The fixture proves environment-only Bearer transport and secret-safe failures, but no live Core credential or supported runtime is available in this repository. |
 | CLI-REAL-CORE-LOCAL-READ | Exercise the compiled CLI against a pinned actual Core runtime using only loopback public read routes. | Issue #16 starts a disposable Core at port `0` with temporary workspace and service roots, then verifies `instance inspect --json` and `service list --json`. It is direct local read proof only: no service is started, registered, installed, or mutated; no remote identity-provider flow, release, deployment, or GA claim follows. |
 | CLI-AUTOMATION | Never prompt, separate stdout from stderr and keep errors secret-safe, including when a transport implementation throws an error. | Implemented for this slice; durable operation identifiers, waits, cancellation and idempotency await Core. |
-| CLI-DISTRIBUTION | Produce an exact, checksum-bound candidate that a clean Node 22 consumer can install without colliding with Core's local-runtime executable. | Implemented for manually dispatched `develop` candidates. The portable package archive contains the `service-lassoctl` entrypoint and requires Node 22; standalone native binaries remain deferred. |
+| CLI-DISTRIBUTION | Produce an exact, checksum-bound candidate that a clean Node 22 consumer can install without colliding with Core's local-runtime executable. | Issue #26 owns actual standalone `service-lassoctl` SEA executables. The existing portable package archive remains a separate Node 22 candidate and is not native-binary proof. |
 
 The capability matrix is the operation-to-contract record. The Core compatibility
 note records the command ownership decision and the dependencies that must close
@@ -79,6 +79,17 @@ before a complete create-to-running-service workflow can be implemented.
     conflict, unknown readback, secret-safe errors and invalid-input
     no-mutation. This is source/fixture contract evidence only; packaged
     external CLI, hosted exact-head CI and GA remain separate gates.
+16. Issue #26 builds a bundled CommonJS Node 22.23.2 SEA main script, creates
+   its preparation blob with that same Node version, and injects it into the
+   matching host Node executable using pinned `esbuild` and `postject` tools.
+   Windows x64, Linux x64, and macOS arm64 direct execution each require
+   `service-lassoctl --help`, `--version`, a local fixture-backed `--json` read,
+   safe invalid input, and a credential-sentinel non-leak with `node` absent
+   from `PATH`. Each emitted executable is bound to its source commit, SHA-256,
+   operating system and architecture. Hosted Linux/macOS evidence is separate
+   from direct local Windows proof; cross-compilation never substitutes for
+   target-host execution. This slice creates no release, publication,
+   deployment, packaged-Core qualification, or GA claim.
 
 ## Framework decision traceability
 
