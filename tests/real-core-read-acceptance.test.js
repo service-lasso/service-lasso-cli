@@ -11,7 +11,7 @@ import test from "node:test";
 
 const cliRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const coreRoot = process.env.SERVICE_LASSO_CORE_DIR;
-const coreRevision = "d9e2ae799244317940c862fe1261dfd22b7bdda1";
+const coreRevision = "454d1590698a36194847755a4aabc4a59d6c5ec4";
 const startupTimeoutMs = 20_000;
 const shutdownTimeoutMs = 10_000;
 
@@ -171,5 +171,5 @@ process.once("SIGINT", () => { void shutdown(); });
 });
 
 test("real Core acceptance pins the reviewed Core source revision", () => {
-  assert.equal(coreRevision, "d9e2ae799244317940c862fe1261dfd22b7bdda1");
+  assert.equal(coreRevision, "454d1590698a36194847755a4aabc4a59d6c5ec4");
 });

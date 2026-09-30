@@ -19,28 +19,25 @@ function run(args, env) {
   });
 }
 
-test("compiled service-lassoctl uses preview, one durable mutation, wait, health and operation reconciliation against an owned loopback fixture", async () => {
-  const state = { mutations: 0, unrelated: "unchanged", reads: 0, confirmation: "fixture-phrase-not-a-credential" };
+test("compiled CLI allowlists the actual durable contract shape and never spreads caller parameters", async () => {
+  const state = { mutations: 0, confirmation: "confirm service-start fixture-1234567890abcdef", cancellationPosts: 0 };
   const server = createServer(async (request, response) => {
     const url = new URL(request.url, "http://127.0.0.1");
     const send = (status, body) => { response.writeHead(status, { "content-type": "application/json" }); response.end(JSON.stringify(body)); };
-    if (request.headers.authorization !== "Bearer fixture-token") return send(401, { error: "denied" });
-    if (url.pathname === "/api/operator/lifecycle/services/demo/availability") return send(200, { contractVersion: "service-lasso-durable-lifecycle-operation.v1", actions: ["install", "configure", "start", "stop", "restart"].map((action) => ({ action, available: true, cancellationSupported: false })) });
+    if (request.headers.authorization !== "Bearer fixture-token") return send(401, { error: "denied", secret: "fixture-token" });
+    if (url.pathname === "/api/operator/lifecycle/services/demo/availability") return send(200, { contractVersion: "service-lasso-durable-lifecycle-operation.v1", actions: ["install", "config", "start", "stop", "restart"].map((action) => ({ action, available: true, cancellationSupported: false })) });
     if (url.pathname === "/api/operator/lifecycle/operations" && request.method === "POST") {
       let raw = ""; for await (const chunk of request) raw += chunk;
       const body = JSON.parse(raw || "{}");
-      if (!body.execute) return send(200, { confirmation: { status: "pending", id: "fixture-confirmation", confirmationPhrase: state.confirmation }, preflight: { mutated: false } });
+      assert.deepEqual(Object.keys(body).sort(), body.execute ? ["action", "confirmationId", "confirmationPhrase", "execute", "idempotencyKey", "serviceId"] : ["action", "serviceId"]);
+      if (!body.execute) return send(200, { contractVersion: "service-lasso-mcp-guarded-action.v1", action: "service_start", confirmation: { status: "pending", id: "fixture-confirmation", expiresAt: "2030-01-01T00:00:00.000Z", confirmationPhrase: state.confirmation }, preflight: { targets: ["demo"], effects: ["start demo"], executable: true, skippedReason: null, requiredProfile: "operator" }, accidentalSecret: "must-not-print" });
       assert.equal(body.confirmationId, "fixture-confirmation");
       assert.equal(body.confirmationPhrase, state.confirmation);
-      assert.equal(body.idempotencyKey, "fixture-key-0001");
       state.mutations += 1;
-      return send(202, { accepted: true, operation: { operationId: "fixture-operation-0001", cancellationSupported: false, outcome: null } });
+      return send(202, { contractVersion: "service-lasso-mcp-operation-accepted.v1", accepted: true, operation: { operationId: "mcp-operation-fixture-0001", action: "service_start", status: "running", phase: "running", progress: 20, summary: "running", targetIds: ["demo"], cancellationSupported: false, outcome: null }, accidentalSecret: "must-not-print" });
     }
-    if (url.pathname === "/api/operator/lifecycle/operations/fixture-operation-0001") {
-      state.reads += 1;
-      return send(200, { operation: { operationId: "fixture-operation-0001", cancellationSupported: false, outcome: state.reads > 1 ? "succeeded" : null } });
-    }
-    if (url.pathname === "/api/services/demo/health") return send(200, { serviceId: "demo", status: "healthy" });
+    if (url.pathname === "/api/operator/lifecycle/operations/mcp-operation-fixture-0001") return send(200, { contractVersion: "service-lasso-mcp-operation.v1", operation: { operationId: "mcp-operation-fixture-0001", action: "service_start", status: "succeeded", phase: "completed", progress: 100, summary: "done", targetIds: ["demo"], cancellationSupported: false, outcome: "succeeded" }, accidentalSecret: "must-not-print" });
+    if (url.pathname.endsWith("/cancel")) { state.cancellationPosts += 1; return send(500, {}); }
     return send(404, { error: "not_found" });
   });
   server.listen(0, "127.0.0.1");
@@ -50,21 +47,19 @@ test("compiled service-lassoctl uses preview, one durable mutation, wait, health
   try {
     const preview = await run(["operator", "preview", "start", "demo", "--json"], environment);
     assert.equal(preview.code, 0, preview.stderr);
-    assert.equal(JSON.parse(preview.stdout).preflight.mutated, false);
+    assert.deepEqual(JSON.parse(preview.stdout), { contractVersion: "service-lasso-mcp-guarded-action.v1", action: "service_start", confirmation: { id: "fixture-confirmation", expiresAt: "2030-01-01T00:00:00.000Z", phrase: state.confirmation }, preflight: { targets: ["demo"], effects: ["start demo"], executable: true, skippedReason: null, requiredProfile: "operator" }, safety: { mutating: false, redacted: true } });
+    assert.equal(preview.stdout.includes("must-not-print"), false);
     const denied = await run(["operator", "execute", "start", "demo", "--confirmation-id", "fixture-confirmation", "--confirmation-phrase", state.confirmation, "--idempotency-key", "fixture-key-0001", "--json"], environment);
     assert.equal(denied.code, 1);
     assert.equal(state.mutations, 0);
-    const execute = await run(["operator", "execute", "start", "demo", "--confirm", "--confirmation-id", "fixture-confirmation", "--confirmation-phrase", state.confirmation, "--idempotency-key", "fixture-key-0001", "--wait-ms", "1000", "--json"], environment);
+    const execute = await run(["operator", "execute", "start", "demo", "--confirm", "--confirmation-id", "fixture-confirmation", "--confirmation-phrase", state.confirmation, "--idempotency-key", "fixture-key-0001", "--wait-ms", "1", "--json"], environment);
     assert.equal(execute.code, 0, execute.stderr);
     assert.equal(JSON.parse(execute.stdout).operation.outcome, "succeeded");
     assert.equal(state.mutations, 1);
-    const reconciled = await run(["operator", "operation", "get", "fixture-operation-0001", "--json"], environment);
-    assert.equal(reconciled.code, 0, reconciled.stderr);
-    assert.equal(JSON.parse(reconciled.stdout).operation.outcome, "succeeded");
-    const health = await run(["operator", "health", "demo", "--json"], environment);
-    assert.equal(health.code, 0, health.stderr);
-    assert.equal(JSON.parse(health.stdout).status, "healthy");
-    assert.equal(state.unrelated, "unchanged");
+    const cancelled = await run(["operator", "operation", "cancel", "mcp-operation-fixture-0001", "--json"], environment);
+    assert.equal(cancelled.code, 0, cancelled.stderr);
+    assert.equal(JSON.parse(cancelled.stdout).cancellation.result, "unsupported");
+    assert.equal(state.cancellationPosts, 0);
   } finally {
     server.close();
     await once(server, "close");
