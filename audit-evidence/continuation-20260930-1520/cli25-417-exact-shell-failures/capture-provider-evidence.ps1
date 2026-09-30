@@ -3,14 +3,15 @@ $ErrorActionPreference = 'Stop'
 $repo = 'service-lasso/service-lasso-cli'
 $run = '36780864895'
 $jobs = @('110110486450', '110110486414')
+$utf8 = [Text.UTF8Encoding]::new($false)
 
-gh api "repos/$repo/actions/runs/$run" | Set-Content -NoNewline -Encoding utf8 provider-run-36780864895.json
+[IO.File]::WriteAllText((Join-Path $PWD 'provider-run-36780864895.json'), (gh api "repos/$repo/actions/runs/$run"), $utf8)
 foreach ($job in $jobs) {
-  gh api "repos/$repo/actions/jobs/$job" | Set-Content -NoNewline -Encoding utf8 "provider-job-$job.json"
-  gh run view $run --repo $repo --job $job --log | Set-Content -NoNewline -Encoding utf8 "raw-job-$job.log"
+  [IO.File]::WriteAllText((Join-Path $PWD "provider-job-$job.json"), (gh api "repos/$repo/actions/jobs/$job"), $utf8)
+  [IO.File]::WriteAllText((Join-Path $PWD "raw-job-$job.log"), ((gh run view $run --repo $repo --job $job --log) -join "`n") + "`n", $utf8)
 }
 
-Get-FileHash provider-run-36780864895.json, provider-job-*.json, raw-job-*.log -Algorithm SHA256 |
+ $sums = Get-FileHash provider-run-36780864895.json, provider-job-*.json, raw-job-*.log -Algorithm SHA256 |
   Sort-Object Path |
-  ForEach-Object { "$($_.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($_.Path))" } |
-  Set-Content -Encoding ascii SHA256SUMS
+  ForEach-Object { "$($_.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($_.Path))" }
+[IO.File]::WriteAllText((Join-Path $PWD 'SHA256SUMS'), ($sums -join "`n") + "`n", $utf8)
