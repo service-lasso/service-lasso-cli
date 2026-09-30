@@ -14,10 +14,13 @@ const registration = {
   idempotencyKey: "release-register-0001",
   confirm: true,
 };
+const completedOperationId = "sro_0123456789abcdef0123456789abcdef";
+const unknownOperationId = "sro_11111111111111111111111111111111";
+const malformedOperationId = "sro_22222222222222222222222222222222";
 
 function operation(overrides = {}) {
   return {
-    id: "sro_0123456789abcdef0123456789abcdef",
+    id: completedOperationId,
     kind: "service_registration",
     status: "completed",
     replayed: false,
@@ -45,6 +48,27 @@ async function startServer() {
       response.end(JSON.stringify({ error: "remote_auth_required", detail: token }));
       return;
     }
+    if (request.method === "GET" && request.url?.endsWith(malformedOperationId)) {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ operation: { id: malformedOperationId, detail: token } }));
+      return;
+    }
+    if (request.method === "GET" && request.url?.endsWith(unknownOperationId)) {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ operation: operation({
+        id: unknownOperationId,
+        status: "unknown",
+        version: null,
+        completedAt: null,
+        errorCode: "registration_interrupted",
+      }) }));
+      return;
+    }
+    if (request.method === "GET" && request.url?.endsWith(completedOperationId)) {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ operation: operation() }));
+      return;
+    }
     if (request.method === "GET") {
       response.writeHead(404, { "content-type": "application/json" });
       response.end(JSON.stringify({ error: "operation_not_found", detail: token }));
@@ -54,6 +78,11 @@ async function startServer() {
     if (received.idempotencyKey === "release-conflict-0001") {
       response.writeHead(409, { "content-type": "application/json" });
       response.end(JSON.stringify({ operation: operation({ status: "conflict", errorCode: "target_manifest_exists" }) }));
+      return;
+    }
+    if (received.idempotencyKey === "release-malformed-conflict-0001") {
+      response.writeHead(409, { "content-type": "application/json" });
+      response.end(JSON.stringify({ operation: { id: completedOperationId, detail: token } }));
       return;
     }
     const replayed = requests.filter((entry) => entry.method === "POST").length > 1;
@@ -82,6 +111,14 @@ function runCli(args, env) {
     child.on("error", reject);
     child.on("close", (status) => resolve({ status, stdout, stderr }));
   });
+}
+
+function registerArgs(idempotencyKey) {
+  return ["--core-url", "", "service", "register", "--repo", registration.repo, "--tag", registration.tag, "--expected-commit", registration.expectedCommit, "--expected-manifest-sha256", registration.expectedManifestSha256, "--idempotency-key", idempotencyKey, "--confirm", "--json"];
+}
+
+function assertSecretSafe(result) {
+  assert.doesNotMatch(`${result.stdout}${result.stderr}`, new RegExp(token));
 }
 
 test("released-service registration sends only the Core release contract and preserves replay/conflict results", async () => {
@@ -137,13 +174,71 @@ test("invalid registration input makes no request and remote cleartext credentia
 test("compiled command uses only environment local-admin credential and keeps it out of output", async () => {
   const server = await startServer();
   try {
-    const result = await runCli(["--core-url", server.baseUrl, "service", "register", "--repo", registration.repo, "--tag", registration.tag, "--expected-commit", registration.expectedCommit, "--expected-manifest-sha256", registration.expectedManifestSha256, "--idempotency-key", registration.idempotencyKey, "--confirm", "--json"], {
+    const args = registerArgs(registration.idempotencyKey);
+    args[1] = server.baseUrl;
+    assert.doesNotMatch(args.join(" "), new RegExp(token));
+    const result = await runCli(args, {
       ...process.env,
       SERVICE_LASSO_CLI_LOCAL_ADMIN_TOKEN: token,
     });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(JSON.parse(result.stdout).id, operation().id);
-    assert.doesNotMatch(`${result.stdout}${result.stderr}`, new RegExp(token));
+    assertSecretSafe(result);
+  } finally {
+    await server.stop();
+  }
+});
+
+test("compiled registration and operation commands preserve durable states and reject hostile operation bodies", async () => {
+  const server = await startServer();
+  const environment = { ...process.env, SERVICE_LASSO_CLI_LOCAL_ADMIN_TOKEN: token };
+  try {
+    const acceptedArgs = registerArgs("release-cli-completed-0001");
+    acceptedArgs[1] = server.baseUrl;
+    const accepted = await runCli(acceptedArgs, environment);
+    assert.equal(accepted.status, 0, accepted.stderr);
+    assert.deepEqual(JSON.parse(accepted.stdout), operation());
+    assertSecretSafe(accepted);
+
+    const completed = await runCli(["--core-url", server.baseUrl, "service", "operation", completedOperationId, "--json"], environment);
+    assert.equal(completed.status, 0, completed.stderr);
+    assert.equal(JSON.parse(completed.stdout).status, "completed");
+    assertSecretSafe(completed);
+
+    const unknown = await runCli(["--core-url", server.baseUrl, "service", "operation", unknownOperationId, "--json"], environment);
+    assert.equal(unknown.status, 0, unknown.stderr);
+    assert.deepEqual(JSON.parse(unknown.stdout), operation({
+      id: unknownOperationId,
+      status: "unknown",
+      version: null,
+      completedAt: null,
+      errorCode: "registration_interrupted",
+    }));
+    assertSecretSafe(unknown);
+
+    const malformed = await runCli(["--core-url", server.baseUrl, "service", "operation", malformedOperationId, "--json"], environment);
+    assert.equal(malformed.status, 1);
+    assert.equal(malformed.stdout, "");
+    assert.match(malformed.stderr, /Error \[invalid_core_response\]: Core returned an invalid service-registration operation response\./);
+    assertSecretSafe(malformed);
+
+    const conflictArgs = registerArgs("release-malformed-conflict-0001");
+    conflictArgs[1] = server.baseUrl;
+    const malformedConflict = await runCli(conflictArgs, environment);
+    assert.equal(malformedConflict.status, 1);
+    assert.equal(malformedConflict.stdout, "");
+    assert.match(malformedConflict.stderr, /Error \[invalid_core_response\]: Core returned an invalid service-registration operation response\./);
+    assertSecretSafe(malformedConflict);
+
+    assert.deepEqual(server.requests.map((request) => ({ method: request.method, url: request.url })), [
+      { method: "POST", url: "/api/runtime/actions/importService" },
+      { method: "GET", url: `/api/operator/operations/${completedOperationId}` },
+      { method: "GET", url: `/api/operator/operations/${unknownOperationId}` },
+      { method: "GET", url: `/api/operator/operations/${malformedOperationId}` },
+      { method: "POST", url: "/api/runtime/actions/importService" },
+    ]);
+    assert.equal(server.requests.every((request) => request.token === token), true);
+    assert.equal(server.requests.every((request) => !request.body.includes(token)), true);
   } finally {
     await server.stop();
   }
