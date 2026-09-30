@@ -62,8 +62,21 @@ for (const args of [
 }
 
 const sentinel = "native-cli-credential-sentinel";
-const server = createServer((request, response) => {
-  assert.equal(request.headers.authorization, `Bearer ${sentinel}`);
+const fixture = { preview: 0, effect: "stopped", operationId: "native-durable-operation-0001" };
+async function requestJson(request) {
+  let body = "";
+  for await (const chunk of request) body += chunk;
+  return body ? JSON.parse(body) : {};
+}
+function operation() {
+  return { contractVersion: "service-lasso-mcp-operation.v1", operation: { operationId: fixture.operationId, action: "service_start", status: "succeeded", phase: "completed", progress: 100, summary: "started", targetIds: ["demo"], cancellationSupported: false, outcome: "succeeded" } };
+}
+const server = createServer(async (request, response) => {
+  if (request.headers.authorization !== `Bearer ${sentinel}`) {
+    response.statusCode = 401;
+    response.end(JSON.stringify({ error: "denied", privateCredential: sentinel }));
+    return;
+  }
   response.setHeader("content-type", "application/json");
   const path = new URL(request.url, "http://127.0.0.1").pathname;
   if (path === "/api/health") return response.end(JSON.stringify({ status: "ok" }));
@@ -75,6 +88,22 @@ const server = createServer((request, response) => {
   if (path === "/api/services/demo/health") return response.end(JSON.stringify({ serviceId: "demo", health: { type: "process", healthy: true, checks: [{ id: "native-check", type: "process", required: true, healthy: true, attempts: 1 }] }, privateCredential: sentinel }));
   if (path === "/api/dependencies") return response.end(JSON.stringify({ dependencies: { nodes: [{ id: "demo" }, { id: "database" }], edges: [{ from: "database", to: "demo" }] }, privateCredential: sentinel }));
   if (path === "/api/operator/lifecycle/services/demo/availability") return response.end(JSON.stringify({ contractVersion: "service-lasso-durable-lifecycle-operation.v1", actions: [{ action: "start", available: true }], privateCredential: sentinel }));
+  if (path === "/api/operator/lifecycle/operations" && request.method === "POST") {
+    const body = await requestJson(request);
+    if (body.execute !== true) {
+      fixture.preview += 1;
+      const changed = fixture.preview === 1;
+      return response.end(JSON.stringify({ contractVersion: "service-lasso-mcp-guarded-action.v1", action: "service_start", confirmation: { status: "pending", id: changed ? "native-confirmation-stale" : "native-confirmation-current", expiresAt: "2030-01-01T00:10:00.000Z", confirmationPhrase: changed ? "confirm service-start stale" : "confirm service-start current" }, preflight: { targets: ["demo"], effects: ["start demo"], executable: true, skippedReason: null, requiredProfile: "operator" }, privateCredential: sentinel }));
+    }
+    if (body.confirmationId === "native-confirmation-stale") {
+      response.statusCode = 409;
+      return response.end(JSON.stringify({ error: "changed_context", privateCredential: sentinel }));
+    }
+    assert.deepEqual(body, { action: "start", serviceId: "demo", execute: true, idempotencyKey: "native-durable-key-0001", confirmationId: "native-confirmation-current", confirmationPhrase: "confirm service-start current" });
+    fixture.effect = "running";
+    return response.end(JSON.stringify(operation()));
+  }
+  if (path === `/api/operator/lifecycle/operations/${fixture.operationId}` && request.method === "GET") return response.end(JSON.stringify(operation()));
   response.statusCode = 404;
   response.end(JSON.stringify({ error: "not_found" }));
 });
@@ -94,6 +123,36 @@ try {
   const invalid = await run(executable, ["service", "start"], environment);
   assert.notEqual(invalid.status, 0);
   assert.doesNotMatch(`${read.stdout}${read.stderr}${invalid.stdout}${invalid.stderr}`, new RegExp(sentinel));
+  const denied = await run(executable, ["operator", "availability", "demo", "--json"], nodeFreeEnvironment({ SERVICE_LASSO_CORE_URL: `http://127.0.0.1:${address.port}`, SERVICE_LASSO_CORE_TOKEN: "native-invalid-token" }));
+  assert.equal(denied.status, 1);
+  assert.match(denied.stderr, /Error \[core_api_error\]: Core returned HTTP 401\./);
+  assert.equal(`${denied.stdout}${denied.stderr}`.includes("native-invalid-token"), false);
+  const stalePreview = await run(executable, ["operator", "preview", "start", "demo", "--json"], environment);
+  assert.equal(stalePreview.status, 0, stalePreview.stderr);
+  const stale = JSON.parse(stalePreview.stdout);
+  const changed = await run(executable, ["operator", "execute", "start", "demo", "--confirm", "--confirmation-id", stale.confirmation.id, "--confirmation-phrase", stale.confirmation.phrase, "--idempotency-key", "native-durable-key-0001", "--json"], environment);
+  assert.equal(changed.status, 1);
+  assert.match(changed.stderr, /Error \[core_api_error\]: Core returned HTTP 409\./);
+  assert.equal(`${changed.stdout}${changed.stderr}`.includes(stale.confirmation.phrase), false);
+  const currentPreview = await run(executable, ["operator", "preview", "start", "demo", "--json"], environment);
+  assert.equal(currentPreview.status, 0, currentPreview.stderr);
+  const current = JSON.parse(currentPreview.stdout);
+  const executeArgs = ["operator", "execute", "start", "demo", "--confirm", "--confirmation-id", current.confirmation.id, "--confirmation-phrase", current.confirmation.phrase, "--idempotency-key", "native-durable-key-0001", "--wait-ms", "10000", "--json"];
+  const execute = await run(executable, executeArgs, environment);
+  assert.equal(execute.status, 0, execute.stderr);
+  const accepted = JSON.parse(execute.stdout);
+  assert.equal(accepted.operation.operationId, fixture.operationId);
+  assert.equal(fixture.effect, "running");
+  const replay = await run(executable, executeArgs, environment);
+  assert.equal(replay.status, 0, replay.stderr);
+  assert.equal(JSON.parse(replay.stdout).operation.operationId, fixture.operationId);
+  const inspected = await run(executable, ["operator", "operation", "get", fixture.operationId, "--json"], environment);
+  assert.equal(inspected.status, 0, inspected.stderr);
+  const waited = await run(executable, ["operator", "operation", "wait", fixture.operationId, "--wait-ms", "10000", "--json"], environment);
+  assert.equal(waited.status, 0, waited.stderr);
+  const cancellation = await run(executable, ["operator", "operation", "cancel", fixture.operationId, "--json"], environment);
+  assert.equal(cancellation.status, 0, cancellation.stderr);
+  assert.equal(JSON.parse(cancellation.stdout).cancellation.result, "unsupported");
 } finally {
   await new Promise((resolveClose, rejectClose) => server.close((error) => error ? rejectClose(error) : resolveClose()));
 }

@@ -2,8 +2,7 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import { createServer } from "node:http";
 import { mkdtemp, mkdir, readFile, rm } from "node:fs/promises";
-import { spawn } from "node:child_process";
-import { execFileSync } from "node:child_process";
+import { spawn, execFileSync, spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
@@ -12,11 +11,15 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const cliRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const coreRoot = process.env.SERVICE_LASSO_CORE_DIR;
+const nativeExecutable = process.env.SERVICE_LASSO_CLI_NATIVE_EXE;
 const coreRevision = "d6dc5558307f13c654194ddc944e3be40c940675";
 
 function run(args, env) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [path.join(cliRoot, "dist", "index.js"), ...args], { env: { ...process.env, ...env }, stdio: ["ignore", "pipe", "pipe"] });
+    const nativeEnvironment = nativeExecutable ? nodeFreeEnvironment(env) : { ...process.env, ...env };
+    const child = nativeExecutable
+      ? spawn(nativeExecutable, args, { env: nativeEnvironment, stdio: ["ignore", "pipe", "pipe"] })
+      : spawn(process.execPath, [path.join(cliRoot, "dist", "index.js"), ...args], { env: nativeEnvironment, stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk) => { stdout += chunk; });
@@ -24,6 +27,18 @@ function run(args, env) {
     child.once("error", reject);
     child.once("exit", (code) => resolve({ code, stdout, stderr }));
   });
+}
+
+function nodeFreeEnvironment(extra) {
+  const environment = { ...process.env, ...extra };
+  delete environment.NODE_OPTIONS;
+  delete environment.NODE_PATH;
+  if (process.platform === "win32") {
+    delete environment.PATH;
+    delete environment.Path;
+    environment.Path = `${process.env.SystemRoot}\\System32;${process.env.SystemRoot}`;
+  } else environment.PATH = "/usr/bin:/bin";
+  return environment;
 }
 
 async function startJwksServer(coreRequire) {
@@ -44,6 +59,9 @@ async function startJwksServer(coreRequire) {
 
 test("compiled external CLI exercises merged actual Core durable lifecycle contract safely", { skip: !coreRoot }, async () => {
   assert.equal(execFileSync("git", ["-C", coreRoot, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(), coreRevision);
+  if (nativeExecutable) {
+    assert.equal(spawnSync("node", ["--version"], { env: nodeFreeEnvironment(), encoding: "utf8" }).error?.code, "ENOENT", "native Core acceptance must not find Node on the child PATH");
+  }
   const coreRequire = createRequire(path.join(coreRoot, "package.json"));
   const { SignJWT } = coreRequire("jose");
   const { startApiServer } = await import(pathToFileURL(path.join(coreRoot, "dist", "server", "index.js")).href);
