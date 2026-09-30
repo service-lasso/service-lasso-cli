@@ -44,10 +44,12 @@ export class CoreClient {
     });
   }
 
-  public async operatorStatus(): Promise<unknown> { return this.request("/api/runtime/instance"); }
-  public async setup(): Promise<unknown> { return this.request("/api/setup/status"); }
-  public async serviceHealth(serviceId: string): Promise<unknown> { return this.request(`/api/services/${this.serviceId(serviceId)}/health`); }
-  public async serviceDependencies(serviceId: string): Promise<unknown> { return this.request(`/api/services/${this.serviceId(serviceId)}/dependencies`); }
+  public async operatorStatus(): Promise<OperatorStatus> { return operatorStatusRecord(await this.request("/api/runtime/instance")); }
+  public async setup(): Promise<SetupStatus> { return setupStatusRecord(await this.request("/api/setup/status")); }
+  public async serviceHealth(serviceId: string): Promise<ServiceHealthStatus> { return serviceHealthRecord(await this.request(`/api/services/${this.serviceId(serviceId)}/health`)); }
+  public async serviceDependencies(serviceId: string): Promise<ServiceDependencies> {
+    return serviceDependenciesRecord(this.serviceId(serviceId), await this.request("/api/dependencies"));
+  }
 
   public async availability(serviceId: string): Promise<LifecycleAvailability> {
     const result = await this.request(`/api/operator/lifecycle/services/${this.serviceId(serviceId)}/availability`);
@@ -240,6 +242,64 @@ function strings(value: unknown, error: string): string[] {
   if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) throw new CliError("invalid_core_response", error);
   return value as string[];
 }
+
+function safeText(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 && value.length <= 160
+    && /^[\x20-\x7e]+$/.test(value) && !/[\\/]|:\/\//.test(value);
+}
+
+function opaqueId(value: unknown): value is string {
+  return safeText(value) && /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value);
+}
+
+function isoTime(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value);
+}
+
+export interface OperatorStatus {
+  instance: null | { instanceId: string; generationId: string; phase: "starting" | "running" | "stopping" | "stopped" | "failed" | "superseded"; status: "active" | "stale" | "unknown"; version: string; startedAt: string; updatedAt: string; };
+  registry: { activeCount: number; staleCount: number; unknownCount: number };
+}
+
+function operatorStatusRecord(value: unknown): OperatorStatus {
+  const response = record(value, "Core returned an invalid operator status response.");
+  const registry = record(response.registry, "Core returned an invalid operator status response.");
+  if (![registry.activeCount, registry.staleCount, registry.unknownCount].every((count) => typeof count === "number" && Number.isSafeInteger(count) && count >= 0)) throw new CliError("invalid_core_response", "Core returned an invalid operator status response.");
+  if (response.instance === null) return { instance: null, registry: { activeCount: registry.activeCount as number, staleCount: registry.staleCount as number, unknownCount: registry.unknownCount as number } };
+  const instance = record(response.instance, "Core returned an invalid operator status response.");
+  if (!opaqueId(instance.instanceId) || !opaqueId(instance.generationId) || !safeText(instance.version) || !isoTime(instance.startedAt) || !isoTime(instance.updatedAt)
+    || !["starting", "running", "stopping", "stopped", "failed", "superseded"].includes(instance.phase as string)
+    || !["active", "stale", "unknown"].includes(instance.status as string)) throw new CliError("invalid_core_response", "Core returned an invalid operator status response.");
+  return { instance: { instanceId: instance.instanceId, generationId: instance.generationId, phase: instance.phase as OperatorStatus["instance"] extends infer T ? T extends { phase: infer P } ? P : never : never, status: instance.status as "active" | "stale" | "unknown", version: instance.version, startedAt: instance.startedAt, updatedAt: instance.updatedAt }, registry: { activeCount: registry.activeCount as number, staleCount: registry.staleCount as number, unknownCount: registry.unknownCount as number } };
+}
+
+export interface SetupStatus { setup: { contractVersion: "service-lasso.setup-status.v1"; state: "not_required" | "setup_required" | "setup_in_progress" | "setup_complete" | "setup_failed"; setupMode: boolean; vault: { required: boolean; ready: boolean } } }
+function setupStatusRecord(value: unknown): SetupStatus {
+  const response = record(value, "Core returned an invalid setup status response."); const setup = record(response.setup, "Core returned an invalid setup status response."); const vault = record(setup.vault, "Core returned an invalid setup status response.");
+  if (setup.contractVersion !== "service-lasso.setup-status.v1" || !["not_required", "setup_required", "setup_in_progress", "setup_complete", "setup_failed"].includes(setup.state as string) || typeof setup.setupMode !== "boolean" || typeof vault.required !== "boolean" || typeof vault.ready !== "boolean") throw new CliError("invalid_core_response", "Core returned an invalid setup status response.");
+  return { setup: { contractVersion: "service-lasso.setup-status.v1", state: setup.state as SetupStatus["setup"]["state"], setupMode: setup.setupMode, vault: { required: vault.required, ready: vault.ready } } };
+}
+
+export interface ServiceHealthStatus { serviceId: string; health: { type: "process" | "http" | "tcp" | "udp" | "file" | "variable" | "aggregate" | "provider" | "unknown"; healthy: boolean; checks?: Array<{ id: string; type: "process" | "http" | "tcp" | "udp" | "file" | "variable"; required: boolean; healthy: boolean; attempts: number }> } }
+function serviceHealthRecord(value: unknown): ServiceHealthStatus {
+  const response = record(value, "Core returned an invalid service health response."); const health = record(response.health, "Core returned an invalid service health response.");
+  const healthTypes = ["process", "http", "tcp", "udp", "file", "variable", "aggregate", "provider", "unknown"];
+  if (!opaqueId(response.serviceId) || !healthTypes.includes(health.type as string) || typeof health.healthy !== "boolean") throw new CliError("invalid_core_response", "Core returned an invalid service health response.");
+  let checks: ServiceHealthStatus["health"]["checks"];
+  if (health.checks !== undefined) { if (!Array.isArray(health.checks)) throw new CliError("invalid_core_response", "Core returned an invalid service health response."); checks = health.checks.map((check) => { const entry = record(check, "Core returned an invalid service health response."); if (!opaqueId(entry.id) || !["process", "http", "tcp", "udp", "file", "variable"].includes(entry.type as string) || typeof entry.required !== "boolean" || typeof entry.healthy !== "boolean" || typeof entry.attempts !== "number" || !Number.isSafeInteger(entry.attempts) || entry.attempts < 0) throw new CliError("invalid_core_response", "Core returned an invalid service health response."); return { id: entry.id, type: entry.type as "process" | "http" | "tcp" | "udp" | "file" | "variable", required: entry.required, healthy: entry.healthy, attempts: entry.attempts }; }); }
+  return { serviceId: response.serviceId, health: { type: health.type as ServiceHealthStatus["health"]["type"], healthy: health.healthy, ...(checks ? { checks } : {}) } };
+}
+
+export interface ServiceDependencies { serviceId: string; dependencies: string[] }
+function serviceDependenciesRecord(serviceId: string, value: unknown): ServiceDependencies {
+  const response = record(value, "Core returned an invalid service dependency response."); const dependencies = record(response.dependencies, "Core returned an invalid service dependency response.");
+  if (!Array.isArray(dependencies.nodes) || !Array.isArray(dependencies.edges) || dependencies.nodes.some((node) => !recordHasSafeId(node)) || dependencies.edges.some((edge) => !edge || typeof edge !== "object" || Array.isArray(edge) || !opaqueId((edge as Record<string, unknown>).from) || !opaqueId((edge as Record<string, unknown>).to))) throw new CliError("invalid_core_response", "Core returned an invalid service dependency response.");
+  const nodes = new Set(dependencies.nodes.map((node) => (node as { id: string }).id)); if (!nodes.has(serviceId)) throw new CliError("invalid_core_response", "Core returned an invalid service dependency response.");
+  const ids = dependencies.edges.filter((edge) => (edge as { to: string }).to === serviceId).map((edge) => (edge as { from: string }).from);
+  if (ids.some((id) => !nodes.has(id))) throw new CliError("invalid_core_response", "Core returned an invalid service dependency response.");
+  return { serviceId, dependencies: [...new Set(ids)].sort() };
+}
+function recordHasSafeId(value: unknown): boolean { return Boolean(value && typeof value === "object" && !Array.isArray(value) && opaqueId((value as Record<string, unknown>).id)); }
 
 function previewRecord(value: unknown): LifecyclePreview {
   const response = record(value);

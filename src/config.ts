@@ -64,36 +64,36 @@ export async function loadConfig(path = configPath()): Promise<CliConfig> {
     const raw = await readFile(path, "utf8");
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new CliError("invalid_config", `Config file is not an object: ${path}`);
+      throw new CliError("invalid_config", "CLI configuration is invalid.");
     }
     const config = parsed as CliConfig;
     const coreUrl = config.coreUrl;
     if (coreUrl !== undefined && typeof coreUrl !== "string") {
-      throw new CliError("invalid_config", `Config coreUrl must be a string: ${path}`);
+      throw new CliError("invalid_config", "CLI configuration is invalid.");
     }
     if (config.defaultConnection !== undefined && typeof config.defaultConnection !== "string") {
-      throw new CliError("invalid_config", `Config defaultConnection must be a string: ${path}`);
+      throw new CliError("invalid_config", "CLI configuration is invalid.");
     }
     const connections: Record<string, { coreUrl: string }> = {};
     if (config.connections !== undefined) {
       if (!config.connections || typeof config.connections !== "object" || Array.isArray(config.connections)) {
-        throw new CliError("invalid_config", `Config connections must be an object: ${path}`);
+        throw new CliError("invalid_config", "CLI configuration is invalid.");
       }
       for (const [name, connection] of Object.entries(config.connections)) {
         validateConnectionName(name);
         if (!connection || typeof connection !== "object" || Array.isArray(connection) || Object.keys(connection).length !== 1 || typeof connection.coreUrl !== "string") {
-          throw new CliError("invalid_config", `Config connection entries must contain only coreUrl: ${path}`);
+          throw new CliError("invalid_config", "CLI configuration is invalid.");
         }
         connections[name] = { coreUrl: normalizeCoreUrl(connection.coreUrl) };
       }
     }
     const defaultConnection = config.defaultConnection ? validateConnectionName(config.defaultConnection) : undefined;
-    if (defaultConnection && !connections[defaultConnection]) throw new CliError("invalid_config", `Config defaultConnection must name a saved connection: ${path}`);
+    if (defaultConnection && !connections[defaultConnection]) throw new CliError("invalid_config", "CLI configuration is invalid.");
     return { ...(coreUrl ? { coreUrl: normalizeCoreUrl(coreUrl) } : {}), ...(defaultConnection ? { defaultConnection } : {}), ...(Object.keys(connections).length ? { connections } : {}) };
   } catch (error) {
     if (typeof error === "object" && error && "code" in error && (error as { code: string }).code === "ENOENT") return {};
     if (error instanceof CliError) throw error;
-    if (error instanceof SyntaxError) throw new CliError("invalid_config", `Config file contains invalid JSON: ${path}`);
+    if (error instanceof SyntaxError) throw new CliError("invalid_config", "CLI configuration is invalid.");
     throw error;
   }
 }

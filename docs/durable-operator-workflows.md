@@ -27,11 +27,19 @@ idempotency key only when the server contract makes replay safe.
 The durable dependency is frozen at merged Core `develop`
 `d6dc5558307f13c654194ddc944e3be40c940675`. Its tree is identical to the
 reviewed `454d1590698a36194847755a4aabc4a59d6c5ec4` source. The focused transport fixture
-proves only the CLI's request and safe-output boundary. Separately, the
-repository's real-core acceptance test constructs a guarded Core with a scoped
-signed JWT and JWKS, then runs the compiled CLI through preview, changed-context
-rejection, start, same-key replay, inspection, unsupported cancellation, and
-unrelated-service preservation. That is direct evidence against this merged
-source-built Core only. It is not packaged-Core, release, deployment, or GA
-qualification. Cancel, update, removal and
-inbox coverage remain tracked by Core #1538, #1542, #1543 and #1544.
+proves only the CLI's request and safe-output boundary. CI run `36780507321`
+observed four passing Ubuntu direct-Core tests at CLI revision
+`af6eae418b1076345da1a67d83c5c0ad24f985cc`: the guarded, source-built Core
+durable lifecycle journey; its explicit Core pin; the source-built Core read
+journey; and its explicit read pin. This is direct Linux-hosted evidence against
+the pinned source-built Core only. It is not fixture-only evidence, a packaged
+Core result, release, deployment, cleanup receipt, or GA qualification.
+
+A separate local Windows attempt at the same CLI revision did not finish within
+its fixed 10-second budget. Its terminal receipt and cleanup observation are
+unobserved; this documentation does not reconstruct either result. The durable
+test itself covers preview, changed-context rejection, start, same-key replay,
+inspection, unsupported cancellation, and unrelated-service preservation.
+Cancel, update, removal and inbox coverage remain tracked by Core #1538, #1542,
+#1543 and #1544. See `docs/acceptance/issue-22-evidence.md` for the safe,
+structured evidence record and future-run schema.

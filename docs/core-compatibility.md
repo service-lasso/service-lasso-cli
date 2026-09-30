@@ -40,7 +40,7 @@ external command name ever changes.
 | `POST /api/runtime/actions/importService` and `GET /api/operator/operations/{operationId}` | Core `develop` `387726b` / merged #1464; Issue #18 focused CLI transport fixture checks | `service register` accepts only release references and has no caller-path, bytes, transfer, install or lifecycle behavior. Packaged external-CLI and hosted exact-head qualification remain open. |
 | `SERVICE_LASSO_CORE_TOKEN` Bearer credential | Core `develop` source accepts the local-admin secret from `Authorization: Bearer`; this client keeps it environment-only and sends it only to HTTPS origins or loopback HTTP. | Remote token authentication depends on Core policy: it is unavailable when Core enforces SSO. Named profiles and non-local-admin identity-provider contracts remain unimplemented. |
 | Named origin profiles and authoring scaffold | Local configuration/filesystem tests; pinned `service-template` tag `2026.5.8-d2241fe`, commit and canonical manifest checksum | Profiles do not supply an identity-provider credential flow. Generated projects are not registered; Core #1463 owns the registration/import contract. |
-| Durable lifecycle operations | Merged Core `develop` source `d6dc5558307f13c654194ddc944e3be40c940675` (tree-equal to reviewed `454d1590698a36194847755a4aabc4a59d6c5ec4`); compiled external CLI against an owned loopback Core with scoped OAuth JWT actor/client identity | The proof exercises only fixed actions, preview validation, explicit confirmation phrase display, same-key replay, context rejection, safe errors, operation inspection and unsupported cancellation. It is not packaged-Core, release, deployment, or GA qualification. |
+| Durable lifecycle operations | CI `36780507321`, exact CLI `af6eae418b1076345da1a67d83c5c0ad24f985cc`, Ubuntu direct source-built Core at merged `d6dc5558307f13c654194ddc944e3be40c940675` (tree-equal to reviewed `454d1590698a36194847755a4aabc4a59d6c5ec4`) | Four direct-Core tests passed: durable journey and pin, plus read journey and pin. The Windows local 10-second attempt is incomplete with receipt and cleanup unobserved. This is not fixture-only proof, packaged-Core, release, deployment, or GA qualification. |
 
 Core `develop` `387726b` now accepts released-service registration at
 `POST /api/runtime/actions/importService` and exposes actor-scoped durable
@@ -56,14 +56,15 @@ evidence; neither candidate archive nor a packaged Core is consumed by this test
 
 Issue #22 has separate source-built Core evidence at merged `develop` revision
 `d6dc5558307f13c654194ddc944e3be40c940675`, whose tree equals reviewed
-`454d1590698a36194847755a4aabc4a59d6c5ec4`. It starts an owned disposable
-loopback Core with guarded MCP HTTP and a short-lived signed JWT containing the
-required actor, client and lifecycle scopes. The CLI sends only fixed lifecycle
-fields and emits an allowlisted preview record. The record displays the
-confirmation phrase because Core requires the operator to re-enter it; other
-raw response fields are excluded. The test leaves the unrelated fixture service
-untouched and removes its owned state. This direct source proof does not
-establish packaging, release, deployment, or GA authority.
+`454d1590698a36194847755a4aabc4a59d6c5ec4`. The terminal Ubuntu job in CI
+`36780507321` ran the compiled CLI against an owned disposable guarded Core
+with a scoped signed JWT, actor/client identity and lifecycle scopes. It passed
+the durable journey and the distinct real-Core read journey. The CLI sends only
+fixed lifecycle fields and emits allowlisted records; the confirmation phrase is
+displayed only because Core requires its re-entry. This proves neither a
+packaged Core nor release, deployment, cleanup, or GA authority. The failed-to-
+finish Windows 10-second local attempt has no terminal receipt or cleanup proof,
+so both remain unobserved.
 
 ## Core package handoff
 

@@ -106,3 +106,42 @@ async function assertAvailabilityValidation() {
     await once(server, "close");
   }
 }
+
+test("compiled CLI validates and redacts Core operator reads", async () => {
+  let malformed = false;
+  const server = createServer((request, response) => {
+    const send = (body) => { response.writeHead(200, { "content-type": "application/json" }); response.end(JSON.stringify(body)); };
+    if (request.headers.authorization !== "Bearer fixture-token") return send({ error: "denied" });
+    const path = new URL(request.url, "http://127.0.0.1").pathname;
+    if (path === "/api/runtime/instance") return send(malformed ? { registry: { activeCount: -1, staleCount: 0, unknownCount: 0 } } : { instance: { instanceId: "instance-1", generationId: "generation-1", phase: "running", status: "active", version: "1.2.3", startedAt: "2030-01-01T00:00:00.000Z", updatedAt: "2030-01-01T00:00:01.000Z", apiUrl: "https://private.example/token", workspaceRoot: "C:\\private" }, registry: { activeCount: 1, staleCount: 0, unknownCount: 0, path: "C:\\private" }, selection: { private: "must-not-print" } });
+    if (path === "/api/setup/status") return send(malformed ? { setup: { contractVersion: "bad" } } : { setup: { contractVersion: "service-lasso.setup-status.v1", state: "setup_complete", setupMode: false, vault: { required: true, ready: true, path: "C:\\private" }, operator: { osUsername: "private-user" }, auth: { token: "fixture-token" } } });
+    if (path === "/api/services/demo/health") return send(malformed ? { serviceId: "demo", health: { type: "process", healthy: "yes" } } : { serviceId: "demo", health: { type: "process", healthy: true, detail: "https://private.example/health", checks: [{ id: "process", type: "process", required: true, healthy: true, attempts: 1, detail: "private-token" }] }, history: { transitions: [{ detail: "private" }] } });
+    if (path === "/api/dependencies") return send(malformed ? { dependencies: { nodes: [{ id: "demo" }], edges: [{ from: "private/secret", to: "demo" }] } } : { dependencies: { nodes: [{ id: "demo", name: "demo private name" }, { id: "database", name: "database" }], edges: [{ from: "database", to: "demo" }], private: "fixture-token" } });
+    response.writeHead(404); response.end();
+  });
+  server.listen(0, "127.0.0.1"); await once(server, "listening");
+  const environment = { SERVICE_LASSO_CORE_URL: `http://127.0.0.1:${server.address().port}`, SERVICE_LASSO_CORE_TOKEN: "fixture-token" };
+  const cases = [
+    { args: ["operator", "status", "--json"], expected: { instance: { instanceId: "instance-1", generationId: "generation-1", phase: "running", status: "active", version: "1.2.3", startedAt: "2030-01-01T00:00:00.000Z", updatedAt: "2030-01-01T00:00:01.000Z" }, registry: { activeCount: 1, staleCount: 0, unknownCount: 0 } }, error: "operator status" },
+    { args: ["operator", "setup", "--json"], expected: { setup: { contractVersion: "service-lasso.setup-status.v1", state: "setup_complete", setupMode: false, vault: { required: true, ready: true } } }, error: "setup status" },
+    { args: ["operator", "health", "demo", "--json"], expected: { serviceId: "demo", health: { type: "process", healthy: true, checks: [{ id: "process", type: "process", required: true, healthy: true, attempts: 1 }] } }, error: "service health" },
+    { args: ["operator", "dependencies", "demo", "--json"], expected: { serviceId: "demo", dependencies: ["database"] }, error: "service dependency" },
+  ];
+  try {
+    for (const entry of cases) {
+      const result = await run(entry.args, environment);
+      assert.equal(result.code, 0, result.stderr);
+      assert.deepEqual(JSON.parse(result.stdout), entry.expected);
+      assert.equal(`${result.stdout}${result.stderr}`.includes("private"), false);
+      assert.equal(`${result.stdout}${result.stderr}`.includes("fixture-token"), false);
+    }
+    malformed = true;
+    for (const entry of cases) {
+      const result = await run(entry.args, environment);
+      assert.equal(result.code, 1, entry.error);
+      assert.equal(result.stdout, "", entry.error);
+      assert.match(result.stderr, /Error \[invalid_core_response\]: Core returned an invalid/, entry.error);
+      assert.equal(`${result.stdout}${result.stderr}`.includes("fixture-token"), false, entry.error);
+    }
+  } finally { server.close(); await once(server, "close"); }
+});
