@@ -27,6 +27,20 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
+  completion-shells:
+    name: Completion shell checks (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: sudo apt-get update && sudo apt-get install --yes zsh
+      - run: npm ci
+      - run: npm run build
+      - run: node --test tests/completion.test.js
+
   real-core-read-acceptance:
     name: Direct real-Core reads (ubuntu-latest)
     runs-on: ubuntu-latest

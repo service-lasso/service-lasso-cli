@@ -15,7 +15,7 @@ Issue [#20](https://github.com/service-lasso/service-lasso-cli/issues/20) record
 | Command tree, parsing and generated help | Commander 15, `src/index.ts`, and CLI tests exercise root/service help and confirmation failures. | Implemented foundation |
 | Argument validation | Commander-required options plus application validation for origins, IDs and released-service references. | Implemented foundation |
 | Stable JSON, stdout/stderr, exit codes | `--json` exists on current commands; application writes results to stdout and `CliError` diagnostics to stderr. The complete taxonomy and every required workflow test are incomplete. | Partial; Issue #1 automation contract |
-| Shell completion | No completion command or completion artifact exists. | Planned; Issue #1 hardening/distribution |
+| Shell completion | Issue [#24](https://github.com/service-lasso/service-lasso-cli/issues/24) provides deterministic PowerShell, bash and zsh completion generated from the declared Commander tree. It emits only command and option names; it does not query Core, config, filesystem state, credentials or service identifiers. | Implemented; bounded Issue #1 automation/documentation acceptance |
 | Portable Node archive | The release workflow packages `dist`, `package.json`, and README for a Node 22 consumer. | Candidate distribution only; not a standalone binary |
 | Native Windows/Linux/macOS binary | No native executable assets or three-platform native validation exist. Node SEA needs a dedicated implementation/acceptance slice; Go/Rust migration needs a new decision issue. | Planned; Issue #1 hardening/distribution |
 | Shared API-client opportunity with TUI | `CoreClient` is separate from parsing and accepts injected fetch. The authoritative sharing boundary is the versioned Core HTTP contract; a shared TypeScript package is possible only after TUI contract alignment. | Deferred architecture decision |
@@ -35,7 +35,8 @@ Issue [#20](https://github.com/service-lasso/service-lasso-cli/issues/20) record
 | Durable operation wait/reconcile | Partial | The registration operation can be read by id after a timeout or disconnect. Bounded waits, cancellation and lifecycle operation reconciliation remain planned. |
 | Remove, inbox/history and logs | Planned | Requires the owning Core API and data-access contracts. |
 | Checksum-bound CLI candidate distribution | Implemented | A manual workflow dispatch from `develop` produces an exact-version Node 22 package archive, immutable candidate record, and SHA-256 manifest. The archive is smoke-tested by clean consumers on Windows, Linux, and macOS. |
-| Shell completion and standalone binaries | Planned | Standalone native binaries remain deferred; the distribution candidate requires Node 22. |
+| Shell completion | Implemented | Issue #24 provides deterministic static-safe PowerShell, bash and zsh source derived from declared Commander commands/options. It is separate from native binaries, distribution and full Issue #1 completion. |
+| Standalone binaries | Planned | Standalone native binaries remain deferred; the distribution candidate requires Node 22. |
 | Core executable compatibility | Implemented foundation | This package installs `service-lassoctl`; Core retains `service-lasso` for its in-process, local-runtime CLI. |
 
 ## Safety properties in this slice

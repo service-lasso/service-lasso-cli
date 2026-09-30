@@ -18,6 +18,7 @@ is complete.
 | CLI-REAL-CORE-ACCEPTANCE | Exercise the compiled CLI against an explicitly selected authenticated Core-shaped HTTP endpoint using only public read routes, and classify fixture proof separately from live-Core proof. | Issue #14 adds a loopback fixture contract for `instance inspect` and `service list`. The fixture proves environment-only Bearer transport and secret-safe failures, but no live Core credential or supported runtime is available in this repository. |
 | CLI-REAL-CORE-LOCAL-READ | Exercise the compiled CLI against a pinned actual Core runtime using only loopback public read routes. | Issue #16 starts a disposable Core at port `0` with temporary workspace and service roots, then verifies `instance inspect --json` and `service list --json`. It is direct local read proof only: no service is started, registered, installed, or mutated; no remote identity-provider flow, release, deployment, or GA claim follows. |
 | CLI-AUTOMATION | Never prompt, separate stdout from stderr and keep errors secret-safe, including when a transport implementation throws an error. | Implemented for this slice; durable operation identifiers, waits, cancellation and idempotency await Core. |
+| CLI-COMPLETION | Emit deterministic, read-only PowerShell, bash and zsh completion source for the declared CLI command tree. | Issue #24 owns static completion generation. Candidates derive from Commander declarations, never inspect Core, configuration, credentials, service identifiers or the filesystem, and stop suggesting options after `--`. |
 | CLI-DISTRIBUTION | Produce an exact, checksum-bound candidate that a clean Node 22 consumer can install without colliding with Core's local-runtime executable. | Implemented for manually dispatched `develop` candidates. The portable package archive contains the `service-lassoctl` entrypoint and requires Node 22; standalone native binaries remain deferred. |
 
 The capability matrix is the operation-to-contract record. The Core compatibility
@@ -79,6 +80,14 @@ before a complete create-to-running-service workflow can be implemented.
     conflict, unknown readback, secret-safe errors and invalid-input
     no-mutation. This is source/fixture contract evidence only; packaged
     external CLI, hosted exact-head CI and GA remain separate gates.
+16. Issue #24 provides `service-lassoctl completion powershell|bash|zsh` as
+    deterministic source on stdout. Candidates are derived from the declared
+    Commander command/options tree, include no runtime-derived values, and stop
+    option suggestions after `--`. The generated source is safe to save and
+    source locally; it does not evaluate completion input, contact Core, read
+    credentials or write state. Focused generator tests plus actual PowerShell
+    and hosted bash/zsh shell checks establish only CLI completion behavior, not
+    a release, native binary or full Issue #1 qualification.
 
 ## Framework decision traceability
 

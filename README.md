@@ -29,6 +29,9 @@ service-lassoctl service start <service-id> --confirm
 service-lassoctl service init <service-id> --directory ./lasso-example
 service-lassoctl --connection remote service register --repo service-lasso/lasso-node --tag v1.0.0 --expected-commit <40-lowercase-hex> --expected-manifest-sha256 <64-lowercase-hex> --idempotency-key <opaque-key> --confirm --json
 service-lassoctl --connection remote service operation <sro_operation_id> --json
+service-lassoctl completion powershell
+service-lassoctl completion bash
+service-lassoctl completion zsh
 ```
 
 Core resolution is deterministic: `--core-url`, then `SERVICE_LASSO_CORE_URL`, then
@@ -126,3 +129,34 @@ echoed, because they can contain operator-sensitive data.
 
 This repository does not publish packages, releases, or deployments from local
 development commands.
+
+## Shell completion
+
+`completion` writes a deterministic shell script to stdout. It derives only
+subcommand and declared option names from the installed CLI command tree. It
+does not contact Core, read saved configuration or credentials, inspect paths,
+or suggest service IDs and option values. Once `--` appears, completion returns
+no candidates.
+
+Save and load the script with the shell's ordinary startup file:
+
+```powershell
+service-lassoctl completion powershell | Out-File -Encoding utf8 "$HOME/.service-lassoctl-completion.ps1"
+. "$HOME/.service-lassoctl-completion.ps1"
+```
+
+```sh
+service-lassoctl completion bash >> ~/.bashrc
+# or, after `autoload -Uz compinit && compinit` in ~/.zshrc:
+service-lassoctl completion zsh >> ~/.zshrc
+```
+
+In CI, generate and syntax-check the source without evaluating it or invoking
+Core:
+
+```sh
+service-lassoctl completion bash > service-lassoctl-completion.bash
+bash -n service-lassoctl-completion.bash
+service-lassoctl completion zsh > service-lassoctl-completion.zsh
+zsh -n service-lassoctl-completion.zsh
+```

@@ -6,6 +6,7 @@ import { configPath, loadConfig, resolveCoreToken, resolveCoreUrl, resolveLocalA
 import { CoreClient } from "./core-client.js";
 import { asCliError, CliError } from "./errors.js";
 import { createServiceScaffold } from "./scaffold.js";
+import { completionSource, supportedCompletionShells } from "./completion.js";
 
 interface Output {
   write(value: string): void;
@@ -42,6 +43,16 @@ export function createProgram(): Command {
     .option("--core-url <url>", "Service Lasso Core origin; overrides environment and saved config")
     .option("--connection <name>", "saved Core connection; overrides environment and default connection")
     .showSuggestionAfterError();
+
+  program.command("completion")
+    .argument("<shell>", `shell (${supportedCompletionShells.join(", ")})`)
+    .description("Print static shell completion source; it never reads Core or local state.")
+    .action((shell: string) => {
+      if (!supportedCompletionShells.includes(shell as (typeof supportedCompletionShells)[number])) {
+        throw new CliError("unsupported_completion_shell", `Unsupported completion shell: ${shell}. Choose powershell, bash, or zsh.`);
+      }
+      print(completionSource(shell, program), false);
+    });
 
   const config = program.command("config").description("Read and write local CLI configuration.");
   config.command("path").description("Print the config file path.").action(() => print(configPath(), false));
