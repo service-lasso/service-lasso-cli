@@ -12,8 +12,8 @@ is complete.
 | Group | Foundation requirement | Current boundary |
 | --- | --- | --- |
 | CLI-CONNECTION | Select a Core origin using flag, environment, named saved configuration and a local default; when a local-admin token is configured, send it only to HTTPS or loopback HTTP, and reject redirects before a request can cross origins. | Named origin profiles are implemented locally with flag > environment > profile/default precedence. Credentials remain environment-only; Core identity-provider profiles await the Core contract. |
-| CLI-AUTHORING | Create a non-destructive, caller-selected package starter from a pinned service-template identity. | Implemented against the reviewed `2026.5.8-d2241fe` template tag, commit and canonical manifest SHA-256; Core registration remains blocked on #1463. |
-| CLI-REGISTRATION | Validate and register local or remote package input. | Blocked on Core registration/import, remote acquisition and duplicate-identity contracts. |
+| CLI-AUTHORING | Create a non-destructive, caller-selected package starter from a pinned service-template identity. | Implemented against the reviewed `2026.5.8-d2241fe` template tag, commit and canonical manifest SHA-256. |
+| CLI-REGISTRATION | Register an allowlisted released service and reconcile its actor-scoped durable operation. | Issue #18 consumes Core `develop` `387726b` / merged #1464 through `POST /api/runtime/actions/importService` and `GET /api/operator/operations/{operationId}`. It sends only repo, tag, full commit, manifest SHA-256, idempotency key and `confirm: true`; Core remains authoritative for allowlisting, provenance, identity, permission, audit and durable state. Caller-local paths, staged bytes, transfer, install and lifecycle remain outside this slice. |
 | CLI-OPERATIONS | Read status and services; invoke supported lifecycle actions with local confirmation. | Read and lifecycle routes are unit-tested transport adapters only until Core publishes the exact API/version/permission contract. |
 | CLI-REAL-CORE-ACCEPTANCE | Exercise the compiled CLI against an explicitly selected authenticated Core-shaped HTTP endpoint using only public read routes, and classify fixture proof separately from live-Core proof. | Issue #14 adds a loopback fixture contract for `instance inspect` and `service list`. The fixture proves environment-only Bearer transport and secret-safe failures, but no live Core credential or supported runtime is available in this repository. |
 | CLI-REAL-CORE-LOCAL-READ | Exercise the compiled CLI against a pinned actual Core runtime using only loopback public read routes. | Issue #16 starts a disposable Core at port `0` with temporary workspace and service roots, then verifies `instance inspect --json` and `service list --json`. It is direct local read proof only: no service is started, registered, installed, or mutated; no remote identity-provider flow, release, deployment, or GA claim follows. |
@@ -70,3 +70,12 @@ before a complete create-to-running-service workflow can be implemented.
     lifecycle, packaged-Core qualification, release, or GA. The checksum-bound
     CLI candidate is separate distribution evidence and is not an input to this
     source-built CLI-to-Core acceptance.
+15. Issue #18 adds `service register` and `service operation` through the Core
+    released-service registration contract. The CLI reads
+    `SERVICE_LASSO_CLI_LOCAL_ADMIN_TOKEN` only from the environment and sends
+    it as `x-service-lasso-admin-token`; it rejects cleartext non-loopback
+    origins, malformed request values and malformed operation responses before
+    exposing result data. Focused transport tests cover denial, replay,
+    conflict, unknown readback, secret-safe errors and invalid-input
+    no-mutation. This is source/fixture contract evidence only; packaged
+    external CLI, hosted exact-head CI and GA remain separate gates.

@@ -2,7 +2,7 @@
 import { Command } from "commander";
 import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { configPath, loadConfig, resolveCoreToken, resolveCoreUrl, saveConfig, validateConnectionName } from "./config.js";
+import { configPath, loadConfig, resolveCoreToken, resolveCoreUrl, resolveLocalAdminToken, saveConfig, validateConnectionName } from "./config.js";
 import { CoreClient } from "./core-client.js";
 import { asCliError, CliError } from "./errors.js";
 import { createServiceScaffold } from "./scaffold.js";
@@ -25,6 +25,7 @@ async function client(coreUrl?: string, connection?: string): Promise<CoreClient
   return new CoreClient({
     baseUrl: resolveCoreUrl({ cliValue: coreUrl, connection, environment: process.env, config }),
     token: resolveCoreToken(),
+    localAdminToken: resolveLocalAdminToken(),
   });
 }
 
@@ -103,6 +104,28 @@ export function createProgram(): Command {
     const result = await createServiceScaffold({ id: serviceId, directory: options.directory ?? `lasso-${serviceId}`, name: options.name, dryRun: options.dryRun });
     print(result, Boolean(options.json));
   });
+  service.command("register")
+    .requiredOption("--repo <owner/repository>", "allowlisted release repository")
+    .requiredOption("--tag <tag>", "allowlisted release tag")
+    .requiredOption("--expected-commit <sha>", "full release commit SHA")
+    .requiredOption("--expected-manifest-sha256 <sha256>", "canonical manifest SHA-256")
+    .requiredOption("--idempotency-key <key>", "caller-supplied retry key")
+    .option("--confirm", "confirm this registration")
+    .option("--json", "print JSON")
+    .description("Register an allowlisted released service through Core.")
+    .action(async (options: { repo: string; tag: string; expectedCommit: string; expectedManifestSha256: string; idempotencyKey: string; confirm?: boolean; json?: boolean }) => {
+      requireConfirmation(options);
+      const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
+      print(await (await client(coreUrl, connection)).registerReleasedService({ ...options, confirm: true }), Boolean(options.json));
+    });
+  service.command("operation")
+    .argument("<operation-id>", "service registration operation id")
+    .option("--json", "print JSON")
+    .description("Read an actor-scoped released-service registration operation.")
+    .action(async (operationId: string, options: { json?: boolean }) => {
+      const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
+      print(await (await client(coreUrl, connection)).releasedServiceOperation(operationId), Boolean(options.json));
+    });
   return program;
 }
 

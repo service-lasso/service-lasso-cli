@@ -27,6 +27,8 @@ service-lassoctl instance inspect --json
 service-lassoctl service list
 service-lassoctl service start <service-id> --confirm
 service-lassoctl service init <service-id> --directory ./lasso-example
+service-lassoctl --connection remote service register --repo service-lasso/lasso-node --tag v1.0.0 --expected-commit <40-lowercase-hex> --expected-manifest-sha256 <64-lowercase-hex> --idempotency-key <opaque-key> --confirm --json
+service-lassoctl --connection remote service operation <sro_operation_id> --json
 ```
 
 Core resolution is deterministic: `--core-url`, then `SERVICE_LASSO_CORE_URL`, then
@@ -34,6 +36,16 @@ the selected `--connection` / `SERVICE_LASSO_CONNECTION` / saved default, then t
 legacy saved origin and local default. Named connections store only Core origins;
 credentials remain environment-only. Mutation commands always
 require `--confirm`; the CLI does not prompt or silently mutate Core.
+
+`service register` is the bounded released-service registration contract from
+Core `develop` `387726b` / merged #1464. It sends only an allowlisted
+repository/tag, full expected commit, manifest SHA-256, idempotency key and
+server confirmation to Core. Inject `SERVICE_LASSO_CLI_LOCAL_ADMIN_TOKEN`
+through a secret environment mechanism; the CLI sends it only in
+`x-service-lasso-admin-token`, never accepts it as an argument, saves it, or
+prints it. HTTPS is required outside loopback. `service operation` performs
+actor-scoped durable readback. These commands have no caller filesystem,
+staged-byte/transfer, install, lifecycle, deployment, release or GA behavior.
 
 For a remote Core whose policy accepts local-admin-token authentication, inject
 `SERVICE_LASSO_CORE_TOKEN` through the CI secret mechanism and use an HTTPS
