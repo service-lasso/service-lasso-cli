@@ -1,4 +1,4 @@
-import { run } from "./index.js";
+import { run } from "./cli.js";
 import { asCliError } from "./errors.js";
 
 run().catch((error) => {
