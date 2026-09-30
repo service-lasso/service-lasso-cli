@@ -28,4 +28,5 @@
   JWT-authenticated fixtures separately from merged-Core, packaged-Core,
   release, deployment, and GA qualification.
 - [x] Evaluate the Issue #1 framework/language candidates in child Issue #20 and record the foundation decision in `docs/decisions/ADR-001-cli-framework.md`.
-- [ ] Complete the remaining Issue #1 workflow, automation-contract, completion, and native-binary/cross-platform acceptance recorded in `.governance/project/BACKLOG.md` and `docs/capability-matrix.md`.
+- [x] Complete Issue #24 `CLI-COMPLETION`: deterministic Commander-derived PowerShell, bash and zsh completion source, safe `--` handling, concise install/CI examples and focused shell evidence. This is a bounded Issue #1 automation/documentation acceptance; no native binary, release or full workflow claim follows.
+- [ ] Complete the remaining Issue #1 workflow, automation-contract, and native-binary/cross-platform acceptance recorded in `.governance/project/BACKLOG.md` and `docs/capability-matrix.md`.
