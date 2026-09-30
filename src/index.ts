@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { realpathSync } from "node:fs";
-import { pathToFileURL } from "node:url";
+import { basename } from "node:path";
 import { configPath, loadConfig, resolveCoreToken, resolveCoreUrl, resolveLocalAdminToken, saveConfig, validateConnectionName } from "./config.js";
 import { CoreClient, LifecycleAction } from "./core-client.js";
 import { asCliError, CliError } from "./errors.js";
@@ -208,7 +207,7 @@ export async function run(argv = process.argv): Promise<void> {
   await createProgram().parseAsync(argv);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
+if (process.argv[1] && basename(process.argv[1]) === "index.js") {
   run().catch((error) => {
     const safe = asCliError(error);
     output.error(`Error [${safe.code}]: ${safe.message}\n`);
