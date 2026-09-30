@@ -31,7 +31,7 @@ const sourceVersion = manifest.version;
 manifest.version = version;
 await writeFile(join(staging, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
 
-const implementation = join(staging, "dist", "cli.js");
+const implementation = join(staging, "dist", "index.js");
 const implementationSource = await readFile(implementation, "utf8");
 const versionCall = `.version("${sourceVersion}")`;
 if (!implementationSource.includes(versionCall)) throw new Error("CLI implementation version marker was not found.");

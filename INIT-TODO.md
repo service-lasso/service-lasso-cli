@@ -22,6 +22,11 @@
   lifecycle, distribution qualification and GA remain open. The active
   boundaries are maintained in `SPEC-CLI-FOUNDATION.md` and
   `docs/capability-matrix.md`.
+- [ ] Issue #22: implement `SPEC-CLI-DURABLE-OPERATIONS` external durable
+  operator slice against merged Core `develop` `d6dc5558307f13c654194ddc944e3be40c940675`.
+  Record compiled external-CLI to source-built Core evidence with disposable
+  JWT-authenticated fixtures separately from merged-Core, packaged-Core,
+  release, deployment, and GA qualification.
 - [x] Evaluate the Issue #1 framework/language candidates in child Issue #20 and record the foundation decision in `docs/decisions/ADR-001-cli-framework.md`.
 - [ ] Complete the remaining Issue #1 workflow, automation-contract, completion, and native-binary/cross-platform acceptance recorded in `.governance/project/BACKLOG.md` and `docs/capability-matrix.md`.
 - [ ] Issue #26: deliver and directly validate checksum-bound Node 22.23.2 SEA

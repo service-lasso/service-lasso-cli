@@ -44,6 +44,87 @@ export class CoreClient {
     });
   }
 
+  public async operatorStatus(): Promise<OperatorStatus> { return operatorStatusRecord(await this.request("/api/runtime/instance")); }
+  public async setup(): Promise<SetupStatus> { return setupStatusRecord(await this.request("/api/setup/status")); }
+  public async serviceHealth(serviceId: string): Promise<ServiceHealthStatus> { return serviceHealthRecord(await this.request(`/api/services/${this.serviceId(serviceId)}/health`)); }
+  public async serviceDependencies(serviceId: string): Promise<ServiceDependencies> {
+    return serviceDependenciesRecord(this.serviceId(serviceId), await this.request("/api/dependencies"));
+  }
+
+  public async availability(serviceId: string): Promise<LifecycleAvailability> {
+    const result = await this.request(`/api/operator/lifecycle/services/${this.serviceId(serviceId)}/availability`);
+    if (!isAvailability(result)) throw new CliError("invalid_core_response", "Core returned an invalid durable lifecycle availability response.");
+    if (result.contractVersion !== "service-lasso-durable-lifecycle-operation.v1") {
+      throw new CliError("unsupported_core_contract", "Core advertised an unsupported durable lifecycle contract version.");
+    }
+    // Core may add server-only availability metadata. Return only the public
+    // contract fields so the CLI never prints an unreviewed response field.
+    return {
+      contractVersion: result.contractVersion,
+      actions: result.actions.map((entry) => ({
+        action: entry.action,
+        available: entry.available,
+        ...(entry.cancellationSupported === undefined ? {} : { cancellationSupported: entry.cancellationSupported }),
+      })),
+    };
+  }
+
+  public async previewLifecycle(serviceId: string, action: LifecycleAction): Promise<LifecyclePreview> {
+    await this.assertActionAvailable(serviceId, action);
+    return previewRecord(await this.request("/api/operator/lifecycle/operations", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action, serviceId }),
+    }));
+  }
+
+  public async executeLifecycle(input: LifecycleExecute): Promise<LifecycleOperationPayload> {
+    // Preview performs availability/version gating. Do not repeat that read
+    // here: a successful start can make a same-key replay unavailable while
+    // Core must still reconcile the identical durable submission.
+    if (!input.confirmationId || !input.confirmationPhrase || !/^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(input.idempotencyKey)) {
+      throw new CliError("invalid_durable_operation", "A confirmation id, confirmation phrase, and opaque 8-128 character idempotency key are required.");
+    }
+    return operationPayload(await this.request("/api/operator/lifecycle/operations", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        action: input.action,
+        serviceId: input.serviceId,
+        execute: true,
+        idempotencyKey: input.idempotencyKey,
+        confirmationId: input.confirmationId,
+        confirmationPhrase: input.confirmationPhrase,
+      }),
+    }));
+  }
+
+  public async lifecycleOperation(operationId: string): Promise<LifecycleOperationPayload> {
+    if (!/^[-A-Za-z0-9_]{8,200}$/.test(operationId)) throw new CliError("invalid_operation_id", "Operation id must be an opaque operation identifier.");
+    return operationPayload(await this.request(`/api/operator/lifecycle/operations/${encodeURIComponent(operationId)}`));
+  }
+
+  public async cancelLifecycleOperation(operationId: string, cancellationSupported: boolean): Promise<LifecycleOperationPayload> {
+    if (!cancellationSupported) {
+      return { operation: { operationId, cancellationSupported: false }, cancellation: { result: "unsupported", terminal: false } };
+    }
+    return operationPayload(await this.request(`/api/operator/lifecycle/operations/${encodeURIComponent(operationId)}/cancel`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }));
+  }
+
+  private serviceId(serviceId: string): string {
+    if (!serviceId || serviceId.includes("/")) throw new CliError("invalid_service_id", "Service id is required and cannot contain a slash.");
+    return encodeURIComponent(serviceId);
+  }
+
+  private async assertActionAvailable(serviceId: string, action: LifecycleAction): Promise<void> {
+    this.assertAvailable(await this.availability(serviceId), action);
+  }
+
+  private assertAvailable(availability: LifecycleAvailability, action: LifecycleAction): void {
+    const advertised = availability.actions.find((entry) => entry.action === action);
+    if (!advertised?.available) throw new CliError("action_unavailable", "Core does not advertise this durable lifecycle action as available.");
+  }
+
   public async registerReleasedService(input: ReleasedServiceRegistration): Promise<ReleasedServiceOperation> {
     if (!input.confirm) throw new CliError("confirmation_required", "This action changes a running Core instance. Re-run with --confirm after reviewing the target.");
     assertReleasedServiceRegistration(input);
@@ -101,6 +182,169 @@ export class CoreClient {
       throw new CliError("invalid_core_response", "Core returned a non-JSON response.");
     }
   }
+}
+
+export type LifecycleAction = "install" | "config" | "start" | "stop" | "restart";
+export interface LifecycleExecute { action: LifecycleAction; serviceId: string; idempotencyKey: string; confirmationId: string; confirmationPhrase: string; }
+type AvailabilityAction = LifecycleAction | "reload";
+export interface LifecycleAvailability { contractVersion: string; actions: Array<{ action: AvailabilityAction; available: boolean; cancellationSupported?: boolean }>; }
+function isAvailability(value: unknown): value is LifecycleAvailability {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const response = value as { contractVersion?: unknown; actions?: unknown };
+  if (typeof response.contractVersion !== "string" || !Array.isArray(response.actions) || response.actions.length === 0) return false;
+  const seen = new Set<AvailabilityAction>();
+  return response.actions.every((candidate) => {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return false;
+    const action = candidate as { action?: unknown; available?: unknown; cancellationSupported?: unknown };
+    if (!isAvailabilityAction(action.action) || typeof action.available !== "boolean" || (action.cancellationSupported !== undefined && typeof action.cancellationSupported !== "boolean") || seen.has(action.action)) return false;
+    seen.add(action.action);
+    return true;
+  });
+}
+
+function isLifecycleAction(value: unknown): value is LifecycleAction {
+  return value === "install" || value === "config" || value === "start" || value === "stop" || value === "restart";
+}
+
+function isAvailabilityAction(value: unknown): value is AvailabilityAction {
+  return isLifecycleAction(value) || value === "reload";
+}
+
+export interface LifecyclePreview {
+  contractVersion: "service-lasso-mcp-guarded-action.v1";
+  action: string;
+  confirmation: { id: string; expiresAt: string; phrase: string };
+  preflight: { targets: string[]; effects: string[]; executable: boolean; skippedReason: string | null; requiredProfile: string };
+  safety: { mutating: false; redacted: true };
+}
+
+export interface LifecycleOperationPayload {
+  operation: {
+    operationId: string;
+    action?: string;
+    status?: string;
+    phase?: string;
+    progress?: number;
+    summary?: string;
+    targetIds?: string[];
+    cancellationSupported: boolean;
+    outcome?: string | null;
+  };
+  cancellation?: { result: "requested" | "unsupported" | "too_late"; terminal: boolean };
+}
+
+function record(value: unknown, error = "Core returned an invalid durable lifecycle response."): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new CliError("invalid_core_response", error);
+  return value as Record<string, unknown>;
+}
+
+function strings(value: unknown, error: string): string[] {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) throw new CliError("invalid_core_response", error);
+  return value as string[];
+}
+
+function safeText(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 && value.length <= 160
+    && /^[\x20-\x7e]+$/.test(value) && !/[\\/]|:\/\//.test(value);
+}
+
+function opaqueId(value: unknown): value is string {
+  return safeText(value) && /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value);
+}
+
+function isoTime(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value);
+}
+
+export interface OperatorStatus {
+  instance: null | { instanceId: string; generationId: string; phase: "starting" | "running" | "stopping" | "stopped" | "failed" | "superseded"; status: "active" | "stale" | "unknown"; version: string; startedAt: string; updatedAt: string; };
+  registry: { activeCount: number; staleCount: number; unknownCount: number };
+}
+
+function operatorStatusRecord(value: unknown): OperatorStatus {
+  const response = record(value, "Core returned an invalid operator status response.");
+  const registry = record(response.registry, "Core returned an invalid operator status response.");
+  if (![registry.activeCount, registry.staleCount, registry.unknownCount].every((count) => typeof count === "number" && Number.isSafeInteger(count) && count >= 0)) throw new CliError("invalid_core_response", "Core returned an invalid operator status response.");
+  if (response.instance === null) return { instance: null, registry: { activeCount: registry.activeCount as number, staleCount: registry.staleCount as number, unknownCount: registry.unknownCount as number } };
+  const instance = record(response.instance, "Core returned an invalid operator status response.");
+  if (!opaqueId(instance.instanceId) || !opaqueId(instance.generationId) || !safeText(instance.version) || !isoTime(instance.startedAt) || !isoTime(instance.updatedAt)
+    || !["starting", "running", "stopping", "stopped", "failed", "superseded"].includes(instance.phase as string)
+    || !["active", "stale", "unknown"].includes(instance.status as string)) throw new CliError("invalid_core_response", "Core returned an invalid operator status response.");
+  return { instance: { instanceId: instance.instanceId, generationId: instance.generationId, phase: instance.phase as OperatorStatus["instance"] extends infer T ? T extends { phase: infer P } ? P : never : never, status: instance.status as "active" | "stale" | "unknown", version: instance.version, startedAt: instance.startedAt, updatedAt: instance.updatedAt }, registry: { activeCount: registry.activeCount as number, staleCount: registry.staleCount as number, unknownCount: registry.unknownCount as number } };
+}
+
+export interface SetupStatus { setup: { contractVersion: "service-lasso.setup-status.v1"; state: "not_required" | "setup_required" | "setup_in_progress" | "setup_complete" | "setup_failed"; setupMode: boolean; vault: { required: boolean; ready: boolean } } }
+function setupStatusRecord(value: unknown): SetupStatus {
+  const response = record(value, "Core returned an invalid setup status response."); const setup = record(response.setup, "Core returned an invalid setup status response."); const vault = record(setup.vault, "Core returned an invalid setup status response.");
+  if (setup.contractVersion !== "service-lasso.setup-status.v1" || !["not_required", "setup_required", "setup_in_progress", "setup_complete", "setup_failed"].includes(setup.state as string) || typeof setup.setupMode !== "boolean" || typeof vault.required !== "boolean" || typeof vault.ready !== "boolean") throw new CliError("invalid_core_response", "Core returned an invalid setup status response.");
+  return { setup: { contractVersion: "service-lasso.setup-status.v1", state: setup.state as SetupStatus["setup"]["state"], setupMode: setup.setupMode, vault: { required: vault.required, ready: vault.ready } } };
+}
+
+export interface ServiceHealthStatus { serviceId: string; health: { type: "process" | "http" | "tcp" | "udp" | "file" | "variable" | "aggregate" | "provider" | "unknown"; healthy: boolean; checks?: Array<{ id: string; type: "process" | "http" | "tcp" | "udp" | "file" | "variable"; required: boolean; healthy: boolean; attempts: number }> } }
+function serviceHealthRecord(value: unknown): ServiceHealthStatus {
+  const response = record(value, "Core returned an invalid service health response."); const health = record(response.health, "Core returned an invalid service health response.");
+  const healthTypes = ["process", "http", "tcp", "udp", "file", "variable", "aggregate", "provider", "unknown"];
+  if (!opaqueId(response.serviceId) || !healthTypes.includes(health.type as string) || typeof health.healthy !== "boolean") throw new CliError("invalid_core_response", "Core returned an invalid service health response.");
+  let checks: ServiceHealthStatus["health"]["checks"];
+  if (health.checks !== undefined) { if (!Array.isArray(health.checks)) throw new CliError("invalid_core_response", "Core returned an invalid service health response."); checks = health.checks.map((check) => { const entry = record(check, "Core returned an invalid service health response."); if (!opaqueId(entry.id) || !["process", "http", "tcp", "udp", "file", "variable"].includes(entry.type as string) || typeof entry.required !== "boolean" || typeof entry.healthy !== "boolean" || typeof entry.attempts !== "number" || !Number.isSafeInteger(entry.attempts) || entry.attempts < 0) throw new CliError("invalid_core_response", "Core returned an invalid service health response."); return { id: entry.id, type: entry.type as "process" | "http" | "tcp" | "udp" | "file" | "variable", required: entry.required, healthy: entry.healthy, attempts: entry.attempts }; }); }
+  return { serviceId: response.serviceId, health: { type: health.type as ServiceHealthStatus["health"]["type"], healthy: health.healthy, ...(checks ? { checks } : {}) } };
+}
+
+export interface ServiceDependencies { serviceId: string; dependencies: string[] }
+function serviceDependenciesRecord(serviceId: string, value: unknown): ServiceDependencies {
+  const response = record(value, "Core returned an invalid service dependency response."); const dependencies = record(response.dependencies, "Core returned an invalid service dependency response.");
+  if (!Array.isArray(dependencies.nodes) || !Array.isArray(dependencies.edges) || dependencies.nodes.some((node) => !recordHasSafeId(node)) || dependencies.edges.some((edge) => !edge || typeof edge !== "object" || Array.isArray(edge) || !opaqueId((edge as Record<string, unknown>).from) || !opaqueId((edge as Record<string, unknown>).to))) throw new CliError("invalid_core_response", "Core returned an invalid service dependency response.");
+  const nodes = new Set(dependencies.nodes.map((node) => (node as { id: string }).id)); if (!nodes.has(serviceId)) throw new CliError("invalid_core_response", "Core returned an invalid service dependency response.");
+  const ids = dependencies.edges.filter((edge) => (edge as { to: string }).to === serviceId).map((edge) => (edge as { from: string }).from);
+  if (ids.some((id) => !nodes.has(id))) throw new CliError("invalid_core_response", "Core returned an invalid service dependency response.");
+  return { serviceId, dependencies: [...new Set(ids)].sort() };
+}
+function recordHasSafeId(value: unknown): boolean { return Boolean(value && typeof value === "object" && !Array.isArray(value) && opaqueId((value as Record<string, unknown>).id)); }
+
+function previewRecord(value: unknown): LifecyclePreview {
+  const response = record(value);
+  const confirmation = record(response.confirmation);
+  const preflight = record(response.preflight);
+  if (response.contractVersion !== "service-lasso-mcp-guarded-action.v1" || typeof response.action !== "string" ||
+    confirmation.status !== "pending" || typeof confirmation.id !== "string" || typeof confirmation.expiresAt !== "string" || typeof confirmation.confirmationPhrase !== "string" ||
+    typeof preflight.executable !== "boolean" || (preflight.skippedReason !== null && typeof preflight.skippedReason !== "string") || typeof preflight.requiredProfile !== "string") {
+    throw new CliError("invalid_core_response", "Core returned an invalid durable lifecycle preview.");
+  }
+  return {
+    contractVersion: "service-lasso-mcp-guarded-action.v1",
+    action: response.action,
+    confirmation: { id: confirmation.id, expiresAt: confirmation.expiresAt, phrase: confirmation.confirmationPhrase },
+    preflight: { targets: strings(preflight.targets, "Core returned an invalid durable lifecycle preview."), effects: strings(preflight.effects, "Core returned an invalid durable lifecycle preview."), executable: preflight.executable, skippedReason: preflight.skippedReason, requiredProfile: preflight.requiredProfile },
+    safety: { mutating: false, redacted: true },
+  };
+}
+
+function operationPayload(value: unknown): LifecycleOperationPayload {
+  const response = record(value);
+  const operation = record(response.operation);
+  if (typeof operation.operationId !== "string" || typeof operation.cancellationSupported !== "boolean") {
+    throw new CliError("invalid_core_response", "Core returned an invalid durable lifecycle operation.");
+  }
+  const allowed = ["action", "status", "phase", "summary"] as const;
+  for (const key of allowed) if (operation[key] !== undefined && typeof operation[key] !== "string") throw new CliError("invalid_core_response", "Core returned an invalid durable lifecycle operation.");
+  if (operation.progress !== undefined && (typeof operation.progress !== "number" || !Number.isFinite(operation.progress))) throw new CliError("invalid_core_response", "Core returned an invalid durable lifecycle operation.");
+  if (operation.outcome !== undefined && operation.outcome !== null && typeof operation.outcome !== "string") throw new CliError("invalid_core_response", "Core returned an invalid durable lifecycle operation.");
+  const cancellation = response.cancellation === undefined ? undefined : record(response.cancellation);
+  if (cancellation && (typeof cancellation.result !== "string" || typeof cancellation.terminal !== "boolean" || !["requested", "unsupported", "too_late"].includes(cancellation.result))) throw new CliError("invalid_core_response", "Core returned an invalid durable lifecycle cancellation.");
+  return {
+    operation: {
+      operationId: operation.operationId,
+      ...(typeof operation.action === "string" ? { action: operation.action } : {}),
+      ...(typeof operation.status === "string" ? { status: operation.status } : {}),
+      ...(typeof operation.phase === "string" ? { phase: operation.phase } : {}),
+      ...(typeof operation.progress === "number" ? { progress: operation.progress } : {}),
+      ...(typeof operation.summary === "string" ? { summary: operation.summary } : {}),
+      ...(operation.targetIds === undefined ? {} : { targetIds: strings(operation.targetIds, "Core returned an invalid durable lifecycle operation.") }),
+      cancellationSupported: operation.cancellationSupported,
+      ...(operation.outcome === undefined || operation.outcome === null ? { outcome: null } : { outcome: operation.outcome }),
+    },
+    ...(cancellation ? { cancellation: { result: cancellation.result as "requested" | "unsupported" | "too_late", terminal: cancellation.terminal as boolean } } : {}),
+  };
 }
 
 export interface ReleasedServiceRegistration {
