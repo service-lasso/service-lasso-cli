@@ -60,9 +60,13 @@ before a complete create-to-running-service workflow can be implemented.
     is fixture-contract evidence only; direct authenticated real-Core
     acceptance requires a supported endpoint and credential outside this
     repository.
-14. Issue #16 runs the compiled CLI against Core `develop`
-    `02785268392318f14af3d0596df1ca5414957ce8` in a temporary loopback runtime
-    at an OS-selected port. The direct read proof covers Core health, instance,
-    capabilities and a discovered service, then stops Core and removes all test
-    state. It neither weakens Core authorization nor proves remote auth,
-    registration, lifecycle, packaged-Core qualification, release, or GA.
+14. Issue #16 runs the source-built compiled CLI against source-built Core
+    `develop` `d9e2ae799244317940c862fe1261dfd22b7bdda1` in a temporary loopback
+    runtime at an OS-selected port. The direct read proof covers Core health,
+    instance, capabilities and an enabled, autostart-eligible discovered service
+    while Core startup is explicitly suppressed; it uses a bounded startup wait,
+    then stops Core and removes all test state with visible cleanup failures. It
+    neither weakens Core authorization nor proves remote auth, registration,
+    lifecycle, packaged-Core qualification, release, or GA. The checksum-bound
+    CLI candidate is separate distribution evidence and is not an input to this
+    source-built CLI-to-Core acceptance.

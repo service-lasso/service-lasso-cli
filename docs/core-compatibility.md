@@ -33,9 +33,9 @@ external command name ever changes.
 
 | CLI adapter | Repository evidence | Integration qualification |
 | --- | --- | --- |
-| `GET /api/health` | Core `develop` source at `02785268392318f14af3d0596df1ca5414957ce8`; dependency-injected client test | No packaged-Core or live-runtime qualification. |
-| `GET /api/services` | Core source route; dependency-injected client test | No live Core response-schema or permission evidence. |
-| `GET /api/runtime/instance` and `GET /api/runtime/capabilities` | Core source routes; dependency-injected client test | No packaged-Core or remote-auth qualification. |
+| `GET /api/health` | Source-built Core `develop` at `d9e2ae799244317940c862fe1261dfd22b7bdda1`; dependency-injected client test | No packaged-Core or live-runtime qualification. |
+| `GET /api/services` | Source-built Core route; dependency-injected client test | No live Core response-schema or permission evidence. |
+| `GET /api/runtime/instance` and `GET /api/runtime/capabilities` | Source-built Core routes; dependency-injected client test | No packaged-Core or remote-auth qualification. |
 | `POST /api/services/{id}/{action}` | Core source route; unit transport test; local `--confirm` gate | No durable-operation or idempotency evidence. |
 | `SERVICE_LASSO_CORE_TOKEN` Bearer credential | Core `develop` source accepts the local-admin secret from `Authorization: Bearer`; this client keeps it environment-only and sends it only to HTTPS origins or loopback HTTP. | Remote token authentication depends on Core policy: it is unavailable when Core enforces SSO. Named profiles and non-local-admin identity-provider contracts remain unimplemented. |
 | Named origin profiles and authoring scaffold | Local configuration/filesystem tests; pinned `service-template` tag `2026.5.8-d2241fe`, commit and canonical manifest checksum | Profiles do not supply an identity-provider credential flow. Generated projects are not registered; Core #1463 owns the registration/import contract. |
@@ -45,6 +45,11 @@ Core exposes `GET /api/runtime/actions/importService/plan`, but the current
 The plan route neither transfers a caller-local artifact nor performs
 registration. This CLI therefore deliberately has no `service register` or
 `service install` command.
+
+Issue #16 is source-built CLI-to-source-built Core evidence only: it starts the
+pinned Core source in a disposable loopback runtime and uses the compiled CLI
+from this source tree. The checksum-bound CLI candidate is separate distribution
+evidence; neither candidate archive nor a packaged Core is consumed by this test.
 
 ## Core package handoff
 

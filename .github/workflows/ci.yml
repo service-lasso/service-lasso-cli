@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: service-lasso/service-lasso
-          ref: 02785268392318f14af3d0596df1ca5414957ce8
+          ref: d9e2ae799244317940c862fe1261dfd22b7bdda1
           path: core
       - name: Build pinned Core runtime
         working-directory: core
