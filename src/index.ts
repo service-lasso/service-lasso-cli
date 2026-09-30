@@ -3,7 +3,7 @@ import { Command } from "commander";
 import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { configPath, loadConfig, resolveCoreToken, resolveCoreUrl, resolveLocalAdminToken, saveConfig, validateConnectionName } from "./config.js";
-import { CoreClient } from "./core-client.js";
+import { CoreClient, LifecycleAction } from "./core-client.js";
 import { asCliError, CliError } from "./errors.js";
 import { createServiceScaffold } from "./scaffold.js";
 
@@ -31,6 +31,41 @@ async function client(coreUrl?: string, connection?: string): Promise<CoreClient
 
 function requireConfirmation(options: { confirm?: boolean }): void {
   if (!options.confirm) throw new CliError("confirmation_required", "This action changes a running Core instance. Re-run with --confirm after reviewing the target.");
+}
+
+const durableActions: LifecycleAction[] = ["install", "configure", "start", "stop", "restart"];
+
+function parseParameters(value: string | undefined): Record<string, unknown> {
+  if (!value) return {};
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error();
+    return parsed as Record<string, unknown>;
+  } catch {
+    throw new CliError("invalid_parameters", "Parameters must be a JSON object.");
+  }
+}
+
+function operationOutcome(value: unknown): "accepted" | "succeeded" | "failed" | "cancelled" | "timeout" | "uncertain" {
+  const operation = value && typeof value === "object" && "operation" in value ? (value as { operation?: unknown }).operation : value;
+  const outcome = operation && typeof operation === "object" ? (operation as { outcome?: unknown }).outcome : undefined;
+  if (outcome === "succeeded" || outcome === "failed" || outcome === "cancelled") return outcome;
+  return "accepted";
+}
+
+async function waitForOperation(core: CoreClient, operationId: string, waitMs: number): Promise<unknown> {
+  const deadline = Date.now() + waitMs;
+  for (;;) {
+    const result = await core.lifecycleOperation(operationId);
+    if (operationOutcome(result) !== "accepted") return result;
+    if (Date.now() >= deadline) return { operationId, outcome: "timeout", reconciliation: "read the operation by id; the client did not cancel or resubmit it" };
+    await new Promise((resolve) => setTimeout(resolve, Math.min(250, deadline - Date.now())));
+  }
+}
+
+function setOutcomeExit(value: unknown): void {
+  const code = operationOutcome(value);
+  process.exitCode = ({ accepted: 2, succeeded: 0, failed: 3, cancelled: 4, timeout: 5, uncertain: 6 } as const)[code];
 }
 
 export function createProgram(): Command {
@@ -87,6 +122,58 @@ export function createProgram(): Command {
     const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
     print(await (await client(coreUrl, connection)).inspect(), Boolean(options.json));
   });
+
+  const operator = program.command("operator").description("Use the server-authoritative durable lifecycle contract.");
+  operator.command("status").option("--json", "print JSON").description("Read runtime status.").action(async (options: { json?: boolean }) => {
+    const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
+    print(await (await client(coreUrl, connection)).operatorStatus(), Boolean(options.json));
+  });
+  operator.command("setup").option("--json", "print JSON").description("Read Core setup state.").action(async (options: { json?: boolean }) => {
+    const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
+    print(await (await client(coreUrl, connection)).setup(), Boolean(options.json));
+  });
+  operator.command("health").argument("<service-id>").option("--json", "print JSON").description("Read service health.").action(async (serviceId: string, options: { json?: boolean }) => {
+    const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
+    print(await (await client(coreUrl, connection)).serviceHealth(serviceId), Boolean(options.json));
+  });
+  operator.command("dependencies").argument("<service-id>").option("--json", "print JSON").description("Read service dependency state.").action(async (serviceId: string, options: { json?: boolean }) => {
+    const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
+    print(await (await client(coreUrl, connection)).serviceDependencies(serviceId), Boolean(options.json));
+  });
+  operator.command("availability").argument("<service-id>").option("--json", "print JSON").description("Read supported durable lifecycle actions.").action(async (serviceId: string, options: { json?: boolean }) => {
+    const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
+    print(await (await client(coreUrl, connection)).availability(serviceId), Boolean(options.json));
+  });
+  operator.command("preview").argument("<action>", "install, configure, start, stop, or restart").argument("<service-id>").option("--parameters-json <json>", "exact action parameters as a JSON object").option("--json", "print JSON").description("Ask Core to validate an action and issue a bound confirmation.").action(async (action: LifecycleAction, serviceId: string, options: { parametersJson?: string; json?: boolean }) => {
+    if (!durableActions.includes(action)) throw new CliError("invalid_action", "Action must be install, configure, start, stop, or restart.");
+    const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
+    print(await (await client(coreUrl, connection)).previewLifecycle(serviceId, action, parseParameters(options.parametersJson)), Boolean(options.json));
+  });
+  operator.command("execute").argument("<action>", "install, configure, start, stop, or restart").argument("<service-id>")
+    .requiredOption("--confirmation-id <id>", "server-issued confirmation id").requiredOption("--confirmation-phrase <phrase>", "server-issued bound confirmation phrase")
+    .requiredOption("--idempotency-key <key>", "caller-supplied opaque idempotency key").option("--parameters-json <json>", "exact action parameters as a JSON object")
+    .option("--wait-ms <milliseconds>", "bounded readback wait after acceptance", Number).option("--confirm", "record local execution intent; does not bypass Core").option("--json", "print JSON")
+    .description("Submit a server-confirmed durable lifecycle operation.").action(async (action: LifecycleAction, serviceId: string, options: { confirmationId: string; confirmationPhrase: string; idempotencyKey: string; parametersJson?: string; waitMs?: number; confirm?: boolean; json?: boolean }) => {
+      if (!durableActions.includes(action)) throw new CliError("invalid_action", "Action must be install, configure, start, stop, or restart.");
+      requireConfirmation(options);
+      if (options.waitMs !== undefined && (!Number.isSafeInteger(options.waitMs) || options.waitMs < 0 || options.waitMs > 120_000)) throw new CliError("invalid_wait", "Wait must be an integer from 0 to 120000 milliseconds.");
+      const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
+      const core = await client(coreUrl, connection);
+      // This read is deliberately outside the uncertain mutation boundary: a
+      // transport failure here has not submitted an action.
+      const availability = await core.availability(serviceId);
+      let accepted: unknown;
+      try { accepted = await core.executeLifecycle({ action, serviceId, confirmationId: options.confirmationId, confirmationPhrase: options.confirmationPhrase, idempotencyKey: options.idempotencyKey, parameters: parseParameters(options.parametersJson) }, availability); }
+      catch (error) { if (error instanceof CliError && error.code === "core_unreachable") { const uncertain = { outcome: "uncertain", reconciliation: "read the operation by id if it was returned before disconnect; do not resubmit automatically" }; print(uncertain, Boolean(options.json)); setOutcomeExit(uncertain); return; } throw error; }
+      const operation = accepted && typeof accepted === "object" && "operation" in accepted ? (accepted as { operation?: { operationId?: unknown } }).operation : undefined;
+      const operationId = operation && typeof operation.operationId === "string" ? operation.operationId : undefined;
+      const result = options.waitMs && operationId ? await waitForOperation(core, operationId, options.waitMs) : accepted;
+      print(result, Boolean(options.json)); setOutcomeExit(result);
+    });
+  const operation = operator.command("operation").description("Inspect, wait for, or cancel a durable lifecycle operation.");
+  operation.command("get").argument("<operation-id>").option("--json", "print JSON").action(async (operationId: string, options: { json?: boolean }) => { const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>(); const result = await (await client(coreUrl, connection)).lifecycleOperation(operationId); print(result, Boolean(options.json)); setOutcomeExit(result); });
+  operation.command("wait").argument("<operation-id>").requiredOption("--wait-ms <milliseconds>", "bounded wait", Number).option("--json", "print JSON").action(async (operationId: string, options: { waitMs: number; json?: boolean }) => { if (!Number.isSafeInteger(options.waitMs) || options.waitMs < 0 || options.waitMs > 120_000) throw new CliError("invalid_wait", "Wait must be an integer from 0 to 120000 milliseconds."); const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>(); const result = await waitForOperation(await client(coreUrl, connection), operationId, options.waitMs); print(result, Boolean(options.json)); setOutcomeExit(result); });
+  operation.command("cancel").argument("<operation-id>").option("--json", "print JSON").action(async (operationId: string, options: { json?: boolean }) => { const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>(); const core = await client(coreUrl, connection); const current = await core.lifecycleOperation(operationId) as { operation?: { cancellationSupported?: boolean } }; const result = await core.cancelLifecycleOperation(operationId, current.operation?.cancellationSupported === true); print(result, Boolean(options.json)); });
 
   const service = program.command("service").description("Scaffold and manage services.");
   service.command("list").description("List services from Core.").option("--json", "print JSON").action(async (options: { json?: boolean }) => {

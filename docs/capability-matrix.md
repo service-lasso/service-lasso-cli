@@ -19,6 +19,7 @@ external-CLI/Core command boundary and the missing integration contracts.
 | Released-service registration and readback | Implemented contract slice | `service register` sends only allowlisted repo/tag/full commit/manifest SHA-256/idempotency key plus server confirmation to Core `POST /api/runtime/actions/importService`; `service operation` reads the actor-scoped durable operation. Core owns allowlisting, provenance, duplicate/conflict semantics, permission, audit and durable state. |
 | Validate, transfer and install | Planned | Caller-local paths, staged bytes, remote acquisition, install/setup and lifecycle are outside the released-service registration route; no shared-path assumption is made. |
 | Durable operation wait/reconcile | Partial | The registration operation can be read by id after a timeout or disconnect. Bounded waits, cancellation and lifecycle operation reconciliation remain planned. |
+| Durable external lifecycle operations | Issue #22 | Reviewed Core lifecycle-operation HTTP contract; fixture-tested only until direct Core qualification exists. |
 | Remove, inbox/history and logs | Planned | Requires the owning Core API and data-access contracts. |
 | Checksum-bound CLI candidate distribution | Implemented | A manual workflow dispatch from `develop` produces an exact-version Node 22 package archive, immutable candidate record, and SHA-256 manifest. The archive is smoke-tested by clean consumers on Windows, Linux, and macOS. |
 | Shell completion and standalone binaries | Planned | Standalone native binaries remain deferred; the distribution candidate requires Node 22. |
@@ -32,3 +33,5 @@ external-CLI/Core command boundary and the missing integration contracts.
 - Scaffolding refuses an existing destination and does not contact Core.
 - A client-side confirmation never substitutes for Core authentication,
   permissions, or server-issued confirmation requirements.
+- Core #1541 / PR #1545 is a retained wrong-repository attempt, superseded by
+  CLI Issue #22. Core #1538, #1542, #1543 and #1544 remain dependencies.

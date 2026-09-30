@@ -22,3 +22,5 @@
   lifecycle, distribution qualification and GA remain open. The active
   boundaries are maintained in `SPEC-CLI-FOUNDATION.md` and
   `docs/capability-matrix.md`.
+- [ ] Issue #22: implement `SPEC-CLI-DURABLE-OPERATIONS` external durable
+  operator slice; record fixture evidence separately from real-Core acceptance.

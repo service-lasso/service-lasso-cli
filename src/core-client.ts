@@ -44,6 +44,57 @@ export class CoreClient {
     });
   }
 
+  public async operatorStatus(): Promise<unknown> { return this.request("/api/runtime/instance"); }
+  public async setup(): Promise<unknown> { return this.request("/api/setup/status"); }
+  public async serviceHealth(serviceId: string): Promise<unknown> { return this.request(`/api/services/${this.serviceId(serviceId)}/health`); }
+  public async serviceDependencies(serviceId: string): Promise<unknown> { return this.request(`/api/services/${this.serviceId(serviceId)}/dependencies`); }
+
+  public async availability(serviceId: string): Promise<LifecycleAvailability> {
+    const result = await this.request(`/api/operator/lifecycle/services/${this.serviceId(serviceId)}/availability`);
+    if (!isAvailability(result)) throw new CliError("unsupported_core_contract", "Core did not advertise the durable lifecycle operation contract.");
+    if (result.contractVersion !== "service-lasso-durable-lifecycle-operation.v1") {
+      throw new CliError("unsupported_core_contract", "Core advertised an unsupported durable lifecycle contract version.");
+    }
+    return result;
+  }
+
+  public async previewLifecycle(serviceId: string, action: LifecycleAction, parameters: Record<string, unknown> = {}): Promise<unknown> {
+    await this.assertActionAvailable(serviceId, action);
+    return this.request("/api/operator/lifecycle/operations", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action, serviceId, ...parameters }) });
+  }
+
+  public async executeLifecycle(input: LifecycleExecute, availability?: LifecycleAvailability): Promise<unknown> {
+    this.assertAvailable(availability ?? await this.availability(input.serviceId), input.action);
+    if (!input.confirmationId || !input.confirmationPhrase || !/^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(input.idempotencyKey)) {
+      throw new CliError("invalid_durable_operation", "A confirmation id, confirmation phrase, and opaque 8-128 character idempotency key are required.");
+    }
+    return this.request("/api/operator/lifecycle/operations", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: input.action, serviceId: input.serviceId, execute: true, idempotencyKey: input.idempotencyKey, confirmationId: input.confirmationId, confirmationPhrase: input.confirmationPhrase, ...input.parameters }) });
+  }
+
+  public async lifecycleOperation(operationId: string): Promise<unknown> {
+    if (!/^[-A-Za-z0-9_]{8,200}$/.test(operationId)) throw new CliError("invalid_operation_id", "Operation id must be an opaque operation identifier.");
+    return this.request(`/api/operator/lifecycle/operations/${encodeURIComponent(operationId)}`);
+  }
+
+  public async cancelLifecycleOperation(operationId: string, cancellationSupported: boolean): Promise<unknown> {
+    if (!cancellationSupported) throw new CliError("cancellation_unsupported", "Core reports that this operation cannot be cancelled.");
+    return this.request(`/api/operator/lifecycle/operations/${encodeURIComponent(operationId)}/cancel`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+  }
+
+  private serviceId(serviceId: string): string {
+    if (!serviceId || serviceId.includes("/")) throw new CliError("invalid_service_id", "Service id is required and cannot contain a slash.");
+    return encodeURIComponent(serviceId);
+  }
+
+  private async assertActionAvailable(serviceId: string, action: LifecycleAction): Promise<void> {
+    this.assertAvailable(await this.availability(serviceId), action);
+  }
+
+  private assertAvailable(availability: LifecycleAvailability, action: LifecycleAction): void {
+    const advertised = availability.actions.find((entry) => entry.action === action);
+    if (!advertised?.available) throw new CliError("action_unavailable", "Core does not advertise this durable lifecycle action as available.");
+  }
+
   public async registerReleasedService(input: ReleasedServiceRegistration): Promise<ReleasedServiceOperation> {
     if (!input.confirm) throw new CliError("confirmation_required", "This action changes a running Core instance. Re-run with --confirm after reviewing the target.");
     assertReleasedServiceRegistration(input);
@@ -101,6 +152,13 @@ export class CoreClient {
       throw new CliError("invalid_core_response", "Core returned a non-JSON response.");
     }
   }
+}
+
+export type LifecycleAction = "install" | "configure" | "start" | "stop" | "restart";
+export interface LifecycleExecute { action: LifecycleAction; serviceId: string; idempotencyKey: string; confirmationId: string; confirmationPhrase: string; parameters?: Record<string, unknown>; }
+export interface LifecycleAvailability { contractVersion: string; actions: Array<{ action: string; available: boolean; cancellationSupported?: boolean }>; }
+function isAvailability(value: unknown): value is LifecycleAvailability {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value) && typeof (value as { contractVersion?: unknown }).contractVersion === "string" && Array.isArray((value as { actions?: unknown }).actions));
 }
 
 export interface ReleasedServiceRegistration {
