@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { basename } from "node:path";
+import { isSea } from "node:sea";
 import { configPath, loadConfig, resolveCoreToken, resolveCoreUrl, resolveLocalAdminToken, saveConfig, validateConnectionName } from "./config.js";
 import { CoreClient, LifecycleAction } from "./core-client.js";
 import { asCliError, CliError } from "./errors.js";
@@ -221,7 +222,7 @@ export async function run(argv = process.argv): Promise<void> {
 // npm may invoke the bin through its POSIX `service-lassoctl` symlink, while
 // Windows invokes the underlying `index.js`. The SEA entry imports this module
 // through `sea-entry`, so neither form matches the native executable itself.
-if (process.argv[1] && ["index.js", "service-lassoctl"].includes(basename(process.argv[1]))) {
+if (!isSea() && process.argv[1] && ["index.js", "service-lassoctl"].includes(basename(process.argv[1]))) {
   run().catch((error) => {
     const safe = asCliError(error);
     output.error(`Error [${safe.code}]: ${safe.message}\n`);
