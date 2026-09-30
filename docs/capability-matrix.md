@@ -6,6 +6,20 @@ repository's focused tests, not a release or a claim that a remote runtime has
 been qualified. See [Core compatibility](core-compatibility.md) for the
 external-CLI/Core command boundary and the missing integration contracts.
 
+## Framework decision boundary
+
+Issue [#20](https://github.com/service-lasso/service-lasso-cli/issues/20) records the source-backed comparison of Commander, Cobra, Kong and clap. `ADR-001` retains TypeScript/Commander for the current slice. The choice does not complete any workflow below and native distribution remains deferred.
+
+| Capability | Current evidence | Status / next owner |
+| --- | --- | --- |
+| Command tree, parsing and generated help | Commander 15, `src/index.ts`, and CLI tests exercise root/service help and confirmation failures. | Implemented foundation |
+| Argument validation | Commander-required options plus application validation for origins, IDs and released-service references. | Implemented foundation |
+| Stable JSON, stdout/stderr, exit codes | `--json` exists on current commands; application writes results to stdout and `CliError` diagnostics to stderr. The complete taxonomy and every required workflow test are incomplete. | Partial; Issue #1 automation contract |
+| Shell completion | No completion command or completion artifact exists. | Planned; Issue #1 hardening/distribution |
+| Portable Node archive | The release workflow packages `dist`, `package.json`, and README for a Node 22 consumer. | Candidate distribution only; not a standalone binary |
+| Native Windows/Linux/macOS binary | No native executable assets or three-platform native validation exist. Node SEA needs a dedicated implementation/acceptance slice; Go/Rust migration needs a new decision issue. | Planned; Issue #1 hardening/distribution |
+| Shared API-client opportunity with TUI | `CoreClient` is separate from parsing and accepts injected fetch. The authoritative sharing boundary is the versioned Core HTTP contract; a shared TypeScript package is possible only after TUI contract alignment. | Deferred architecture decision |
+
 | Workflow | Status | Contract and boundary |
 | --- | --- | --- |
 | Configured Core origin and token | Implemented | `--core-url` > `SERVICE_LASSO_CORE_URL` > `--connection` / `SERVICE_LASSO_CONNECTION` / saved default > legacy saved config > local default. Saved connections contain only origins; `SERVICE_LASSO_CORE_TOKEN` is environment-only, never saved or printed, and may travel only over HTTPS or loopback HTTP. |
