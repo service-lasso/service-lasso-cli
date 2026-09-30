@@ -26,6 +26,7 @@ test("completion source is deterministic, read-safe and derived from declared co
   assert.doesNotMatch(first.stdout, /SERVICE_LASSO_CORE_TOKEN|SERVICE_LASSO_CLI_LOCAL_ADMIN_TOKEN|service-id|filesystem/i);
   assert.match(complete("zsh").stdout, /compinit -i -D/);
   assert.match(complete("zsh").stdout, /"\$\{\(@\)words\[2,CURRENT-1\]\}"/);
+  assert.match(complete("zsh").stdout, /\[\[ \$candidate == "\$current"\* \]\]/);
   assert.doesNotMatch(complete("zsh").stdout, /compinit -u|compinit -C/);
 });
 
