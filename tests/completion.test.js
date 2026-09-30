@@ -55,7 +55,7 @@ test("PowerShell completion follows subcommands and --", { skip: !hasCommand("pw
 
 test("zsh completion parses and computes static candidates", { skip: !hasCommand("zsh") }, () => {
   const source = complete("zsh").stdout;
-  const result = spawnSync("zsh", ["-fc", `${source}\nwords=(service-lassoctl); CURRENT=1; _service_lassoctl_completion\nwords=(service-lassoctl service st); CURRENT=3; _service_lassoctl_completion; print -l -- $reply\nwords=(service-lassoctl service init --directory value -- ''); CURRENT=7; _service_lassoctl_completion; print \"after--:$#reply\"`], { encoding: "utf8" });
+  const result = spawnSync("zsh", ["-fc", `${source}\nwords=(service-lassoctl service st); CURRENT=3; _service_lassoctl_completion; print -l -- $reply\nwords=(service-lassoctl service init --directory value -- ''); CURRENT=7; _service_lassoctl_completion; print \"after--:$#reply\"`], { encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(result.stdout.trim().split("\n"), ["start", "stop", "after--:0"]);
 });
