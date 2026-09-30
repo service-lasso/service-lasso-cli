@@ -22,3 +22,5 @@
   lifecycle, distribution qualification and GA remain open. The active
   boundaries are maintained in `SPEC-CLI-FOUNDATION.md` and
   `docs/capability-matrix.md`.
+- [x] Evaluate the Issue #1 framework/language candidates in child Issue #20 and record the foundation decision in `docs/decisions/ADR-001-cli-framework.md`.
+- [ ] Complete the remaining Issue #1 workflow, automation-contract, completion, and native-binary/cross-platform acceptance recorded in `.governance/project/BACKLOG.md` and `docs/capability-matrix.md`.
