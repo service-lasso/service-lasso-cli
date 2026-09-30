@@ -27,7 +27,7 @@ Primary-source evidence:
 - [Cobra README](https://github.com/spf13/cobra/blob/main/README.md) and [completion guide](https://github.com/spf13/cobra/blob/main/site/content/completions/_index.md): command tree, help, and bash/zsh/fish/PowerShell completion.
 - [Kong README](https://github.com/alecthomas/kong): typed command trees, help customization, and validation.
 - [clap Error](https://docs.rs/clap/latest/clap/error/struct.Error.html) and [clap_complete](https://docs.rs/clap_complete/latest/clap_complete/): parser error output/exit behavior and completion generation.
-- [Node single executable applications](https://nodejs.org/api/single-executable-applications.html): a possible future Node binary route, currently active development and requiring an embedded CommonJS script.
+- [Node single executable applications](https://nodejs.org/api/single-executable-applications.html): a possible future Node binary route, currently active development; it embeds one bundled `main` script whose `mainFormat` can be `commonjs` or `module`.
 
 ## Consequences and boundaries
 
