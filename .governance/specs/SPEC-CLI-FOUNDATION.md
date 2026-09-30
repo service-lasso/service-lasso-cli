@@ -16,6 +16,7 @@ is complete.
 | CLI-REGISTRATION | Validate and register local or remote package input. | Blocked on Core registration/import, remote acquisition and duplicate-identity contracts. |
 | CLI-OPERATIONS | Read status and services; invoke supported lifecycle actions with local confirmation. | Read and lifecycle routes are unit-tested transport adapters only until Core publishes the exact API/version/permission contract. |
 | CLI-REAL-CORE-ACCEPTANCE | Exercise the compiled CLI against an explicitly selected authenticated Core-shaped HTTP endpoint using only public read routes, and classify fixture proof separately from live-Core proof. | Issue #14 adds a loopback fixture contract for `instance inspect` and `service list`. The fixture proves environment-only Bearer transport and secret-safe failures, but no live Core credential or supported runtime is available in this repository. |
+| CLI-REAL-CORE-LOCAL-READ | Exercise the compiled CLI against a pinned actual Core runtime using only loopback public read routes. | Issue #16 starts a disposable Core at port `0` with temporary workspace and service roots, then verifies `instance inspect --json` and `service list --json`. It is direct local read proof only: no service is started, registered, installed, or mutated; no remote identity-provider flow, release, deployment, or GA claim follows. |
 | CLI-AUTOMATION | Never prompt, separate stdout from stderr and keep errors secret-safe, including when a transport implementation throws an error. | Implemented for this slice; durable operation identifiers, waits, cancellation and idempotency await Core. |
 | CLI-DISTRIBUTION | Produce an exact, checksum-bound candidate that a clean Node 22 consumer can install without colliding with Core's local-runtime executable. | Implemented for manually dispatched `develop` candidates. The portable package archive contains the `service-lassoctl` entrypoint and requires Node 22; standalone native binaries remain deferred. |
 
@@ -59,3 +60,13 @@ before a complete create-to-running-service workflow can be implemented.
     is fixture-contract evidence only; direct authenticated real-Core
     acceptance requires a supported endpoint and credential outside this
     repository.
+14. Issue #16 runs the source-built compiled CLI against source-built Core
+    `develop` `d9e2ae799244317940c862fe1261dfd22b7bdda1` in a temporary loopback
+    runtime at an OS-selected port. The direct read proof covers Core health,
+    instance, capabilities and an enabled, autostart-eligible discovered service
+    while Core startup is explicitly suppressed; it uses a bounded startup wait,
+    then stops Core and removes all test state with visible cleanup failures. It
+    neither weakens Core authorization nor proves remote auth, registration,
+    lifecycle, packaged-Core qualification, release, or GA. The checksum-bound
+    CLI candidate is separate distribution evidence and is not an input to this
+    source-built CLI-to-Core acceptance.

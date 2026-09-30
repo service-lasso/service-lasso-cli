@@ -26,3 +26,30 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+
+  real-core-read-acceptance:
+    name: Direct real-Core reads (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/checkout@v5
+        with:
+          repository: service-lasso/service-lasso
+          ref: d9e2ae799244317940c862fe1261dfd22b7bdda1
+          path: core
+      - name: Build pinned Core runtime
+        working-directory: core
+        run: |
+          npm ci
+          npm run build
+      - name: Run direct compiled CLI read acceptance
+        env:
+          SERVICE_LASSO_CORE_DIR: ${{ github.workspace }}/core
+        run: |
+          npm run build
+          node --test tests/real-core-read-acceptance.test.js
