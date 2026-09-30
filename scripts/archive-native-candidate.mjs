@@ -12,7 +12,7 @@ const sourceSha = option("--source-sha");
 if (!/^\d+\.\d+\.\d+-dev\.[0-9a-f]{7}$/i.test(version) || !/^[0-9a-f]{40}$/i.test(sourceSha)) throw new Error("Version or source SHA is invalid.");
 const provenance = JSON.parse(await readFile(join(directory, "provenance.json"), "utf8"));
 const target = `${provenance?.executable?.platform}-${provenance?.executable?.architecture}`;
-if (!new Set(["win32-x64", "linux-x64", "darwin-arm64"]).has(target) || provenance?.source?.commit !== sourceSha) throw new Error("Native provenance does not match the frozen target identity.");
+if (!new Set(["win32-x64", "linux-x64", "darwin-arm64"]).has(target) || provenance?.source?.commit !== sourceSha || provenance?.candidate?.version !== version || provenance?.candidate?.tag !== `cli-v${version}-candidate-${sourceSha.slice(0, 7)}` || provenance?.executable?.version !== version) throw new Error("Native provenance does not match the frozen target identity.");
 const executable = provenance.executable.name;
 const executableBytes = await readFile(join(directory, executable));
 if (sha256(executableBytes) !== provenance.executable.sha256) throw new Error("Native executable does not match its provenance digest.");

@@ -6,11 +6,17 @@ settings and does not assert that any setting is currently enabled.
 | Control | Proposed setting | Why the publisher depends on it |
 | --- | --- | --- |
 | `develop` branch | Require pull requests, one approving review, up-to-date required checks, and block force pushes/direct pushes. Restrict workflow dispatch to reviewed `develop`. | A manual candidate must name a reviewed integration SHA. |
-| `development-candidate` environment | Required reviewers: release owners; prevent self-review; deployment branches: `develop` only; environment secret: `DEVELOPMENT_CANDIDATE_TOKEN` with repository `contents:write` only; protected environment variable `DEVELOPMENT_CANDIDATE_RELEASES_IMMUTABLE=true` after the owner verifies immutable-releases policy. | The publisher needs an explicit human gate, a narrowly scoped token, and an operator-reviewed immutability assertion before its write path opens. |
-| GitHub Actions | Default `contents: read`; only the publish job receives `contents: write`; pin action references to reviewed major/version policy; retain build artifacts long enough for review. | Build/test jobs must not be able to write tags or releases. |
+| `development-candidate` environment | Required reviewers: release owners; prevent self-review; deployment branches: custom policy containing exactly `develop`; environment secret: `DEVELOPMENT_CANDIDATE_TOKEN` with repository `contents:write` only. | The publisher queries the environment and its branch-policy endpoint. It refuses absent permissions or any policy other than exactly `develop`. |
+| Immutable releases | Enable GitHub immutable releases. | The publisher performs `GET /repos/service-lasso/service-lasso-cli/immutable-releases` and requires the provider response to state `enabled: true`; an environment variable is not evidence. |
+| GitHub Actions | Default `contents: read`; only the publish job receives `contents: write`; use the reviewed full-commit action pins below; retain build artifacts long enough for review. | Build/test jobs must not be able to write tags or releases. |
 | Releases and tags | Protect `cli-v*-candidate-*`; allow creation only through the approved publisher identity; disallow mutable/recreated release assets operationally. | Exact collisions can be read back safely, while every partial or mismatched collision fails closed. |
 | Repository ruleset | Require the candidate workflow's exact-head checks before `develop` merge, and require linear, reviewable history. | A frozen SHA is meaningful only when its source review and checks are attributable. |
 
 The operational approval must verify these settings directly in GitHub before
-dispatching. Source tests only verify that the publisher rejects missing or
-inconsistent preflight assertions supplied by GitHub's API.
+dispatching: required status checks must be nonempty and strict (up-to-date),
+force pushes must be disabled, and the branch must remain protected. Source
+tests only verify that the publisher rejects missing or inconsistent provider
+responses. The reviewed action pins are `actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8`,
+`actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444`,
+`actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02`, and
+`actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093`.

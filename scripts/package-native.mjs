@@ -37,7 +37,9 @@ if (process.versions.node !== nodeVersion) throw new Error(`Node ${nodeVersion} 
 
 const output = resolve(argument("--output"));
 const sourceSha = argument("--source-sha");
+const version = argument("--version");
 if (!/^[0-9a-f]{40}$/i.test(sourceSha)) throw new Error("--source-sha must be a full 40-character Git SHA.");
+if (!/^\d+\.\d+\.\d+-dev\.[0-9a-f]{7}$/i.test(version)) throw new Error("--version must be the frozen candidate version.");
 const target = currentTarget();
 const executableName = process.platform === "win32" ? "service-lassoctl.exe" : "service-lassoctl";
 const bundle = join(output, "service-lassoctl.cjs");
@@ -56,6 +58,7 @@ await build({
   target: "node22",
   nodePaths: [join(root, "node_modules")],
   alias: { commander: join(root, "node_modules", "commander", "index.js") },
+  define: { "process.env.SERVICE_LASSO_CANDIDATE_VERSION": JSON.stringify(version) },
   legalComments: "none",
 });
 await writeFile(seaConfig, `${JSON.stringify({ main: bundle, output: blob, disableExperimentalSEAWarning: true, useCodeCache: false, execArgvExtension: "none" }, null, 2)}\n`);
@@ -71,8 +74,9 @@ if (process.platform === "darwin") command("codesign", ["--sign", "-", executabl
 const provenance = {
   schemaVersion: 1,
   command: "service-lassoctl",
+  candidate: { version, tag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}` },
   source: { commit: sourceSha },
-  executable: { name: executableName, sha256: sha256(await readFile(executable)), platform: process.platform, architecture: process.arch },
+  executable: { name: executableName, sha256: sha256(await readFile(executable)), platform: process.platform, architecture: process.arch, version },
   tools: { node: nodeVersion, esbuild: esbuildVersion, postject: postjectVersion },
   sea: { mainFormat: "commonjs", useCodeCache: false, execArgvExtension: "none" },
 };

@@ -33,7 +33,7 @@ await writeFile(join(staging, "package.json"), `${JSON.stringify(manifest, null,
 
 const implementation = join(staging, "dist", "index.js");
 const implementationSource = await readFile(implementation, "utf8");
-const versionCall = `.version("${sourceVersion}")`;
+const versionCall = `.version(process.env.SERVICE_LASSO_CANDIDATE_VERSION ?? "${sourceVersion}")`;
 if (!implementationSource.includes(versionCall)) throw new Error("CLI implementation version marker was not found.");
 await writeFile(implementation, implementationSource.replace(versionCall, `.version("${version}")`));
 

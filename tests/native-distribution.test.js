@@ -11,11 +11,13 @@ test("native SEA packager records a direct host executable and smoke runs withou
   const output = await mkdtemp(join(tmpdir(), "service-lassoctl-native-"));
   const sourceSha = "0123456789abcdef0123456789abcdef01234567";
   try {
-    execFileSync(node, ["scripts/package-native.mjs", "--output", output, "--source-sha", sourceSha], { encoding: "utf8" });
+    const version = "0.1.0-dev.0123456";
+    execFileSync(node, ["scripts/package-native.mjs", "--output", output, "--source-sha", sourceSha, "--version", version], { encoding: "utf8" });
     const provenance = JSON.parse(await readFile(join(output, "provenance.json"), "utf8"));
     assert.equal(provenance.source.commit, sourceSha);
     assert.equal(provenance.executable.platform, process.platform);
     assert.equal(provenance.executable.architecture, process.arch);
+    assert.equal(provenance.candidate.version, version);
     execFileSync(node, ["scripts/smoke-native.mjs", "--directory", output, "--expected-source-sha", sourceSha], { encoding: "utf8" });
     const baseSha = "fedcba9876543210fedcba9876543210fedcba98";
     await writeFile(join(output, "ci-context.json"), `${JSON.stringify({ schemaVersion: 1, eventName: "pull_request", sourceSha, testedBaseSha: baseSha, mergeContextSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" })}\n`);

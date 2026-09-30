@@ -1,102 +1,18 @@
 import { createHash } from "node:crypto";
+import { gunzipSync } from "node:zlib";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
-
-export const NATIVE_TARGETS = Object.freeze([
-  Object.freeze({ id: "win32-x64", platform: "win32", architecture: "x64" }),
-  Object.freeze({ id: "linux-x64", platform: "linux", architecture: "x64" }),
-  Object.freeze({ id: "darwin-arm64", platform: "darwin", architecture: "arm64" }),
-]);
-
-const REPOSITORY = "service-lasso/service-lasso-cli";
-const SHA = /^[0-9a-f]{40}$/i;
-const DIGEST = /^[0-9a-f]{64}$/i;
-const VERSION = /^\d+\.\d+\.\d+-dev\.[0-9a-f]{7}$/i;
-const NAME = /^[a-z0-9][a-z0-9._-]*$/i;
-
-export function sha256(bytes) { return createHash("sha256").update(bytes).digest("hex"); }
-export function fail(message) { throw new Error(`Protected candidate rejected: ${message}`); }
-export function assertClosedObject(value, keys, label) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) fail(`${label} must be an object.`);
-  const actual = Object.keys(value).sort();
-  const expected = [...keys].sort();
-  if (actual.length !== expected.length || actual.some((key, index) => key !== expected[index])) fail(`${label} has an unexpected schema.`);
-}
-export function expectedAssets(version) {
-  if (!VERSION.test(version)) fail("candidate version is invalid.");
-  return [
-    { name: `service-lassoctl-${version}.tgz`, kind: "portable", target: null },
-    { name: "candidate.json", kind: "portable-record", target: null },
-    ...NATIVE_TARGETS.flatMap((target) => [
-      { name: `service-lassoctl-${version}-${target.id}.tar.gz`, kind: "native", target: target.id },
-      { name: `provenance-${target.id}.json`, kind: "provenance", target: target.id },
-    ]),
-  ];
-}
-
-function assertAsset(asset, expected) {
-  assertClosedObject(asset, ["kind", "name", "sha256", "size", "target"], `asset ${expected.name}`);
-  if (asset.name !== expected.name || asset.kind !== expected.kind || asset.target !== expected.target || !DIGEST.test(asset.sha256) || !Number.isSafeInteger(asset.size) || asset.size < 1) fail(`asset ${expected.name} is invalid.`);
-}
-
-export function validateManifest(manifest, version, sourceSha) {
-  if (!VERSION.test(version) || !SHA.test(sourceSha)) fail("expected identity is invalid.");
-  assertClosedObject(manifest, ["assets", "candidateTag", "schemaVersion", "source", "version"], "development candidate manifest");
-  if (manifest.schemaVersion !== 1 || manifest.version !== version || manifest.candidateTag !== `cli-v${version}-candidate-${sourceSha.slice(0, 7)}`) fail("candidate identity does not match the frozen source.");
-  assertClosedObject(manifest.source, ["commit", "repository"], "candidate source");
-  if (manifest.source.repository !== REPOSITORY || manifest.source.commit !== sourceSha) fail("candidate source is not the expected full SHA.");
-  if (!Array.isArray(manifest.assets)) fail("candidate assets must be an array.");
-  const expected = expectedAssets(version);
-  if (manifest.assets.length !== expected.length) fail("candidate asset inventory is incomplete or contains extras.");
-  const byName = new Map();
-  for (const asset of manifest.assets) {
-    if (!asset || typeof asset.name !== "string" || !NAME.test(asset.name) || byName.has(asset.name)) fail("candidate asset names must be unique and safe.");
-    byName.set(asset.name, asset);
-  }
-  for (const item of expected) assertAsset(byName.get(item.name), item);
-  return manifest;
-}
-
-function validateNativeProvenance(value, target, sourceSha) {
-  assertClosedObject(value, ["command", "executable", "schemaVersion", "sea", "source", "tools"], `native provenance ${target.id}`);
-  assertClosedObject(value.source, ["commit"], `native provenance source ${target.id}`);
-  if (value.schemaVersion !== 1 || value.command !== "service-lassoctl" || value.source.commit !== sourceSha) fail(`native provenance ${target.id} has a forged source.`);
-  assertClosedObject(value.executable, ["architecture", "name", "platform", "sha256"], `native executable ${target.id}`);
-  if (value.executable.platform !== target.platform || value.executable.architecture !== target.architecture || !DIGEST.test(value.executable.sha256)) fail(`native provenance ${target.id} has an invalid executable identity.`);
-}
-
-export async function verifyCandidateDirectory(directory, version, sourceSha) {
-  const manifestBytes = await readFile(join(directory, "development-candidate.json"));
-  const manifest = validateManifest(JSON.parse(manifestBytes.toString("utf8")), version, sourceSha);
-  const expectedFiles = new Set(["development-candidate.json", "SHA256SUMS.txt", ...manifest.assets.map((asset) => asset.name)]);
-  const actualFiles = new Set(await readdir(directory));
-  if (actualFiles.size !== expectedFiles.size || [...actualFiles].some((name) => !expectedFiles.has(name))) fail("candidate directory is not a closed inventory.");
-  for (const asset of manifest.assets) {
-    const bytes = await readFile(join(directory, asset.name));
-    if (bytes.length !== asset.size || sha256(bytes) !== asset.sha256) fail(`asset ${asset.name} does not match its manifest digest.`);
-  }
-  for (const target of NATIVE_TARGETS) {
-    const name = `provenance-${target.id}.json`;
-    validateNativeProvenance(JSON.parse((await readFile(join(directory, name))).toString("utf8")), target, sourceSha);
-  }
-  const expectedSums = [...manifest.assets, { name: "development-candidate.json", sha256: sha256(manifestBytes) }]
-    .map((asset) => `${asset.sha256}  ${asset.name}\n`).join("");
-  if ((await readFile(join(directory, "SHA256SUMS.txt"), "utf8")) !== expectedSums) fail("checksum inventory is not exact.");
-  return manifest;
-}
-
-export function assertPreflight(value, sourceSha) {
-  if (!SHA.test(sourceSha)) fail("preflight source SHA is invalid.");
-  assertClosedObject(value, ["develop", "environment", "releases"], "preflight");
-  assertClosedObject(value.develop, ["name", "protected"], "develop protection");
-  assertClosedObject(value.environment, ["name", "protected", "reviewersRequired", "selectedBranches"], "candidate environment");
-  assertClosedObject(value.releases, ["immutable"], "release policy");
-  if (value.develop.name !== "develop" || value.develop.protected !== true || value.environment.name !== "development-candidate" || value.environment.protected !== true || value.environment.reviewersRequired !== true || value.environment.selectedBranches !== "develop" || value.releases.immutable !== true) fail("required branch, environment, or immutable-release protection is absent.");
-}
-
-export function assertPublicResponse(response, secret) {
-  if (response.request?.headers?.authorization || response.request?.headers?.Authorization) fail("public readback must not send authorization.");
-  if (response.status >= 300 && response.status < 400) fail("public readback must reject redirects.");
-  if (response.status !== 200) fail("public readback did not return an asset.");
-  if (secret && `${response.body ?? ""}`.includes(secret)) fail("public response leaked a secret sentinel.");
-}
+export const NATIVE_TARGETS = Object.freeze([{ id:"win32-x64",platform:"win32",architecture:"x64",executable:"service-lassoctl.exe" },{ id:"linux-x64",platform:"linux",architecture:"x64",executable:"service-lassoctl" },{ id:"darwin-arm64",platform:"darwin",architecture:"arm64",executable:"service-lassoctl" }].map(Object.freeze));
+const REPOSITORY="service-lasso/service-lasso-cli", SHA=/^[0-9a-f]{40}$/i, DIGEST=/^[0-9a-f]{64}$/i, VERSION=/^\d+\.\d+\.\d+-dev\.[0-9a-f]{7}$/i, NAME=/^[a-z0-9][a-z0-9._-]*$/i;
+export const sha256=(bytes)=>createHash("sha256").update(bytes).digest("hex"); export const fail=(message)=>{throw new Error(`Protected candidate rejected: ${message}`);};
+export function assertClosedObject(value,keys,label){if(!value||typeof value!=="object"||Array.isArray(value))fail(`${label} must be an object.`);const a=Object.keys(value).sort(),e=[...keys].sort();if(a.length!==e.length||a.some((v,i)=>v!==e[i]))fail(`${label} has an unexpected schema.`);}
+const json=(bytes,label)=>{try{return JSON.parse(bytes.toString("utf8"));}catch{fail(`${label} is not valid JSON.`);}};
+export function expectedAssets(version){if(!VERSION.test(version))fail("candidate version is invalid.");return [{name:`service-lassoctl-${version}.tgz`,kind:"portable",target:null},{name:"candidate.json",kind:"portable-record",target:null},...NATIVE_TARGETS.flatMap(t=>[{name:`service-lassoctl-${version}-${t.id}.tar.gz`,kind:"native",target:t.id},{name:`provenance-${t.id}.json`,kind:"provenance",target:t.id}])];}
+export function validateManifest(m,version,sourceSha){if(!VERSION.test(version)||!SHA.test(sourceSha))fail("expected identity is invalid.");assertClosedObject(m,["assets","candidateTag","schemaVersion","source","version"],"development candidate manifest");if(m.schemaVersion!==1||m.version!==version||m.candidateTag!==`cli-v${version}-candidate-${sourceSha.slice(0,7)}`)fail("candidate identity does not match the frozen source.");assertClosedObject(m.source,["commit","repository"],"candidate source");if(m.source.repository!==REPOSITORY||m.source.commit!==sourceSha||!Array.isArray(m.assets))fail("candidate source or assets are invalid.");const e=expectedAssets(version);if(m.assets.length!==e.length)fail("candidate asset inventory is incomplete or contains extras.");const names=new Set();for(const a of m.assets){assertClosedObject(a,["kind","name","sha256","size","target"],"candidate asset");if(!NAME.test(a.name)||names.has(a.name)||!DIGEST.test(a.sha256)||!Number.isSafeInteger(a.size)||a.size<1)fail("candidate asset is invalid.");names.add(a.name);}for(const a of e){const v=m.assets.find(x=>x.name===a.name);if(!v||v.kind!==a.kind||v.target!==a.target)fail("candidate asset inventory is invalid.");}return m;}
+function tar(bytes){let p;try{p=gunzipSync(bytes,{maxOutputLength:536870912});}catch{fail("native archive is not a bounded gzip tarball.");}const out=new Map();for(let o=0;o<p.length;){const h=p.subarray(o,o+512);if(h.length!==512)fail("native archive is truncated.");if(h.every(x=>x===0)){if(p.subarray(o).some(x=>x!==0))fail("native archive has trailing data.");break;}const name=h.subarray(0,100).toString("utf8").replace(/\0.*$/,""),sizeText=h.subarray(124,136).toString("ascii").replace(/\0.*$/,"").trim();if(!NAME.test(name)||name.includes("/")||h[156]!==48||!/^[0-7]+$/.test(sizeText)||out.has(name))fail("native archive contains a hostile entry.");const n=parseInt(sizeText,8),start=o+512,end=start+n;if(!Number.isSafeInteger(n)||end>p.length)fail("native archive entry is invalid.");out.set(name,Buffer.from(p.subarray(start,end)));o=start+Math.ceil(n/512)*512;}return out;}
+function native(archive,provenance,target,sha,version){const e=tar(archive);if(e.size!==2||!e.has(target.executable)||!e.has("provenance.json"))fail(`native archive ${target.id} is not a closed inventory.`);const p=json(provenance,`native provenance ${target.id}`),q=json(e.get("provenance.json"),`native archive provenance ${target.id}`);if(JSON.stringify(p)!==JSON.stringify(q))fail(`native archive ${target.id} provenance differs.`);assertClosedObject(p,["candidate","command","executable","schemaVersion","sea","source","tools"],`native provenance ${target.id}`);assertClosedObject(p.candidate,["tag","version"],"native candidate");assertClosedObject(p.source,["commit"],"native source");assertClosedObject(p.executable,["architecture","name","platform","sha256","version"],"native executable");if(p.schemaVersion!==1||p.command!=="service-lassoctl"||p.source.commit!==sha||p.candidate.version!==version||p.candidate.tag!==`cli-v${version}-candidate-${sha.slice(0,7)}`||p.executable.name!==target.executable||p.executable.platform!==target.platform||p.executable.architecture!==target.architecture||p.executable.version!==version||p.executable.sha256!==sha256(e.get(target.executable)))fail(`native provenance ${target.id} has a forged identity.`);}
+function portable(value,bytes,version,sha){assertClosedObject(value,["assets","candidateTag","package","platforms","schemaVersion","source","version"],"portable candidate record");assertClosedObject(value.source,["commit","repository"],"portable source");assertClosedObject(value.package,["command","entrypoint","name","node"],"portable package identity");const a=value.assets?.[0];if(value.schemaVersion!==1||value.version!==version||value.candidateTag!==`cli-v${version}-candidate-${sha.slice(0,7)}`||value.source.repository!==REPOSITORY||value.source.commit!==sha||value.package.name!=="@service-lasso/cli"||value.package.command!=="service-lassoctl"||value.package.entrypoint!=="dist/index.js"||value.package.node!==">=22.12.0"||JSON.stringify(value.platforms)!==JSON.stringify(["win32","linux","darwin"])||value.assets?.length!==1||a?.name!==`service-lassoctl-${version}.tgz`||a.sha256!==sha256(bytes)||a.size!==bytes.length)fail("portable candidate identity is invalid.");}
+export async function verifyCandidateDirectory(directory,version,sourceSha){const mb=await readFile(join(directory,"development-candidate.json")),m=validateManifest(json(mb,"development candidate manifest"),version,sourceSha), files=new Set(await readdir(directory)), wanted=new Set(["development-candidate.json","SHA256SUMS.txt",...m.assets.map(a=>a.name)]);if(files.size!==wanted.size||[...files].some(n=>!wanted.has(n)))fail("candidate directory is not a closed inventory.");const held=new Map([["development-candidate.json",mb]]);for(const a of m.assets){const b=await readFile(join(directory,a.name));if(b.length!==a.size||sha256(b)!==a.sha256)fail(`asset ${a.name} does not match its manifest digest.`);held.set(a.name,b);}portable(json(held.get("candidate.json"),"portable candidate record"),held.get(`service-lassoctl-${version}.tgz`),version,sourceSha);for(const t of NATIVE_TARGETS)native(held.get(`service-lassoctl-${version}-${t.id}.tar.gz`),held.get(`provenance-${t.id}.json`),t,sourceSha,version);const sums=[...m.assets,{name:"development-candidate.json",sha256:sha256(mb)}].map(a=>`${a.sha256}  ${a.name}\n`).join("");const sb=await readFile(join(directory,"SHA256SUMS.txt"));if(sb.toString("utf8")!==sums)fail("checksum inventory is not exact.");held.set("SHA256SUMS.txt",sb);return {manifest:m,held};}
+export function assertProviderPreflight({immutable,branch,protection,environment,branchPolicies}){if(immutable?.enabled!==true)fail("GitHub immutable releases are not enabled.");if(branch?.name!=="develop"||branch?.protected!==true)fail("develop is not protected.");if(protection?.required_status_checks?.strict!==true||!Array.isArray(protection.required_status_checks.contexts)||!protection.required_status_checks.contexts.length||protection?.allow_force_pushes?.enabled!==false)fail("develop does not require up-to-date checks and block force pushes.");if(environment?.name!=="development-candidate"||!environment.protection_rules?.some(r=>r?.type==="required_reviewers")||environment?.deployment_branch_policy?.custom_branch_policies!==true||environment?.deployment_branch_policy?.protected_branches!==false||!Array.isArray(branchPolicies)||branchPolicies.length!==1||branchPolicies[0]?.name!=="develop")fail("development-candidate environment policy is absent.");}
+export function canonicalPublicAssetUrl(url,name){let u;try{u=new URL(url);}catch{fail("release asset URL is invalid.");}if(u.protocol!=="https:"||u.hostname!=="github.com"||u.port||u.username||u.password||!u.pathname.includes("/releases/download/")||!u.pathname.endsWith(`/${encodeURIComponent(name)}`))fail("release asset URL is not canonical GitHub.");return u;}
+export function allowedRedirect(url){let u;try{u=new URL(url);}catch{fail("public redirect URL is invalid.");}if(u.protocol!=="https:"||!["github.com","objects.githubusercontent.com","release-assets.githubusercontent.com"].includes(u.hostname)||u.username||u.password)fail("public redirect host is not allowed.");return u;}

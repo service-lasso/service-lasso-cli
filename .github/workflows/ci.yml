@@ -30,7 +30,7 @@ jobs:
             expected_platform: darwin
             expected_architecture: arm64
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
       - id: revision
@@ -47,7 +47,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$source_sha"
           echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
           echo "tested_base_sha=${PR_BASE_SHA:-}" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: 22.23.2
           cache: npm
@@ -57,7 +57,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm run package:native -- --output native-assets --source-sha "${{ steps.revision.outputs.source_sha }}"
+          source_sha="${{ steps.revision.outputs.source_sha }}"
+          npm run package:native -- --output native-assets --source-sha "$source_sha" --version "0.1.0-dev.${source_sha::7}"
       - name: Record CI event context separately from native provenance
         shell: bash
         env:
@@ -86,7 +87,7 @@ jobs:
         env:
           EXPECTED_PLATFORM: ${{ matrix.expected_platform }}
           EXPECTED_ARCHITECTURE: ${{ matrix.expected_architecture }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: service-lassoctl-sea-${{ matrix.expected_platform }}-${{ matrix.expected_architecture }}-${{ steps.revision.outputs.source_sha }}
           path: native-assets/
@@ -101,8 +102,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: 22.23.2
           cache: npm
@@ -114,8 +115,8 @@ jobs:
     name: Completion shell checks (ubuntu-latest)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: 22.23.2
           cache: npm
@@ -128,13 +129,13 @@ jobs:
     name: Direct real-Core reads (ubuntu-latest)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: 22.23.2
           cache: npm
       - run: npm ci
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
           repository: service-lasso/service-lasso
           ref: d6dc5558307f13c654194ddc944e3be40c940675
@@ -156,5 +157,5 @@ jobs:
         run: |
           set -euo pipefail
           source_sha="$(git rev-parse HEAD)"
-          npm run package:native -- --output native-assets --source-sha "$source_sha"
+          npm run package:native -- --output native-assets --source-sha "$source_sha" --version "0.1.0-dev.${source_sha::7}"
           SERVICE_LASSO_CLI_NATIVE_EXE="$GITHUB_WORKSPACE/native-assets/service-lassoctl" node --test tests/real-core-durable-acceptance.test.js

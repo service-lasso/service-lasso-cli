@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { assertPreflight, assertPublicResponse, expectedAssets, validateManifest } from "../scripts/protected-candidate-lib.mjs";
+import { assertProviderPreflight, canonicalPublicAssetUrl, expectedAssets, validateManifest } from "../scripts/protected-candidate-lib.mjs";
 
 const node = process.execPath;
 const sourceSha = "0123456789abcdef0123456789abcdef01234567";
@@ -13,8 +13,13 @@ const version = "0.1.0-dev.0123456";
 async function nativeDirectory(root, target) {
   const directory = join(root, target.id);
   await mkdir(directory, { recursive: true });
-  await writeFile(join(directory, `service-lassoctl-${version}-${target.id}.tar.gz`), `archive-${target.id}`);
-  await writeFile(join(directory, "provenance.json"), `${JSON.stringify({ schemaVersion: 1, command: "service-lassoctl", source: { commit: sourceSha }, executable: { name: target.id === "win32-x64" ? "service-lassoctl.exe" : "service-lassoctl", sha256: "a".repeat(64), platform: target.platform, architecture: target.architecture }, tools: {}, sea: {} })}\n`);
+  const executable = target.id === "win32-x64" ? "service-lassoctl.exe" : "service-lassoctl";
+  const bytes = Buffer.from(`native-${target.id}`);
+  await writeFile(join(directory, executable), bytes);
+  const digest = (await import("node:crypto")).createHash("sha256").update(bytes).digest("hex");
+  await writeFile(join(directory, "provenance.json"), `${JSON.stringify({ schemaVersion: 1, command: "service-lassoctl", candidate: { version, tag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}` }, source: { commit: sourceSha }, executable: { name: executable, sha256: digest, platform: target.platform, architecture: target.architecture, version }, tools: {}, sea: {} })}\n`);
+  execFileSync("tar", ["-czf", `service-lassoctl-${version}-${target.id}.tar.gz`, executable, "provenance.json"], { cwd: directory });
+  await rm(join(directory, executable));
   return directory;
 }
 
@@ -41,11 +46,10 @@ test("CLI30 schema rejects duplicates, unexpected fields and forged source ident
   assert.throws(() => validateManifest({ ...valid, source: { repository: "service-lasso/service-lasso-cli", commit: "f".repeat(40) } }, version, sourceSha));
 });
 
-test("CLI30 preflight and public readback fail closed", () => {
-  const preflight = { develop: { name: "develop", protected: true }, environment: { name: "development-candidate", protected: true, reviewersRequired: true, selectedBranches: "develop" }, releases: { immutable: true } };
-  assert.doesNotThrow(() => assertPreflight(preflight, sourceSha));
-  assert.throws(() => assertPreflight({ ...preflight, releases: { immutable: false } }, sourceSha));
-  assert.doesNotThrow(() => assertPublicResponse({ status: 200, request: { headers: {} }, body: "asset" }, "secret-sentinel"));
-  assert.throws(() => assertPublicResponse({ status: 302, request: { headers: {} }, body: "asset" }));
-  assert.throws(() => assertPublicResponse({ status: 200, request: { headers: { authorization: "Bearer secret-sentinel" } }, body: "asset" }, "secret-sentinel"));
+test("CLI30 provider preflight and public URL fail closed", () => {
+  const preflight = { immutable: { enabled: true }, branch: { name: "develop", protected: true }, protection: { required_status_checks: { strict: true, contexts: ["CI"] }, allow_force_pushes: { enabled: false } }, environment: { name: "development-candidate", protection_rules: [{ type: "required_reviewers" }], deployment_branch_policy: { custom_branch_policies: true, protected_branches: false } }, branchPolicies: [{ name: "develop" }] };
+  assert.doesNotThrow(() => assertProviderPreflight(preflight));
+  assert.throws(() => assertProviderPreflight({ ...preflight, immutable: { enabled: false } }));
+  assert.doesNotThrow(() => canonicalPublicAssetUrl("https://github.com/service-lasso/service-lasso-cli/releases/download/x/service-lassoctl-a.tgz", "service-lassoctl-a.tgz"));
+  assert.throws(() => canonicalPublicAssetUrl("https://attacker.invalid/a", "a"));
 });
