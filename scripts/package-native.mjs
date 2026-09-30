@@ -1,0 +1,80 @@
+import { build } from "esbuild";
+import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { fileURLToPath } from "node:url";
+import { basename, dirname, join, resolve } from "node:path";
+
+const nodeVersion = "22.23.2";
+const postjectVersion = "1.0.0-alpha.6";
+const esbuildVersion = "0.28.2";
+const fuse = "NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2";
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+function argument(name) {
+  const index = process.argv.indexOf(name);
+  if (index === -1 || !process.argv[index + 1]) throw new Error(`Missing required ${name} argument.`);
+  return process.argv[index + 1];
+}
+
+function currentTarget() {
+  const target = `${process.platform}-${process.arch}`;
+  const supported = new Set(["win32-x64", "linux-x64", "darwin-arm64"]);
+  if (!supported.has(target)) throw new Error(`Unsupported native SEA target ${target}; expected Windows x64, Linux x64, or macOS arm64.`);
+  return target;
+}
+
+function command(file, args) {
+  const result = spawnSync(file, args, { cwd: root, encoding: "utf8" });
+  if (result.status !== 0 || result.error) throw new Error(`${basename(file)} failed: ${result.error?.message ?? result.stderr ?? result.stdout}`);
+}
+
+function sha256(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+if (process.versions.node !== nodeVersion) throw new Error(`Node ${nodeVersion} is required; found ${process.versions.node}.`);
+
+const output = resolve(argument("--output"));
+const sourceSha = argument("--source-sha");
+if (!/^[0-9a-f]{40}$/i.test(sourceSha)) throw new Error("--source-sha must be a full 40-character Git SHA.");
+const target = currentTarget();
+const executableName = process.platform === "win32" ? "service-lassoctl.exe" : "service-lassoctl";
+const bundle = join(output, "service-lassoctl.cjs");
+const blob = join(output, "service-lassoctl.blob");
+const executable = join(output, executableName);
+const seaConfig = join(output, "sea-config.json");
+
+await rm(output, { recursive: true, force: true });
+await mkdir(output, { recursive: true });
+await build({
+  bundle: true,
+  entryPoints: [join(root, "dist", "sea-entry.js")],
+  format: "cjs",
+  outfile: bundle,
+  platform: "node",
+  target: "node22",
+  nodePaths: [join(root, "node_modules")],
+  alias: { commander: join(root, "node_modules", "commander", "index.js") },
+  legalComments: "none",
+});
+await writeFile(seaConfig, `${JSON.stringify({ main: bundle, output: blob, disableExperimentalSEAWarning: true, useCodeCache: false, execArgvExtension: "none" }, null, 2)}\n`);
+command(process.execPath, ["--experimental-sea-config", seaConfig]);
+await copyFile(process.execPath, executable);
+if (process.platform === "darwin") command("codesign", ["--remove-signature", executable]);
+const postject = join(root, "node_modules", "postject", "dist", "cli.js");
+const postjectArgs = [executable, "NODE_SEA_BLOB", blob, "--sentinel-fuse", fuse];
+if (process.platform === "darwin") postjectArgs.push("--macho-segment-name", "NODE_SEA");
+command(process.execPath, [postject, ...postjectArgs]);
+if (process.platform === "darwin") command("codesign", ["--sign", "-", executable]);
+
+const provenance = {
+  schemaVersion: 1,
+  command: "service-lassoctl",
+  source: { commit: sourceSha },
+  executable: { name: executableName, sha256: sha256(await readFile(executable)), platform: process.platform, architecture: process.arch },
+  tools: { node: nodeVersion, esbuild: esbuildVersion, postject: postjectVersion },
+  sea: { mainFormat: "commonjs", useCodeCache: false, execArgvExtension: "none" },
+};
+await writeFile(join(output, "provenance.json"), `${JSON.stringify(provenance, null, 2)}\n`);
+process.stdout.write(`${JSON.stringify(provenance)}\n`);

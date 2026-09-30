@@ -31,11 +31,11 @@ const sourceVersion = manifest.version;
 manifest.version = version;
 await writeFile(join(staging, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
 
-const entrypoint = join(staging, "dist", "index.js");
-const entrypointSource = await readFile(entrypoint, "utf8");
+const implementation = join(staging, "dist", "index.js");
+const implementationSource = await readFile(implementation, "utf8");
 const versionCall = `.version("${sourceVersion}")`;
-if (!entrypointSource.includes(versionCall)) throw new Error("CLI entrypoint version marker was not found.");
-await writeFile(entrypoint, entrypointSource.replace(versionCall, `.version("${version}")`));
+if (!implementationSource.includes(versionCall)) throw new Error("CLI implementation version marker was not found.");
+await writeFile(implementation, implementationSource.replace(versionCall, `.version("${version}")`));
 
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const packed = JSON.parse(execFileSync(npm, ["pack", "--json", "--pack-destination", output], {

@@ -19,7 +19,7 @@ is complete.
 | CLI-REAL-CORE-LOCAL-READ | Exercise the compiled CLI against a pinned actual Core runtime using only loopback public read routes. | Issue #16 starts a disposable Core at port `0` with temporary workspace and service roots, then verifies `instance inspect --json` and `service list --json`. It is direct local read proof only: no service is started, registered, installed, or mutated; no remote identity-provider flow, release, deployment, or GA claim follows. |
 | CLI-AUTOMATION | Never prompt, separate stdout from stderr and keep errors secret-safe, including when a transport implementation throws an error. | Implemented for this slice; durable operation identifiers, waits, cancellation and idempotency await Core. |
 | CLI-COMPLETION | Emit deterministic, read-only PowerShell, bash and zsh completion source for the declared CLI command tree. | Issue #24 owns static completion generation. Candidates derive from Commander declarations, never inspect Core, configuration, credentials, service identifiers or the filesystem, and stop suggesting options after `--`. |
-| CLI-DISTRIBUTION | Produce an exact, checksum-bound candidate that a clean Node 22 consumer can install without colliding with Core's local-runtime executable. | Implemented for manually dispatched `develop` candidates. The portable package archive contains the `service-lassoctl` entrypoint and requires Node 22; standalone native binaries remain deferred. |
+| CLI-DISTRIBUTION | Produce an exact, checksum-bound candidate that a clean Node 22 consumer can install without colliding with Core's local-runtime executable. | Issue #26 owns standalone `service-lassoctl` SEA executables. The portable package archive remains a separate Node 22 candidate and is not native-binary proof. |
 
 The capability matrix is the operation-to-contract record. The Core compatibility
 note records the command ownership decision and the dependencies that must close
@@ -93,6 +93,15 @@ before a complete create-to-running-service workflow can be implemented.
     checks for literal wildcard, punctuation, whitespace and quote prefixes and
     hosted bash/zsh shell checks establish only CLI completion behavior, not
     a release, native binary or full Issue #1 qualification.
+17. Issue #26 builds a bundled CommonJS Node 22.23.2 SEA main script with
+    pinned `esbuild` and `postject`, then binds every target-host executable to
+    its source commit, SHA-256, operating system and architecture. The native
+    fixture journey runs preview, changed-context rejection, one confirmed
+    execution, same-key reconciliation, operation get/wait and unsupported
+    cancellation with `node` absent from the child `PATH`; it redacts tokens
+    and response details. Linux also runs that native executable against the
+    separately pinned source-built guarded Core. Fixture and direct-Core proof
+    remain distinct from portable-candidate, release, deployment and GA gates.
 
 ## Framework decision traceability
 
