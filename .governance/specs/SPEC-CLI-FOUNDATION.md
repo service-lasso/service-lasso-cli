@@ -86,8 +86,8 @@ before a complete create-to-running-service workflow can be implemented.
     option suggestions after `--`. The generated source is safe to save and
     source locally; it does not evaluate completion input, contact Core, read
     credentials or write state. Its zsh bootstrap retains `compinit -i` so
-    insecure completion paths are ignored, and adds `-D` so it neither reads
-    nor writes `.zcompdump`. Focused generator tests plus actual PowerShell
+    insecure completion paths are ignored, and adds `-D` to suppress
+    `.zcompdump` writes; `-D` may still read an existing dump. Focused generator tests plus actual PowerShell
     and hosted bash/zsh shell checks establish only CLI completion behavior, not
     a release, native binary or full Issue #1 qualification.
 

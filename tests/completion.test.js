@@ -25,6 +25,7 @@ test("completion source is deterministic, read-safe and derived from declared co
   assert.match(first.stdout, /--expected-manifest-sha256/);
   assert.doesNotMatch(first.stdout, /SERVICE_LASSO_CORE_TOKEN|SERVICE_LASSO_CLI_LOCAL_ADMIN_TOKEN|service-id|filesystem/i);
   assert.match(complete("zsh").stdout, /compinit -i -D/);
+  assert.match(complete("zsh").stdout, /"\$\{\(@\)words\[2,CURRENT-1\]\}"/);
   assert.doesNotMatch(complete("zsh").stdout, /compinit -u|compinit -C/);
 });
 
@@ -60,7 +61,7 @@ test("zsh completion parses and computes static candidates", { skip: !hasCommand
   assert.deepEqual(result.stdout.trim().split("\n"), ["start", "stop", "after--:0"]);
 });
 
-test("zsh bootstrap ignores insecure fpath entries and writes no completion dump", { skip: !hasCommand("zsh") }, () => {
+test("zsh bootstrap ignores insecure fpath entries and creates no completion dump", { skip: !hasCommand("zsh") }, () => {
   const temp = mkdtempSync(join(tmpdir(), "service-lassoctl-completion-"));
   const insecure = join(temp, "insecure");
   mkdirSync(insecure);

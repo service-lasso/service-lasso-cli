@@ -137,7 +137,8 @@ subcommand and declared option names from the installed CLI command tree. It
 does not contact Core, read saved configuration or credentials, inspect paths,
 or suggest service IDs and option values. Once `--` appears, completion returns
 no candidates. The generated zsh bootstrap uses `compinit -i -D`: it ignores
-insecure completion paths and does not read or write a `.zcompdump` cache.
+insecure completion paths and suppresses `.zcompdump` writes. `-D` may still
+read an existing dump.
 
 Save and load the script with the shell's ordinary startup file:
 
