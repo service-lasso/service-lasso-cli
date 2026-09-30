@@ -50,7 +50,13 @@ assert.equal(provenance.executable.architecture, process.arch);
 const withoutNode = nodeFreeEnvironment();
 const nodeLookup = spawnSync("node", ["--version"], { encoding: "utf8", env: withoutNode });
 assert.equal(nodeLookup.error?.code, "ENOENT", "native smoke must remove node from PATH");
-for (const args of [["--help"], ["--version"]]) {
+for (const args of [
+  ["--help"], ["--version"], ["operator", "--help"], ["operator", "status", "--help"],
+  ["operator", "setup", "--help"], ["operator", "health", "--help"], ["operator", "dependencies", "--help"],
+  ["operator", "availability", "--help"], ["operator", "preview", "--help"], ["operator", "execute", "--help"],
+  ["operator", "operation", "--help"], ["operator", "operation", "get", "--help"], ["operator", "operation", "wait", "--help"],
+  ["operator", "operation", "cancel", "--help"],
+]) {
   const result = await run(executable, args, withoutNode);
   assert.equal(result.status, 0, result.stderr);
 }
@@ -59,7 +65,18 @@ const sentinel = "native-cli-credential-sentinel";
 const server = createServer((request, response) => {
   assert.equal(request.headers.authorization, `Bearer ${sentinel}`);
   response.setHeader("content-type", "application/json");
-  response.end(JSON.stringify({ status: "ok" }));
+  const path = new URL(request.url, "http://127.0.0.1").pathname;
+  if (path === "/api/health") return response.end(JSON.stringify({ status: "ok" }));
+  if (path === "/api/runtime/instance") return response.end(JSON.stringify({
+    instance: { instanceId: "native-instance", generationId: "native-generation", phase: "running", status: "active", version: "1.2.3", startedAt: "2030-01-01T00:00:00.000Z", updatedAt: "2030-01-01T00:00:01.000Z" },
+    registry: { activeCount: 1, staleCount: 0, unknownCount: 0 }, privateCredential: sentinel,
+  }));
+  if (path === "/api/setup/status") return response.end(JSON.stringify({ setup: { contractVersion: "service-lasso.setup-status.v1", state: "setup_complete", setupMode: false, vault: { required: true, ready: true } }, privateCredential: sentinel }));
+  if (path === "/api/services/demo/health") return response.end(JSON.stringify({ serviceId: "demo", health: { type: "process", healthy: true, checks: [{ id: "native-check", type: "process", required: true, healthy: true, attempts: 1 }] }, privateCredential: sentinel }));
+  if (path === "/api/dependencies") return response.end(JSON.stringify({ dependencies: { nodes: [{ id: "demo" }, { id: "database" }], edges: [{ from: "database", to: "demo" }] }, privateCredential: sentinel }));
+  if (path === "/api/operator/lifecycle/services/demo/availability") return response.end(JSON.stringify({ contractVersion: "service-lasso-durable-lifecycle-operation.v1", actions: [{ action: "start", available: true }], privateCredential: sentinel }));
+  response.statusCode = 404;
+  response.end(JSON.stringify({ error: "not_found" }));
 });
 await new Promise((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
 try {
@@ -69,6 +86,11 @@ try {
   const read = await run(executable, ["instance", "status", "--json"], environment);
   assert.equal(read.status, 0, read.stderr);
   assert.deepEqual(JSON.parse(read.stdout), { status: "ok" });
+  for (const args of [["operator", "status", "--json"], ["operator", "setup", "--json"], ["operator", "health", "demo", "--json"], ["operator", "dependencies", "demo", "--json"], ["operator", "availability", "demo", "--json"]]) {
+    const operatorRead = await run(executable, args, environment);
+    assert.equal(operatorRead.status, 0, operatorRead.stderr);
+    assert.equal(`${operatorRead.stdout}${operatorRead.stderr}`.includes(sentinel), false);
+  }
   const invalid = await run(executable, ["service", "start"], environment);
   assert.notEqual(invalid.status, 0);
   assert.doesNotMatch(`${read.stdout}${read.stderr}${invalid.stdout}${invalid.stderr}`, new RegExp(sentinel));
