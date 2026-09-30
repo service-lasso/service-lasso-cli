@@ -79,3 +79,7 @@ before a complete create-to-running-service workflow can be implemented.
     conflict, unknown readback, secret-safe errors and invalid-input
     no-mutation. This is source/fixture contract evidence only; packaged
     external CLI, hosted exact-head CI and GA remain separate gates.
+
+## Framework decision traceability
+
+Issue [#20](https://github.com/service-lasso/service-lasso-cli/issues/20) resolves Issue #1's framework-comparison acceptance for this foundation: Commander, Cobra, Kong and clap are evaluated in `docs/decisions/ADR-001-cli-framework.md`. The selected current direction is TypeScript/Commander. This does not claim a standalone binary, shell completion, cross-platform release acceptance, or the full Issue #1 workflow. Any language migration or native-binary commitment must start as a new bounded issue and update this specification before implementation.
