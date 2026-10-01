@@ -5,7 +5,7 @@ import { isSea } from "node:sea";
 import { configPath, loadConfig, resolveCoreToken, resolveCoreUrl, resolveLocalAdminToken, saveConfig, validateConnectionName } from "./config.js";
 import { CoreClient, LifecycleAction } from "./core-client.js";
 import { asCliError, CliError } from "./errors.js";
-import { createServiceScaffold } from "./scaffold.js";
+import { createServiceScaffold, previewServiceScaffold } from "./scaffold.js";
 import { completionSource, supportedCompletionShells } from "./completion.js";
 
 interface Output {
@@ -175,6 +175,12 @@ export function createProgram(): Command {
   operation.command("cancel").argument("<operation-id>").option("--json", "print JSON").action(async (operationId: string, options: { json?: boolean }) => { const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>(); const core = await client(coreUrl, connection); const current = await core.lifecycleOperation(operationId); const result = await core.cancelLifecycleOperation(operationId, current.operation.cancellationSupported); print(result, Boolean(options.json)); });
 
   const service = program.command("service").description("Scaffold and manage services.");
+  service.command("template")
+    .description("Inspect the template-contract gate without writing a project.")
+    .option("--json", "print JSON")
+    .action((options: { json?: boolean }) => {
+      print(previewServiceScaffold({ id: "template-preview", directory: "service-template-preview", dryRun: true }), Boolean(options.json));
+    });
   service.command("list").description("List services from Core.").option("--json", "print JSON").action(async (options: { json?: boolean }) => {
     const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
     print(await (await client(coreUrl, connection)).services(), Boolean(options.json));
@@ -186,8 +192,9 @@ export function createProgram(): Command {
       print(await (await client(coreUrl, connection)).lifecycle(serviceId, action), Boolean(options.json));
     });
   }
-  service.command("init").argument("<service-id>", "lowercase service id").option("--directory <path>", "new package directory").option("--name <name>", "display name").option("--dry-run", "show files without creating them").option("--json", "print JSON").description("Create a non-destructive service-package starter.").action(async (serviceId: string, options: { directory?: string; name?: string; dryRun?: boolean; json?: boolean }) => {
-    const result = await createServiceScaffold({ id: serviceId, directory: options.directory ?? `lasso-${serviceId}`, name: options.name, dryRun: options.dryRun });
+  service.command("init").argument("<service-id>", "lowercase service id").option("--directory <path>", "new package directory").option("--name <name>", "display name").option("--template-root <path>", "already-acquired accepted template bundle").option("--dry-run", "validate and list files without creating them").option("--json", "print JSON").description("Create from an accepted immutable service template.").action(async (serviceId: string, options: { directory?: string; name?: string; templateRoot?: string; dryRun?: boolean; json?: boolean }) => {
+    const input = { id: serviceId, directory: options.directory ?? `lasso-${serviceId}`, name: options.name, templateRoot: options.templateRoot, dryRun: options.dryRun };
+    const result = options.templateRoot ? await createServiceScaffold(input) : options.dryRun ? previewServiceScaffold(input) : await createServiceScaffold(input);
     print(result, Boolean(options.json));
   });
   service.command("register")

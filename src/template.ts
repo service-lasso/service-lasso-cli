@@ -1,20 +1,54 @@
 import { createHash } from "node:crypto";
+import { lstat, readFile } from "node:fs/promises";
+import { relative, resolve, sep } from "node:path";
 import { CliError } from "./errors.js";
 
-// Exact UTF-8 bytes of service-template 2026.5.8-d2241fe:service.json.
-const REVIEWED_TEMPLATE_BASE64 = "ewogICJpZCI6ICJlY2hvLXNlcnZpY2UiLAogICJuYW1lIjogIkVjaG8gU2VydmljZSIsCiAgImRlc2NyaXB0aW9uIjogIk1pbmltYWwgc2FtcGxlIHNlcnZpY2UgdXNlZCB0byBwcm92ZSB0aGUgc2VydmljZS10ZW1wbGF0ZSBjb250cmFjdC4iLAogICJlbmFibGVkIjogdHJ1ZSwKICAidmVyc2lvbiI6ICIwLjEuMCIsCiAgImxvZ291dHB1dCI6IHRydWUsCiAgImljb24iOiBbCiAgICB7CiAgICAgICJwcm92aWRlciI6ICJsdWNpZGUiLAogICAgICAibmFtZSI6ICJ0ZXJtaW5hbCIKICAgIH0KICBdLAogICJzZXJ2aWNldHlwZSI6IDUwLAogICJzZXJ2aWNlbG9jYXRpb24iOiAxMCwKICAibG9nbyI6IFtdLAogICJsb2dzIjogewogICAgImRlZmF1bHQiOiB7CiAgICAgICJwYXRoIjogImxvZ3MvZWNoby1zZXJ2aWNlLmxvZyIKICAgIH0KICB9LAogICJtZXRhIjogewogICAgImRldmVsb3BlcnMiOiBbCiAgICAgIHsKICAgICAgICAibmFtZSI6ICJTZXJ2aWNlIExhc3NvIGNvbnRyaWJ1dG9ycyIKICAgICAgfQogICAgXSwKICAgICJsaWNlbnNlIjogIkFwYWNoZS0yLjAiLAogICAgInJlcG9zaXRvcnkiOiB7CiAgICAgICJ0eXBlIjogImdpdCIsCiAgICAgICJ1cmwiOiAiaHR0cHM6Ly9naXRodWIuY29tL3NlcnZpY2UtbGFzc28vc2VydmljZS10ZW1wbGF0ZS5naXQiCiAgICB9LAogICAgIndlYnNpdGVVcmwiOiAiaHR0cHM6Ly9naXRodWIuY29tL3NlcnZpY2UtbGFzc28vc2VydmljZS10ZW1wbGF0ZSIsCiAgICAiZG9jdW1lbnRhdGlvblVybCI6ICJodHRwczovL2dpdGh1Yi5jb20vc2VydmljZS1sYXNzby9zZXJ2aWNlLXRlbXBsYXRlL2Jsb2IvbWFpbi9SRUFETUUubWQiLAogICAgImlzc3Vlc1VybCI6ICJodHRwczovL2dpdGh1Yi5jb20vc2VydmljZS1sYXNzby9zZXJ2aWNlLXRlbXBsYXRlL2lzc3VlcyIsCiAgICAic3VwcG9ydCI6IHsKICAgICAgImlzc3Vlc1VybCI6ICJodHRwczovL2dpdGh1Yi5jb20vc2VydmljZS1sYXNzby9zZXJ2aWNlLXRlbXBsYXRlL2lzc3VlcyIKICAgIH0sCiAgICAibGlua3MiOiB7CiAgICAgICJyZXBvc2l0b3J5IjogImh0dHBzOi8vZ2l0aHViLmNvbS9zZXJ2aWNlLWxhc3NvL3NlcnZpY2UtdGVtcGxhdGUiLAogICAgICAiaXNzdWVzIjogImh0dHBzOi8vZ2l0aHViLmNvbS9zZXJ2aWNlLWxhc3NvL3NlcnZpY2UtdGVtcGxhdGUvaXNzdWVzIiwKICAgICAgImRvY3VtZW50YXRpb24iOiAiaHR0cHM6Ly9naXRodWIuY29tL3NlcnZpY2UtbGFzc28vc2VydmljZS10ZW1wbGF0ZS9ibG9iL21haW4vUkVBRE1FLm1kIgogICAgfSwKICAgICJ0YWdzIjogWwogICAgICAic2VydmljZS1sYXNzbyIsCiAgICAgICJ0ZW1wbGF0ZSIsCiAgICAgICJleGFtcGxlLXNlcnZpY2UiCiAgICBdCiAgfSwKICAiYXJ0aWZhY3QiOiB7CiAgICAia2luZCI6ICJhcmNoaXZlIiwKICAgICJzb3VyY2UiOiB7CiAgICAgICJ0eXBlIjogImdpdGh1Yi1yZWxlYXNlIiwKICAgICAgInJlcG8iOiAic2VydmljZS1sYXNzby9zZXJ2aWNlLXRlbXBsYXRlIiwKICAgICAgImNoYW5uZWwiOiAibGF0ZXN0IgogICAgfSwKICAgICJwbGF0Zm9ybXMiOiB7CiAgICAgICJ3aW4zMiI6IHsKICAgICAgICAiYXNzZXROYW1lIjogImVjaG8tc2VydmljZS13aW4zMi56aXAiLAogICAgICAgICJhcmNoaXZlVHlwZSI6ICJ6aXAiLAogICAgICAgICJjb21tYW5kIjogIi4vZWNoby1zZXJ2aWNlLmV4ZSIsCiAgICAgICAgImFyZ3MiOiBbXQogICAgICB9LAogICAgICAiZGFyd2luIjogewogICAgICAgICJhc3NldE5hbWUiOiAiZWNoby1zZXJ2aWNlLWRhcndpbi50YXIuZ3oiLAogICAgICAgICJhcmNoaXZlVHlwZSI6ICJ0YXIuZ3oiLAogICAgICAgICJjb21tYW5kIjogIi4vZWNoby1zZXJ2aWNlIiwKICAgICAgICAiYXJncyI6IFtdCiAgICAgIH0sCiAgICAgICJsaW51eCI6IHsKICAgICAgICAiYXNzZXROYW1lIjogImVjaG8tc2VydmljZS1saW51eC50YXIuZ3oiLAogICAgICAgICJhcmNoaXZlVHlwZSI6ICJ0YXIuZ3oiLAogICAgICAgICJjb21tYW5kIjogIi4vZWNoby1zZXJ2aWNlIiwKICAgICAgICAiYXJncyI6IFtdCiAgICAgIH0sCiAgICAgICJkZWZhdWx0IjogewogICAgICAgICJhc3NldE5hbWUiOiAiZWNoby1zZXJ2aWNlLXdpbjMyLnppcCIsCiAgICAgICAgImFyY2hpdmVUeXBlIjogInppcCIsCiAgICAgICAgImNvbW1hbmQiOiAiLi9lY2hvLXNlcnZpY2UuZXhlIiwKICAgICAgICAiYXJncyI6IFtdCiAgICAgIH0KICAgIH0KICB9LAogICJhY3Rpb25zIjogewogICAgImluc3RhbGwiOiB7CiAgICAgICJkZXNjcmlwdGlvbiI6ICJBY3F1aXJlIG9yIHVucGFjayB0aGUgcGFja2FnZWQgZWNoby1zZXJ2aWNlIHJ1bnRpbWUgYXJ0aWZhY3QuIiwKICAgICAgIm1vZGUiOiAiY29udmVyZ2UtaW5zdGFsbCIsCiAgICAgICJpZGVtcG90ZW50IjogdHJ1ZQogICAgfSwKICAgICJjb25maWciOiB7CiAgICAgICJkZXNjcmlwdGlvbiI6ICJNYXRlcmlhbGl6ZSBkZXBsb3ltZW50LWxvY2FsIGVjaG8tc2VydmljZSBjb25maWcgYW5kIGVudiB2YWx1ZXMuIiwKICAgICAgIm1vZGUiOiAiY29udmVyZ2UtY29uZmlnIiwKICAgICAgImlkZW1wb3RlbnQiOiB0cnVlCiAgICB9LAogICAgInVwZGF0ZSI6IHsKICAgICAgImRlc2NyaXB0aW9uIjogIkFwcGx5IGEgbmV3ZXIgcmVsZWFzZSBhcnRpZmFjdCBhbmQgcmVjb25jaWxlIHVwZGF0ZS10aW1lIGNoYW5nZXMgYmVmb3JlIHJlc3RhcnQuIiwKICAgICAgIm1vZGUiOiAiY29udmVyZ2UtdXBkYXRlIiwKICAgICAgImlkZW1wb3RlbnQiOiB0cnVlCiAgICB9LAogICAgInN0YXJ0IjogewogICAgICAiZGVzY3JpcHRpb24iOiAiU3RhcnQgdGhlIHNhbXBsZSBlY2hvIHNlcnZpY2UuIiwKICAgICAgIm1vZGUiOiAicnVudGltZS1zdGFydCIsCiAgICAgICJpZGVtcG90ZW50IjogdHJ1ZQogICAgfSwKICAgICJzdG9wIjogewogICAgICAiZGVzY3JpcHRpb24iOiAiU3RvcCB0aGUgc2FtcGxlIGVjaG8gc2VydmljZSBncmFjZWZ1bGx5LiIsCiAgICAgICJtb2RlIjogInJ1bnRpbWUtc3RvcCIsCiAgICAgICJpZGVtcG90ZW50IjogdHJ1ZQogICAgfSwKICAgICJyZXN0YXJ0IjogewogICAgICAiZGVzY3JpcHRpb24iOiAiUmVzdGFydCB0aGUgc2FtcGxlIGVjaG8gc2VydmljZSBhZnRlciBjb25maWcgb3IgdXBkYXRlIGNoYW5nZXMuIiwKICAgICAgIm1vZGUiOiAicnVudGltZS1yZXN0YXJ0IiwKICAgICAgImlkZW1wb3RlbnQiOiBmYWxzZQogICAgfSwKICAgICJyb2xsYmFjayI6IHsKICAgICAgImRlc2NyaXB0aW9uIjogIlJlc3RvcmUgdGhlIHByZXZpb3VzbHkgZGVwbG95ZWQgYXJ0aWZhY3QgaWYgYW4gdXBkYXRlIGZhaWxzIHZhbGlkYXRpb24uIiwKICAgICAgIm1vZGUiOiAic3RhdGUtcm9sbGJhY2siLAogICAgICAiaWRlbXBvdGVudCI6IGZhbHNlCiAgICB9CiAgfSwKICAiZXhlY2NvbmZpZyI6IHsKICAgICJzZXJ2aWNlb3JkZXIiOiAxMDAsCiAgICAic2VydmljZXBvcnQiOiAwLAogICAgImV4ZWNjd2QiOiAicnVudGltZSIsCiAgICAiZXhlY3V0YWJsZSI6ICJlY2hvLXNlcnZpY2UiLAogICAgImVudiI6IHsKICAgICAgIkVDSE9fTUVTU0FHRSI6ICJoZWxsbyBmcm9tIHNlcnZpY2UtdGVtcGxhdGUiCiAgICB9LAogICAgImRlcGVuZF9vbiI6IFtdLAogICAgImhlYWx0aGNoZWNrIjogewogICAgICAidHlwZSI6ICJwcm9jZXNzIgogICAgfQogIH0KfQo=";
-export const SERVICE_TEMPLATE_IDENTITY = Object.freeze({ repository: "service-lasso/service-template", tag: "2026.5.8-d2241fe", commit: "d2241fe9b5fc477f14e99adb1836825de2c7a767", serviceJsonSha256: "535b939b39d96b3e72750c8a4c404d88f68e7f94150bc8d42ae6695baf9e1fd4" });
-export function reviewedTemplateBytes(): Buffer { return Buffer.from(REVIEWED_TEMPLATE_BASE64, "base64"); }
-export function authoringTemplateManifest(): Record<string, unknown> { return JSON.parse(reviewedTemplateBytes().toString("utf8")) as Record<string, unknown>; }
-/** Bounded safe transforms: identity substitution, disabled sample, and no mutable artifact source. */
-export function canonicalTemplateManifest(id: string, name: string): Record<string, unknown> {
-  const { artifact: _sampleArtifact, ...baseline } = authoringTemplateManifest();
-  return { ...baseline, id, name, enabled: false };
+export const TEMPLATE_CONTRACT_GATE = Object.freeze({
+  repository: "service-lasso/service-template", sourceCommit: "bdeb24b84f97e702372ccbcba0794ce30888ad53", templateVersion: "1.0.0-dev",
+  contractDigest: "05162aa2966c3656d5809050398ebaeba354ee6639f51b047464bc6a383324cb", contractSha256: "95e022bf381deb1096f42a0699c4f8f0cfed996670b9d6f0655792d6e41c0f0e",
+  status: "blocked" as const, blocker: "The current service-template develop contract is a development candidate source, not an accepted immutable template artifact.",
+  requiredArtifact: ["immutable tag", "published archive SHA-256", "published template-contract SHA-256", "candidate provenance", "accepted catalog identity"],
+});
+
+export interface TemplateInventoryEntry { path: string; sha256: string; mode: string; bytes: number; }
+export interface AcceptedTemplateBundle { repository: string; tag: string; commit: string; templateVersion: string; contractDigest: string; contractSha256: string; archiveSha256: string; catalogIdentity: string; inventory: TemplateInventoryEntry[]; root: string; }
+function fail(message: string): never { throw new CliError("invalid_template_bundle", message); }
+function sha256(bytes: Buffer): string { return createHash("sha256").update(bytes).digest("hex"); }
+function safeRelative(path: string): string {
+  if (path.includes("\\") || path.startsWith("/") || path.split("/").some((part) => !part || part === "." || part === "..")) fail("Template inventory contains an unsafe path.");
+  return path;
 }
-export function assertCanonicalTemplateManifest(manifest: Record<string, unknown>): void {
-  const actions = manifest.actions as Record<string, unknown> | undefined; const execconfig = manifest.execconfig as Record<string, unknown> | undefined;
-  if (!manifest.id || !manifest.name || !manifest.version || !actions?.install || !actions.config || !actions.start || !actions.stop || !Array.isArray(execconfig?.depend_on) || !execconfig.healthcheck) throw new CliError("invalid_template_manifest", "The pinned service template is missing required identity, lifecycle, or runtime declarations.");
+function isSha(value: unknown, length: number): value is string { return typeof value === "string" && new RegExp(`^[a-f0-9]{${length}}$`).test(value); }
+
+export function templateContractPreview(): Record<string, unknown> { return TEMPLATE_CONTRACT_GATE; }
+export function requireAcceptedTemplateIdentity(): never { throw new CliError("template_identity_unavailable", "No accepted immutable service-template identity is available; project creation is blocked until the template owner publishes and accepts the checksum-bound candidate."); }
+
+/** Verify a caller-supplied, already acquired accepted tuple without network I/O. */
+export async function loadAcceptedTemplateBundle(templateRoot: string): Promise<AcceptedTemplateBundle> {
+  const root = resolve(templateRoot);
+  const [contractBytes, candidateBytes, provenanceBytes, archiveBytes] = await Promise.all([
+    readFile(resolve(root, "template-contract.json")), readFile(resolve(root, "template-candidate.json")), readFile(resolve(root, "template-provenance.json")), readFile(resolve(root, "service-template.tar.gz")),
+  ]).catch(() => fail("Accepted template bundle is incomplete."));
+  let contract: any; let candidate: any; let provenance: any;
+  try { contract = JSON.parse(contractBytes.toString("utf8")); candidate = JSON.parse(candidateBytes.toString("utf8")); provenance = JSON.parse(provenanceBytes.toString("utf8")); } catch { fail("Accepted template bundle metadata is invalid."); }
+  if (!contract || contract.schemaVersion !== 1 || !Array.isArray(contract.inventory) || !candidate || candidate.schemaVersion !== 1 || !provenance || provenance.schemaVersion !== 1) fail("Accepted template bundle metadata is invalid.");
+  if (!isSha(candidate.templateCommit, 40) || !isSha(candidate.archiveSha256, 64) || !isSha(candidate.contractSha256, 64) || !isSha(candidate.contractDigest, 64) || candidate.contractSha256 !== sha256(contractBytes) || candidate.archiveSha256 !== sha256(archiveBytes)) fail("Accepted template bundle checksum metadata is invalid.");
+  if (typeof candidate.releaseTag !== "string" || candidate.releaseTag !== `template-v${candidate.templateVersion}-${candidate.templateCommit}` || !/^template-v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?-[a-f0-9]{40}$/.test(candidate.releaseTag) || String(candidate.templateVersion).includes("dev")) fail("Template bundle is not an accepted immutable release.");
+  if (provenance.templateRepository !== "service-lasso/service-template" || provenance.templateCommit !== candidate.templateCommit || provenance.templateVersion !== candidate.templateVersion || provenance.contractDigest !== candidate.contractDigest || !provenance.origin || typeof provenance.catalogIdentity !== "string" || provenance.catalogIdentity.length === 0) fail("Accepted template provenance is incomplete.");
+  const inventory: TemplateInventoryEntry[] = contract.inventory.map((entry: any) => {
+    if (!entry || typeof entry !== "object" || typeof entry.path !== "string" || !isSha(entry.sha256, 64) || !/^(0644|0755)$/.test(entry.mode) || !Number.isSafeInteger(entry.bytes) || entry.bytes < 0) fail("Template inventory is invalid.");
+    return { path: safeRelative(entry.path), sha256: entry.sha256, mode: entry.mode, bytes: entry.bytes };
+  });
+  if (new Set(inventory.map((entry) => entry.path)).size !== inventory.length || inventory.length === 0) fail("Template inventory is invalid.");
+  for (const entry of inventory) {
+    const path = resolve(root, entry.path); if (!path.startsWith(root + sep)) fail("Template inventory contains an unsafe path.");
+    const stat = await lstat(path).catch(() => fail("Template payload does not match its inventory."));
+    if (!stat.isFile() || stat.isSymbolicLink() || (process.platform !== "win32" && (stat.mode & 0o777) !== Number.parseInt(entry.mode, 8))) fail("Template payload contains an unsafe file.");
+    const bytes = await readFile(path); if (bytes.length !== entry.bytes || sha256(bytes) !== entry.sha256) fail("Template payload does not match its inventory.");
+  }
+  return { repository: provenance.templateRepository, tag: candidate.releaseTag, commit: candidate.templateCommit, templateVersion: candidate.templateVersion, contractDigest: candidate.contractDigest, contractSha256: candidate.contractSha256, archiveSha256: candidate.archiveSha256, catalogIdentity: provenance.catalogIdentity, inventory, root };
 }
-export function assertReviewedTemplateChecksum(): void {
-  if (createHash("sha256").update(reviewedTemplateBytes()).digest("hex") !== SERVICE_TEMPLATE_IDENTITY.serviceJsonSha256) throw new CliError("template_checksum_mismatch", "The embedded reviewed service template does not match its recorded checksum.");
+
+export async function acceptedTemplateFiles(bundle: AcceptedTemplateBundle): Promise<Array<{ path: string; bytes: Buffer; mode: number }>> {
+  return Promise.all(bundle.inventory.map(async (entry) => ({ path: entry.path, bytes: await readFile(resolve(bundle.root, entry.path)), mode: Number.parseInt(entry.mode, 8) })));
 }

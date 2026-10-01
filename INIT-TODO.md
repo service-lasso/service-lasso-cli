@@ -10,6 +10,12 @@
   flag/environment/profile precedence, credentials kept environment-only, and
   the reviewed service-template tag, commit and manifest checksum recorded in
   each non-destructive local scaffold.
+- [ ] Issue #8 accepted-template activation: the full-contract materializer is
+  ready for an immutable candidate tag, archive/contract checksum tuple,
+  provenance and catalog admission. Current `service-template` `develop`
+  `bdeb24b84f97e702372ccbcba0794ce30888ad53` is `1.0.0-dev` source-only, so
+  default scaffold output and direct generated-project/Core validation stay
+  blocked until the owning template release supplies that tuple.
 - [x] Define Issue #16 `CLI-REAL-CORE-ACCEPTANCE`: run the source-built compiled
   CLI against pinned Core `develop` `d9e2ae799244317940c862fe1261dfd22b7bdda1`
   on an ephemeral loopback port with temporary workspace and service roots,
