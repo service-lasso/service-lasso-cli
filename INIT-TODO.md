@@ -31,7 +31,10 @@
 - [x] Complete Issue #24 `CLI-COMPLETION`: deterministic Commander-derived PowerShell, bash and zsh completion source, safe `--` handling, concise install/CI examples and focused shell evidence. This is a bounded Issue #1 automation/documentation acceptance; no native binary, release or full workflow claim follows.
 - [ ] Issue #26: directly validate checksum-bound Node 22.23.2 SEA binaries on Windows x64, Linux x64 and macOS arm64. Each target needs a native no-Node fixture journey; Linux additionally runs the native executable against the pinned actual guarded Core lifecycle route. The portable archive remains separate.
 - [ ] Issue #30: retain the source-only publisher with actual provider GET
-  preflight, closed archive/portable verification and retained-byte readback;
+  preflight (review/admin/strict/direct-force policy), closed archive/portable
+  verification, bounded streamed metadata/asset reads, authenticated private
+  asset-ID verification before one publish transition, and retained-byte
+  readback;
   maintain `SPEC-CLI-PROTECTED-NATIVE-CANDIDATE.md`, Project #1 lifecycle,
   and the concrete `.github` settings proposal. Owner approval, provider
   settings, dispatch, release assets, tags, deployment and Core packaging are
