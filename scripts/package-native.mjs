@@ -2,6 +2,7 @@ import { build } from "esbuild";
 import { copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { gzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 import { basename, dirname, join, resolve } from "node:path";
 
@@ -33,6 +34,19 @@ function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
+function controlledFixtureArchive(payload) {
+  const blocks = [];
+  for (const [path, value] of Object.entries(payload)) {
+    const bytes = Buffer.from(value), header = Buffer.alloc(512);
+    Buffer.from(path).copy(header);
+    Buffer.from("0000644\0").copy(header, 100);
+    Buffer.from(`${bytes.length.toString(8).padStart(11, "0")}\0`).copy(header, 124);
+    header[156] = 48;
+    blocks.push(header, bytes, Buffer.alloc((512 - bytes.length % 512) % 512));
+  }
+  return gzipSync(Buffer.concat([...blocks, Buffer.alloc(1024)]));
+}
+
 async function confinedWriterSourceSha256() {
   const directory = join(root, "native", "confined-scaffold");
   const names = (await readdir(directory)).filter((name) => name.endsWith(".go") || name === "go.mod" || name === "go.sum").sort();
@@ -46,6 +60,7 @@ if (process.versions.node !== nodeVersion) throw new Error(`Node ${nodeVersion} 
 const output = resolve(argument("--output"));
 const sourceSha = argument("--source-sha");
 const version = argument("--version");
+const controlledTestAdmission = process.argv.includes("--controlled-test-admission");
 if (!/^[0-9a-f]{40}$/i.test(sourceSha)) throw new Error("--source-sha must be a full 40-character Git SHA.");
 if (!/^\d+\.\d+\.\d+-dev\.[0-9a-f]{7}$/i.test(version)) throw new Error("--version must be the frozen candidate version.");
 const target = currentTarget();
@@ -63,6 +78,22 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 command("go", ["build", "-trimpath", "-o", confinedWriter, "."], join(root, "native", "confined-scaffold"));
 const confinedWriterSha256 = sha256(await readFile(confinedWriter));
+// This fixed tuple is solely an executable integration fixture. It is never
+// present in a normal candidate and cannot be supplied by a caller at runtime.
+const controlledPayload = { "service.json": '{"id":"controlled-primary"}\n', "config/example.env": "PORT=8080\n" };
+const controlledInventory = Object.entries(controlledPayload).map(([path, value]) => ({ path, sha256: sha256(value), mode: "0644", bytes: Buffer.byteLength(value) }));
+const controlledContract = Buffer.from(`${JSON.stringify({ schemaVersion: 1, contractDigest: "2".repeat(64), inventory: controlledInventory })}\n`);
+const controlledArchive = controlledFixtureArchive(controlledPayload);
+const controlledAdmissions = controlledTestAdmission ? [{
+  repository: "service-lasso/service-template",
+  tag: `template-v9.9.9-${"1".repeat(40)}`,
+  commit: "1".repeat(40),
+  templateVersion: "9.9.9",
+  contractDigest: "2".repeat(64),
+  contractSha256: sha256(controlledContract),
+  archiveSha256: sha256(controlledArchive),
+  catalogIdentity: "controlled-source-test-fixture",
+}] : [];
 await build({
   bundle: true,
   entryPoints: [join(root, "dist", "sea-entry.js")],
@@ -78,6 +109,7 @@ await build({
     __SERVICE_LASSO_CANDIDATE_VERSION__: JSON.stringify(version),
     __SERVICE_LASSO_CANDIDATE_SOURCE_SHA__: JSON.stringify(sourceSha),
     __SERVICE_LASSO_CONFINED_HELPER_SHA256__: JSON.stringify(confinedWriterSha256),
+    __SERVICE_LASSO_CONTROLLED_TEST_ADMISSIONS__: JSON.stringify(controlledAdmissions),
   },
   legalComments: "none",
 });

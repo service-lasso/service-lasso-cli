@@ -1,7 +1,9 @@
 import { execFileSync, spawn, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { appendFile, mkdtemp, mkdir, rename, rm, readFile, readdir, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { gzipSync } from "node:zlib";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -11,6 +13,18 @@ async function awaitGate(gate, stage) { for (let i = 0; i < 400; i++) { try { if
 async function releaseGate(gate, stage) { await appendFile(`${gate}.continue`, `${stage}\n`); }
 function helperInput(destination) { return `${Buffer.from(destination).toString("base64")}\n${bundle.files.length}\n${bundle.files.map((file) => `${file.path}\t${file.mode.toString(8)}\t${file.bytes.toString("base64")}`).join("\n")}\n`; }
 function runHeldHelper(helper, destination) { const input = helperInput(destination); return new Promise((resolve, reject) => { const child = spawn(helper, ["--test-gate"], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true }); let stdout = "", stderr = ""; child.stdout.on("data", (value) => { stdout += value; }); child.stderr.on("data", (value) => { stderr += value; }); child.once("error", reject); child.once("close", (code) => { if (code === 0 && stderr === "" && /^ok\t[0-9a-f]{64}\n$/.test(stdout)) resolve(); else { const error = new Error(`held helper failed: ${stdout}${stderr}`); error.code = stdout.match(/^error\t([^\n]+)/)?.[1] ?? "write_rejected"; reject(error); } }); child.stdin.end(input); }); }
+function digest(value) { return createHash("sha256").update(value).digest("hex"); }
+function archive(payload) { const blocks = []; for (const [path, value] of Object.entries(payload)) { const bytes = Buffer.from(value), header = Buffer.alloc(512); Buffer.from(path).copy(header); Buffer.from("0000644\0").copy(header, 100); Buffer.from(`${bytes.length.toString(8).padStart(11, "0")}\0`).copy(header, 124); header[156] = 48; blocks.push(header, bytes, Buffer.alloc((512 - bytes.length % 512) % 512)); } return gzipSync(Buffer.concat([...blocks, Buffer.alloc(1024)])); }
+async function controlledBundle(root) {
+  const payload = { "service.json": '{"id":"controlled-primary"}\n', "config/example.env": "PORT=8080\n" };
+  const inventory = Object.entries(payload).map(([path, value]) => ({ path, sha256: digest(value), mode: "0644", bytes: Buffer.byteLength(value) }));
+  const contract = Buffer.from(`${JSON.stringify({ schemaVersion: 1, contractDigest: "2".repeat(64), inventory })}\n`);
+  const archiveBytes = archive(payload);
+  const candidate = { schemaVersion: 1, templateCommit: "1".repeat(40), templateVersion: "9.9.9", contractDigest: "2".repeat(64), contractSha256: digest(contract), archiveSha256: digest(archiveBytes), releaseTag: `template-v9.9.9-${"1".repeat(40)}` };
+  const provenance = { schemaVersion: 1, templateRepository: "service-lasso/service-template", templateCommit: candidate.templateCommit, templateVersion: candidate.templateVersion, contractDigest: candidate.contractDigest, catalogIdentity: "controlled-source-test-fixture", origin: { kind: "controlled-source-test" } };
+  await Promise.all([writeFile(join(root, "template-contract.json"), contract), writeFile(join(root, "template-candidate.json"), `${JSON.stringify(candidate)}\n`), writeFile(join(root, "template-provenance.json"), `${JSON.stringify(provenance)}\n`), writeFile(join(root, "service-template.tar.gz"), archiveBytes), ...Object.entries(payload).map(([path, value]) => { const index = path.lastIndexOf("/"); return (index < 0 ? Promise.resolve() : mkdir(join(root, path.slice(0, index)), { recursive: true })).then(() => writeFile(join(root, path), value)); })]);
+}
+function runNative(executable, args, environment) { return new Promise((resolve, reject) => { const child = spawn(executable, args, { env: environment, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] }); let stdout = "", stderr = ""; child.stdout.on("data", (value) => { stdout += value; }); child.stderr.on("data", (value) => { stderr += value; }); child.once("error", reject); child.once("close", (code) => resolve({ code, stdout, stderr })); }); }
 
 test("native SEA packager records a direct host executable and smoke runs without Node on PATH", async () => {
   const output = await mkdtemp(join(tmpdir(), "service-lassoctl-native-"));
@@ -27,6 +41,7 @@ test("native SEA packager records a direct host executable and smoke runs withou
     assert.equal(provenance.candidate.version, version);
     const seaBundle = await readFile(join(output, "service-lassoctl.cjs"), "utf8");
     assert.match(seaBundle, new RegExp(provenance.confinedWriter.sha256));
+    assert.doesNotMatch(seaBundle, /controlled-source-test-fixture/);
     execFileSync(node, ["scripts/write-native-ci-context.mjs", "--directory", output, "--event-name", "workflow_dispatch", "--source-sha", sourceSha, "--tested-base-sha", "", "--merge-context-sha", sourceSha], { encoding: "utf8" });
     execFileSync(node, ["scripts/smoke-native.mjs", "--directory", output, "--expected-source-sha", sourceSha, "--expected-version", version, "--write-host-acceptance"], { encoding: "utf8" });
     const acceptance = JSON.parse(await readFile(join(output, "host-acceptance.json"), "utf8"));
@@ -61,6 +76,37 @@ test("native SEA packager records a direct host executable and smoke runs withou
     execFileSync(node, ["scripts/verify-native-ci-provenance.mjs", "--directory", output, "--expected-source-sha", sourceSha, "--expected-event", "pull_request", "--expected-base-sha", baseSha, "--expected-merge-context-sha", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "--expected-platform", process.platform, "--expected-architecture", process.arch], { encoding: "utf8" });
   } finally {
     await rm(output, { recursive: true, force: true });
+  }
+});
+
+test("controlled source admission exercises the native primary to SEA to gate to writer route despite a hostile helper PATH", async () => {
+  const root = await mkdtemp(join(tmpdir(), "service-lassoctl-primary-route-"));
+  const output = join(root, "native"), templateRoot = join(root, "controlled-template"), destination = join(root, "generated"), hostileDirectory = join(root, "hostile-path");
+  const sourceSha = "0123456789abcdef0123456789abcdef01234567", version = "0.1.0-dev.0123456";
+  try {
+    await mkdir(templateRoot); await mkdir(hostileDirectory); await controlledBundle(templateRoot);
+    const hostileWriter = join(hostileDirectory, `service-lasso-confined-scaffold${process.platform === "win32" ? ".exe" : ""}`);
+    await writeFile(hostileWriter, process.platform === "win32" ? "not a valid executable" : `#!/bin/sh\nprintf hostile > '${join(root, "hostile-executed").replace(/'/g, "'\\''")}'\nexit 1\n`);
+    if (process.platform !== "win32") execFileSync("chmod", ["0700", hostileWriter]);
+    execFileSync(node, ["scripts/package-native.mjs", "--output", output, "--source-sha", sourceSha, "--version", version, "--controlled-test-admission"], { encoding: "utf8" });
+    const executable = join(output, process.platform === "win32" ? "service-lassoctl.exe" : "service-lassoctl");
+    const { SERVICE_LASSO_PRIMARY_GATE, SERVICE_LASSO_PRIMARY_GATE_PIPE, SERVICE_LASSO_PRIMARY_GATE_FD, SERVICE_LASSO_PRIMARY_GATE_CAPABILITY, ...inherited } = process.env;
+    const result = await runNative(executable, ["service", "init", "controlled-primary", "--template-root", templateRoot, "--directory", destination, "--json"], { ...inherited, PATH: hostileDirectory, SERVICE_LASSO_PRIMARY_GATE: "hostile", SERVICE_LASSO_PRIMARY_GATE_PIPE: "\\\\.\\pipe\\service-lasso-primary-0000000000000000000000000000000000000000000000000000000000000000", SERVICE_LASSO_PRIMARY_GATE_FD: "7", SERVICE_LASSO_PRIMARY_GATE_CAPABILITY: Buffer.alloc(32).toString("base64") });
+    if (process.platform === "darwin") {
+      // macOS activation requires the non-interactive system immutable flag.
+      // Hosted runners without that privilege must reject the route before any
+      // writer can run; this remains distinct from the Linux/Windows proof.
+      assert.equal(result.code, 1);
+      assert.match(result.stderr, /The native primary gate could not start\./);
+      await assert.rejects(readFile(join(destination, "service.json")));
+      return;
+    }
+    assert.equal(result.code, 0, result.stderr);
+    assert.match(result.stdout, /"dryRun": false/);
+    assert.equal(await readFile(join(destination, "service.json"), "utf8"), '{"id":"controlled-primary"}\n');
+    await assert.rejects(readFile(join(root, "hostile-executed")));
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 });
 

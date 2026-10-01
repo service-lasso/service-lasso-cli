@@ -198,7 +198,9 @@ func stageImage(directory windows.Handle, name string, value []byte) (windows.Ha
 	return handle, nil
 }
 func main() {
-	if !newGateCapability() { fail() }
+	if !newGateCapability() {
+		fail()
+	}
 	directory, directoryHandle, err := stageDirectory()
 	if err != nil {
 		failAt("private directory")

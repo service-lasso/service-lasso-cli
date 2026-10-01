@@ -8,8 +8,15 @@ export const TEMPLATE_CONTRACT_GATE = Object.freeze({ repository: "service-lasso
 export interface TemplateInventoryEntry { path: string; sha256: string; mode: string; bytes: number; }
 export interface TemplateAdmission { repository: string; tag: string; commit: string; templateVersion: string; contractDigest: string; contractSha256: string; archiveSha256: string; catalogIdentity: string; }
 export interface AcceptedTemplateBundle extends TemplateAdmission { inventory: TemplateInventoryEntry[]; files: Array<{ path: string; bytes: Buffer; mode: number }>; }
+declare const __SERVICE_LASSO_CONTROLLED_TEST_ADMISSIONS__: readonly TemplateAdmission[] | undefined;
 // Source-owned versioned admission data. No caller-controlled path can add an entry.
-export const TEMPLATE_ADMISSIONS: readonly TemplateAdmission[] = Object.freeze([]);
+// A specially requested test build may embed a fixed, source-owned fixture
+// admission. It is deliberately a compile-time value: neither the native
+// command line nor its environment can add an admission, and ordinary
+// candidate builds continue to contain an empty catalog.
+export const TEMPLATE_ADMISSIONS: readonly TemplateAdmission[] = Object.freeze(
+  typeof __SERVICE_LASSO_CONTROLLED_TEST_ADMISSIONS__ === "undefined" ? [] : __SERVICE_LASSO_CONTROLLED_TEST_ADMISSIONS__,
+);
 const metadata = new Set(["template-contract.json", "template-candidate.json", "template-provenance.json", "service-template.tar.gz"]);
 const fail = (message: string): never => { throw new CliError("invalid_template_bundle", message); };
 const digest = (bytes: Buffer): string => createHash("sha256").update(bytes).digest("hex");

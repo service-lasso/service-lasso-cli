@@ -78,6 +78,17 @@ jobs:
         run: |
           set -euo pipefail
           npm run smoke:native -- --directory native-assets --expected-source-sha "${{ steps.revision.outputs.source_sha }}" --expected-version "${{ steps.revision.outputs.candidate_version }}"
+      - name: Exercise controlled primary-to-writer route on the native host
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test --test-name-pattern "controlled source admission" tests/native-distribution.test.js
+      - name: Verify Darwin process-exit admission rejection
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd native/primary-gate && go test ./...)
       - name: Verify exact-head provenance and CI event context
         shell: bash
         run: |

@@ -99,6 +99,7 @@ async function primaryMaterialize(input: string): Promise<{ stdout: string; stde
     const close = () => { socket.destroy(); done(undefined); };
     socket.setEncoding("utf8");
     socket.once("error", close);
+    socket.once("close", close);
     // An inherited Unix socketpair endpoint is already connected. Waiting for
     // a future connect event would leave the one-shot capability idle; named
     // pipes still use their ordinary asynchronous connection event.
@@ -118,7 +119,7 @@ async function primaryMaterialize(input: string): Promise<{ stdout: string; stde
           socket.write(`${JSON.stringify({ version: 1, nonce, proof: gateProof(capability, "sea", nonce), input: Buffer.from(input).toString("base64") })}\n`);
           return;
         }
-        socket.removeListener("error", close); socket.end();
+        socket.removeListener("error", close); socket.removeListener("close", close); socket.end();
         if (!value || typeof value !== "object") return done(undefined);
         const record = value as { version?: unknown; nonce?: unknown; code?: unknown; stdout?: unknown; stderr?: unknown };
         if (record.version !== 1 || record.nonce !== nonce || !Number.isInteger(record.code) || typeof record.stdout !== "string" || typeof record.stderr !== "string") return done(undefined);
