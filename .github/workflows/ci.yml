@@ -73,15 +73,6 @@ jobs:
           set -euo pipefail
           source_sha="${{ steps.revision.outputs.source_sha }}"
           npm run package:native -- --output native-assets --source-sha "$source_sha" --version "${{ steps.revision.outputs.candidate_version }}"
-      - name: Provision the bounded Darwin descriptor helper
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          set -euo pipefail
-          helper_root="$RUNNER_TEMP/service-lasso-privileged-helper-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_JOB}"
-          sudo -n /usr/bin/install -d -o root -g wheel -m 0755 "$helper_root"
-          sudo -n /usr/bin/install -o root -g wheel -m 0555 native-assets/service-lasso-darwin-immutable-helper "$helper_root/service-lasso-darwin-immutable-helper"
-          echo "SERVICE_LASSO_DARWIN_PRIVILEGED_HELPER=$helper_root/service-lasso-darwin-immutable-helper" >> "$GITHUB_ENV"
       - name: Record schema-closed CI event context separately from native provenance
         shell: bash
         env:
@@ -103,7 +94,7 @@ jobs:
           set -euo pipefail
           executable="native-assets/service-lassoctl"
           if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
-          node scripts/run-native-qualification-phase.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --phase route --executable "$executable" -- node --test --test-name-pattern "controlled source admission" tests/native-distribution.test.js
+          SERVICE_LASSO_CONTROLLED_NATIVE_EXE="$GITHUB_WORKSPACE/$executable" node scripts/run-native-qualification-phase.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --phase route --qualification-status unavailable --executable "$executable" -- node --test --test-name-pattern "controlled source admission" tests/native-distribution.test.js
       - name: Verify Darwin process-exit admission rejection
         if: runner.os == 'macOS'
         shell: bash

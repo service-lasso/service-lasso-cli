@@ -35,7 +35,10 @@ const receipt = {
   sourceHead: head,
   rawHeadSha256: hash(rawHead),
   recursiveHeadTreeSha256: hash(tree),
-  runtime: {
+  // These are job-custody declarations only. The native CLI has no Core
+  // runtime input for these paths, so retaining them as a runtime-isolation
+  // claim would be false evidence.
+  declaredRuntimePathMetadata: {
     workspaceRoot,
     instanceRegistryPath,
     hostPortRegistryPath,

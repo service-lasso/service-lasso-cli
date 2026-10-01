@@ -13,6 +13,8 @@ if (!new Set(["smoke", "route", "archive"]).has(phase)) throw new Error("Unknown
 const receiptDirectory = resolve(option("--receipt-directory"));
 const executable = process.argv.includes("--executable") ? resolve(option("--executable")) : null;
 const artifact = process.argv.includes("--artifact") ? resolve(option("--artifact")) : null;
+const qualificationStatus = process.argv.includes("--qualification-status") ? option("--qualification-status") : "verified";
+if (!new Set(["verified", "unavailable"]).has(qualificationStatus)) throw new Error("Unknown qualification status.");
 const separator = process.argv.indexOf("--");
 if (separator < 0 || separator === process.argv.length - 1) throw new Error("A literal -- followed by the owned child command is required.");
 const command = process.argv[separator + 1], args = process.argv.slice(separator + 2);
@@ -41,6 +43,7 @@ const record = {
   argumentsSha256: createHash("sha256").update(JSON.stringify(args)).digest("hex"),
   nativeExecutableSha256: executable ? await sha256(executable) : null,
   artifactSha256: artifact ? await sha256(artifact) : null,
+  qualificationStatus,
   rawClose: result,
   passed: result.code === 0 && result.signal === null && result.spawnError === null,
 };

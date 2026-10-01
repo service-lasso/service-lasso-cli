@@ -44,12 +44,16 @@ func darwinHelper() (string, error) {
 func setImmutable(fd int, mode string) error {
 	helper, err := darwinHelper()
 	if err != nil { return err }
+	capabilityFD, err := strconv.Atoi(os.Getenv("SERVICE_LASSO_DARWIN_IMMUTABILITY_CAPABILITY_FD"))
+	if err != nil || capabilityFD < 3 { return fmt.Errorf("Darwin immutable capability is not inherited") }
+	capability := os.NewFile(uintptr(capabilityFD), "service-lasso-darwin-immutability-capability")
+	if capability == nil { return fmt.Errorf("Darwin immutable capability is unavailable") }
 	var stat unix.Stat_t
 	if err = unix.Fstat(fd, &stat); err != nil || stat.Uid != uint32(os.Getuid()) { return fmt.Errorf("Darwin image is not job-owned") }
-	// sudo -C 4 preserves only the explicit descriptor passed as fd 3. A host
-	// without this provisioned, non-interactive boundary fails closed.
-	command := exec.Command("/usr/bin/sudo", "-n", "-C", "4", "--", helper, "--fd", "3", "--device", strconv.FormatUint(uint64(stat.Dev), 10), "--inode", strconv.FormatUint(stat.Ino, 10), "--mode", mode)
-	command.ExtraFiles = []*os.File{os.NewFile(uintptr(fd), "service-lasso-owned-image")}
+	// The policy-bound capability and image descriptor are the only preserved
+	// descriptors. A runner without externally provisioned authority fails.
+	command := exec.Command("/usr/bin/sudo", "-n", "-C", "5", "--", helper, "--fd", "3", "--capability-fd", "4", "--device", strconv.FormatUint(uint64(stat.Dev), 10), "--inode", strconv.FormatUint(stat.Ino, 10), "--mode", mode)
+	command.ExtraFiles = []*os.File{os.NewFile(uintptr(fd), "service-lasso-owned-image"), capability}
 	if err = command.Run(); err != nil { return err }
 	if err = unix.Fstat(fd, &stat); err != nil { return err }
 	if mode == "set" && stat.Flags&unix.SF_IMMUTABLE == 0 { return fmt.Errorf("system immutable readback failed") }

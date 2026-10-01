@@ -90,25 +90,32 @@ test("native SEA packager records a direct host executable and smoke runs withou
 
 test("controlled source admission exercises the native primary to SEA to gate to writer route despite a hostile helper PATH", async () => {
   const root = await mkdtemp(join(tmpdir(), "service-lassoctl-primary-route-"));
-  const output = join(root, "native"), templateRoot = join(root, "controlled-template"), destination = join(root, "generated"), hostileDirectory = join(root, "hostile-path");
+  // Qualification can pass the already-built executable here.  In that mode
+  // this test proves the truthful empty-catalog result; it must never rebuild
+  // a different test-admission binary and attach that result to production
+  // bytes.
+  const suppliedExecutable = process.env.SERVICE_LASSO_CONTROLLED_NATIVE_EXE;
+  const output = suppliedExecutable ? undefined : join(root, "native"), templateRoot = join(root, "controlled-template"), destination = join(root, "generated"), hostileDirectory = join(root, "hostile-path");
   const sourceSha = "0123456789abcdef0123456789abcdef01234567", version = "0.1.0-dev.0123456";
   try {
     await mkdir(templateRoot); await mkdir(hostileDirectory); await controlledBundle(templateRoot);
     const hostileWriter = join(hostileDirectory, `service-lasso-confined-scaffold${process.platform === "win32" ? ".exe" : ""}`);
     await writeFile(hostileWriter, process.platform === "win32" ? "not a valid executable" : `#!/bin/sh\nprintf hostile > '${join(root, "hostile-executed").replace(/'/g, "'\\''")}'\nexit 1\n`);
     if (process.platform !== "win32") execFileSync("chmod", ["0700", hostileWriter]);
-    execFileSync(node, ["scripts/package-native.mjs", "--output", output, "--source-sha", sourceSha, "--version", version, "--controlled-test-admission"], { encoding: "utf8" });
-    const executable = join(output, process.platform === "win32" ? "service-lassoctl.exe" : "service-lassoctl");
+    if (!suppliedExecutable) execFileSync(node, ["scripts/package-native.mjs", "--output", output, "--source-sha", sourceSha, "--version", version, "--controlled-test-admission"], { encoding: "utf8" });
+    const executable = suppliedExecutable ?? join(output, process.platform === "win32" ? "service-lassoctl.exe" : "service-lassoctl");
     const { SERVICE_LASSO_PRIMARY_GATE, SERVICE_LASSO_PRIMARY_GATE_PIPE, SERVICE_LASSO_PRIMARY_GATE_FD, SERVICE_LASSO_PRIMARY_GATE_CAPABILITY, ...inherited } = process.env;
     const result = await runNative(executable, ["service", "init", "controlled-primary", "--template-root", templateRoot, "--directory", destination, "--json"], { ...inherited, PATH: hostileDirectory, SERVICE_LASSO_PRIMARY_GATE: "hostile", SERVICE_LASSO_PRIMARY_GATE_PIPE: "\\\\.\\pipe\\service-lasso-primary-0000000000000000000000000000000000000000000000000000000000000000", SERVICE_LASSO_PRIMARY_GATE_FD: "7", SERVICE_LASSO_PRIMARY_GATE_CAPABILITY: Buffer.alloc(32).toString("base64") });
-    // This is deliberately a positive native-host proof on every supported
-    // target. Darwin's primary only reaches this point after its private
-    // images and held parent have read back SF_IMMUTABLE and rejected the
-    // pre-open writer. A host that cannot supply that privilege fails this
-    // test; it must not turn the expected failure into a passing receipt.
-    assert.equal(result.code, 0, result.stderr);
-    assert.match(result.stdout, /"dryRun": false/);
-    assert.equal(await readFile(join(destination, "service.json"), "utf8"), '{"id":"controlled-primary"}\n');
+    if (suppliedExecutable) {
+      assert.notEqual(result.code, 0, "the normal empty catalog must reject a controlled test bundle");
+      await assert.rejects(readFile(join(destination, "service.json")));
+    } else {
+      // This is a source-owned, separately built test admission only. It is
+      // deliberately never used as a release-qualification receipt.
+      assert.equal(result.code, 0, result.stderr);
+      assert.match(result.stdout, /"dryRun": false/);
+      assert.equal(await readFile(join(destination, "service.json"), "utf8"), '{"id":"controlled-primary"}\n');
+    }
     await assert.rejects(readFile(join(root, "hostile-executed")));
   } finally {
     await rm(root, { recursive: true, force: true });

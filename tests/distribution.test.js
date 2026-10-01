@@ -49,9 +49,9 @@ function assertProtectedCandidateWorkflow(workflow) {
   const primaryRoute = nativeSteps.find((step) => step.name === "Record actual controlled primary route close result")?.run ?? "";
   assert.match(primaryRoute, /run-native-qualification-phase\.mjs .*--phase route/);
   assert.match(primaryRoute, /controlled source admission/);
-  const darwinHelper = nativeSteps.find((step) => step.name === "Provision the bounded Darwin descriptor helper")?.run ?? "";
-  assert.match(darwinHelper, /install -o root -g wheel -m 0555/);
-  assert.doesNotMatch(darwinHelper, /chflags/);
+  assert.equal(nativeSteps.some((step) => /Provision the bounded Darwin descriptor helper/.test(step.name ?? "")), false);
+  assert.match(primaryRoute, /SERVICE_LASSO_CONTROLLED_NATIVE_EXE=/);
+  assert.match(primaryRoute, /--qualification-status unavailable/);
   const closeReceipt = nativeSteps.find((step) => step.name === "Close native qualification receipt from the accepted executable")?.run ?? "";
   assert.match(closeReceipt, /close-native-qualification-receipt\.mjs/);
   assert.doesNotMatch(closeReceipt, /--exit/);
@@ -115,9 +115,9 @@ test("ordinary native CI passes the frozen seven-character candidate version to 
   const route = steps.find((step) => step.name === "Exercise controlled primary-to-writer route on the native host")?.run ?? "";
   assert.match(route, /run-native-qualification-phase\.mjs .*--phase route/);
   assert.match(route, /controlled source admission/);
-  const ciHelper = steps.find((step) => step.name === "Provision the bounded Darwin descriptor helper")?.run ?? "";
-  assert.match(ciHelper, /install -o root -g wheel -m 0555/);
-  assert.doesNotMatch(ciHelper, /chflags/);
+  assert.equal(steps.some((step) => /Provision the bounded Darwin descriptor helper/.test(step.name ?? "")), false);
+  assert.match(route, /SERVICE_LASSO_CONTROLLED_NATIVE_EXE=/);
+  assert.match(route, /--qualification-status unavailable/);
   const ciClose = steps.find((step) => step.name === "Close native qualification receipt from the accepted executable")?.run ?? "";
   assert.match(ciClose, /close-native-qualification-receipt\.mjs/);
   assert.doesNotMatch(ciClose, /--exit/);

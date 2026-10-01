@@ -16,7 +16,7 @@ const executableSha256 = createHash("sha256").update(await readFile(executable))
 const phases = {};
 for (const phase of ["smoke", "route", "archive"]) {
   const record = JSON.parse(await readFile(join(receiptDirectory, `phase-${phase}.json`), "utf8"));
-  if (record.schemaVersion !== 1 || record.phase !== phase || record.sourceHead !== initial.sourceHead || record.rawHeadSha256 !== initial.rawHeadSha256 || record.recursiveHeadTreeSha256 !== initial.recursiveHeadTreeSha256 || record.nativeExecutableSha256 !== executableSha256 || record.passed !== true || record.rawClose?.code !== 0 || record.rawClose?.signal !== null || record.rawClose?.spawnError !== null) {
+  if (record.schemaVersion !== 1 || record.phase !== phase || record.sourceHead !== initial.sourceHead || record.rawHeadSha256 !== initial.rawHeadSha256 || record.recursiveHeadTreeSha256 !== initial.recursiveHeadTreeSha256 || record.nativeExecutableSha256 !== executableSha256 || record.qualificationStatus !== "verified" || record.passed !== true || record.rawClose?.code !== 0 || record.rawClose?.signal !== null || record.rawClose?.spawnError !== null) {
     throw new Error(`Qualification phase ${phase} is unresolved or does not bind the accepted executable.`);
   }
   if (phase === "archive" && (!/^[0-9a-f]{64}$/i.test(record.artifactSha256 ?? ""))) throw new Error("Archive phase does not contain a retained archive digest.");
