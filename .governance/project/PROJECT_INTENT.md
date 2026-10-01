@@ -12,3 +12,8 @@ Issue #22 extends this intent with durable, server-authoritative operator
 workflows. The external binary is `service-lassoctl`. It consumes the reviewed
 Core lifecycle-operation HTTP contract as a dependency; it does not recreate
 Core lifecycle semantics, authorization, confirmation, or operation storage.
+
+Issue #30 prepares the source-only protected immutable development-candidate
+publisher for the portable Node archive plus Windows x64, Linux x64 and macOS
+arm64 native archives. Provider settings, dispatch, publication, deployment,
+Core packaging and GA remain separately authorised and evidenced.

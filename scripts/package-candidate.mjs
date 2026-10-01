@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { cp, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
-import { basename, join, resolve } from "node:path";
+import { access, cp, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { basename, dirname, join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 
 function option(name) {
@@ -33,16 +33,29 @@ await writeFile(join(staging, "package.json"), `${JSON.stringify(manifest, null,
 
 const implementation = join(staging, "dist", "index.js");
 const implementationSource = await readFile(implementation, "utf8");
-const versionCall = `.version("${sourceVersion}")`;
+const versionCall = `.version(process.env.SERVICE_LASSO_CANDIDATE_VERSION ?? "${sourceVersion}")`;
 if (!implementationSource.includes(versionCall)) throw new Error("CLI implementation version marker was not found.");
 await writeFile(implementation, implementationSource.replace(versionCall, `.version("${version}")`));
 
-const npm = process.platform === "win32" ? "npm.cmd" : "npm";
-const packed = JSON.parse(execFileSync(npm, ["pack", "--json", "--pack-destination", output], {
-  cwd: staging,
-  encoding: "utf8",
-  shell: process.platform === "win32",
-}));
+const npm = process.platform === "win32"
+  ? { file: process.execPath, arguments: [join(dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js")] }
+  : { file: "npm", arguments: [] };
+if (process.platform === "win32") {
+  try { await access(npm.arguments[0]); } catch { throw new Error("The Node installation does not provide npm-cli.js."); }
+}
+let packedOutput;
+try {
+  packedOutput = execFileSync(npm.file, [...npm.arguments, "pack", "--json", "--pack-destination", output], {
+    cwd: staging,
+    encoding: "utf8",
+  });
+} catch (error) {
+  const status = Number.isInteger(error?.status) ? String(error.status) : "unavailable";
+  const signal = typeof error?.signal === "string" ? error.signal : "none";
+  const code = typeof error?.code === "string" ? error.code : "none";
+  throw new Error(`npm pack failed (status=${status}; signal=${signal}; error=${code}).`);
+}
+const packed = JSON.parse(packedOutput);
 if (!Array.isArray(packed) || packed.length !== 1 || typeof packed[0]?.filename !== "string") throw new Error("npm pack did not return one archive.");
 const archiveName = `service-lassoctl-${version}.tgz`;
 const packedPath = join(output, packed[0].filename);

@@ -65,7 +65,7 @@ export function createProgram(): Command {
   program
     .name("service-lassoctl")
     .description("Automation-first service authoring and Service Lasso Core operations.")
-    .version("0.1.0")
+    .version(process.env.SERVICE_LASSO_CANDIDATE_VERSION ?? "0.1.0")
     .option("--core-url <url>", "Service Lasso Core origin; overrides environment and saved config")
     .option("--connection <name>", "saved Core connection; overrides environment and default connection")
     .showSuggestionAfterError();

@@ -15,6 +15,13 @@ function hasCommand(command) {
   return spawnSync(command, ["--version"], { encoding: "utf8" }).status === 0;
 }
 
+function childDiagnostic(result) {
+  const status = Number.isInteger(result.status) ? String(result.status) : "unavailable";
+  const signal = typeof result.signal === "string" ? result.signal : "none";
+  const error = typeof result.error?.code === "string" ? result.error.code : "none";
+  return `completion child did not exit successfully (status=${status}; signal=${signal}; error=${error}).`;
+}
+
 test("completion source is deterministic, read-safe and derived from declared commands", () => {
   const first = complete("bash");
   const second = complete("bash");
@@ -53,7 +60,7 @@ test("PowerShell completion uses literal prefixes, follows subcommands and stops
   assert.doesNotMatch(source, /-like/);
   const script = `${source}\n_ServiceLassoCtlComplete -Words @('service-lassoctl','service') -WordToComplete 'st'\n$prefixes = [ordered]@{ star = '*'; question = '?'; bracket = '['; space = ' '; singleQuote = "'"; doubleQuote = '"'; semicolon = ';' }\nforeach ($name in $prefixes.Keys) { $matches = @(_ServiceLassoCtlComplete -Words @('service-lassoctl','service') -WordToComplete $prefixes[$name]); Write-Output "\${name}:$($matches.Count)" }\n$after = _ServiceLassoCtlComplete -Words @('service-lassoctl','service','--') -WordToComplete ''; Write-Output "after--:$($after.Count)"\n`;
   const result = spawnSync("pwsh", ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script], { encoding: "utf8" });
-  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.status, 0, result.status === 0 ? undefined : childDiagnostic(result));
   assert.deepEqual(result.stdout.trim().split(/\r?\n/), ["start", "stop", "star:0", "question:0", "bracket:0", "space:0", "singleQuote:0", "doubleQuote:0", "semicolon:0", "after--:0"]);
 });
 
