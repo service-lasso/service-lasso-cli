@@ -46,19 +46,25 @@ executable SHA-256, `nodeAbsentFromPath: true`, `status: "passed"`, and an
 `evidenceDigest`. That digest is the SHA-256 of the verifier-defined canonical
 identity string. These files are archive members, not unverified sidecar paths.
 
-This verifier-only increment defines and tests the contract. The current
-candidate workflow does not yet produce the two required records before calling
-the archive tool. The archive tool now refuses to create a closed native archive
-without them; making hosted jobs emit and consume them is a later
-workflow-acceptance increment and is not claimed here.
+The candidate workflow is the producer for these records. Each native target
+writes a schema-closed `ci-context.json` for the actual `workflow_dispatch`
+event (null tested base and source-equal merge context), then emits
+`host-acceptance.json` only after its matching no-Node fixture journey has
+succeeded. It archives and uploads those same accepted bytes without rebuilding.
+The Linux Core journey remains separately named and does not turn the fixture
+record into Core proof. Source tests validate the producer and its meaningful
+failure paths; a terminal workflow-dispatch run remains the required hosted
+acceptance evidence.
 
 ## Traceability
 
 - `CLI30-IDENTITY`, `CLI30-FROZEN-BYTES`, `CLI30-CLOSED-INVENTORY`,
   `CLI30-IMMUTABILITY`, and `CLI30-SECRET-SAFE-READBACK` map to
   `tests/protected-candidate-publisher.test.js`.
-- `CLI30-TARGET-PROOF` maps to the target-host native smoke workflow steps and
-  the existing `tests/native-distribution.test.js` proof boundary.
-- This verifier-only context contract maps to
+- `CLI30-TARGET-PROOF` maps to the target-host native smoke, context and
+  acceptance producer steps, plus `tests/native-distribution.test.js` and
+  `tests/distribution.test.js`.
+- The context and acceptance producer contract maps to
+  `tests/native-distribution.test.js` and
   `tests/protected-candidate-publisher.test.js`; it is source test evidence,
   not hosted CI acceptance or candidate publication evidence.

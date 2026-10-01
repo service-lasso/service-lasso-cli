@@ -27,7 +27,7 @@ const provenance = JSON.parse(await readFile(join(directory, "provenance.json"),
 const context = JSON.parse(await readFile(join(directory, "ci-context.json"), "utf8"));
 
 assert.match(sourceSha, /^[0-9a-f]{40}$/i, "source SHA must be a full Git revision");
-assert.ok(["pull_request", "push"].includes(eventName), "event must be pull_request or push");
+assert.ok(["pull_request", "push", "workflow_dispatch"].includes(eventName), "event must be pull_request, push, or workflow_dispatch");
 assert.match(mergeContextSha, /^[0-9a-f]{40}$/i, "merge context SHA must be a full Git revision");
 assert.equal(context.schemaVersion, 1, "CI context must use schema version 1");
 assert.match(context.sourceSha, /^[0-9a-f]{40}$/i, "CI context source SHA must be a full Git revision");
@@ -45,9 +45,9 @@ if (eventName === "pull_request") {
   assert.notEqual(mergeContextSha, sourceSha, "pull-request merge context and source must differ");
   assert.notEqual(mergeContextSha, baseSha, "pull-request merge context and target base must differ");
 } else {
-  assert.equal(baseSha, "", "push events must pass an explicitly empty expected base");
-  assert.ok(!Object.hasOwn(context, "testedBaseSha") || context.testedBaseSha === null, "push CI context must omit or null the tested base");
-  assert.equal(mergeContextSha, sourceSha, "push merge context must equal the source revision");
+  assert.equal(baseSha, "", "push and workflow-dispatch events must pass an explicitly empty expected base");
+  assert.ok(!Object.hasOwn(context, "testedBaseSha") || context.testedBaseSha === null, "push and workflow-dispatch CI context must omit or null the tested base");
+  assert.equal(mergeContextSha, sourceSha, "push and workflow-dispatch merge context must equal the source revision");
 }
 assert.equal(provenance.executable.platform, platform);
 assert.equal(provenance.executable.architecture, architecture);

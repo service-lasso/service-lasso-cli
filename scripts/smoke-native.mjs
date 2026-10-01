@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { readFile, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { resolve, join } from "node:path";
 
@@ -39,6 +40,9 @@ function run(executable, args, environment) {
 
 const directory = resolve(argument("--directory"));
 const expectedSourceSha = argument("--expected-source-sha");
+const expectedVersion = argument("--expected-version");
+assert.match(expectedSourceSha, /^[0-9a-f]{40}$/i, "expected source SHA must be a full Git revision");
+assert.match(expectedVersion, /^\d+\.\d+\.\d+-dev\.[0-9a-f]{7}$/i, "expected version must be the frozen candidate version");
 const executableName = process.platform === "win32" ? "service-lassoctl.exe" : "service-lassoctl";
 const executable = join(directory, executableName);
 const provenance = JSON.parse(await readFile(join(directory, "provenance.json"), "utf8"));
@@ -46,12 +50,17 @@ assert.equal(provenance.source.commit, expectedSourceSha);
 assert.equal(provenance.executable.name, executableName);
 assert.equal(provenance.executable.platform, process.platform);
 assert.equal(provenance.executable.architecture, process.arch);
+assert.equal(provenance.candidate.version, expectedVersion);
+assert.equal(provenance.executable.version, expectedVersion);
 
 const withoutNode = nodeFreeEnvironment();
 const nodeLookup = spawnSync("node", ["--version"], { encoding: "utf8", env: withoutNode });
 assert.equal(nodeLookup.error?.code, "ENOENT", "native smoke must remove node from PATH");
+const versionResult = await run(executable, ["--version"], withoutNode);
+assert.equal(versionResult.status, 0, versionResult.stderr);
+assert.equal(versionResult.stdout.trim(), expectedVersion, "native executable must report the exact frozen candidate version");
 for (const args of [
-  ["--help"], ["--version"], ["operator", "--help"], ["operator", "status", "--help"],
+  ["--help"], ["operator", "--help"], ["operator", "status", "--help"],
   ["operator", "setup", "--help"], ["operator", "health", "--help"], ["operator", "dependencies", "--help"],
   ["operator", "availability", "--help"], ["operator", "preview", "--help"], ["operator", "execute", "--help"],
   ["operator", "operation", "--help"], ["operator", "operation", "get", "--help"], ["operator", "operation", "wait", "--help"],
@@ -157,4 +166,11 @@ try {
   await new Promise((resolveClose, rejectClose) => server.close((error) => error ? rejectClose(error) : resolveClose()));
 }
 
-process.stdout.write(`${JSON.stringify({ command: provenance.command, executable: provenance.executable, source: provenance.source, nodeAbsentFromPath: true })}\n`);
+if (process.argv.includes("--write-host-acceptance")) {
+  const executableSha256 = createHash("sha256").update(await readFile(executable)).digest("hex");
+  assert.equal(executableSha256, provenance.executable.sha256, "accepted executable must retain its provenance digest");
+  const identity = `service-lasso-native-acceptance-v1\n${expectedSourceSha}\n${expectedVersion}\n${process.platform}\n${process.arch}\n${executableSha256}\nnode-absent\npassed\n`;
+  const acceptance = { schemaVersion: 1, sourceSha: expectedSourceSha, version: expectedVersion, platform: process.platform, architecture: process.arch, executableSha256, nodeAbsentFromPath: true, status: "passed", evidenceDigest: createHash("sha256").update(Buffer.from(identity, "utf8")).digest("hex") };
+  await writeFile(join(directory, "host-acceptance.json"), `${JSON.stringify(acceptance, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ ...acceptance, emittedAfter: "native-no-node-fixture" })}\n`);
+}

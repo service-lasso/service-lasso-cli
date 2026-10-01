@@ -39,7 +39,7 @@ function verifyFailure(arguments_) {
   return result.stderr;
 }
 
-test("native CI provenance verifier accepts exact push and pull-request event contexts", async () => {
+test("native CI provenance verifier accepts exact push, pull-request, and workflow-dispatch event contexts", async () => {
   const directory = await createNativeAssets();
   try {
     await writeFile(join(directory, "ci-context.json"), `${JSON.stringify({ schemaVersion: 1, eventName: "push", sourceSha, mergeContextSha: sourceSha })}\n`);
@@ -47,6 +47,9 @@ test("native CI provenance verifier accepts exact push and pull-request event co
 
     await writeFile(join(directory, "ci-context.json"), `${JSON.stringify({ schemaVersion: 1, eventName: "pull_request", sourceSha, testedBaseSha: baseSha, mergeContextSha: mergeSha })}\n`);
     verify(directory, { eventName: "pull_request", expectedBaseSha: baseSha, expectedMergeContextSha: mergeSha });
+
+    await writeFile(join(directory, "ci-context.json"), `${JSON.stringify({ schemaVersion: 1, eventName: "workflow_dispatch", sourceSha, testedBaseSha: null, mergeContextSha: sourceSha })}\n`);
+    verify(directory, { eventName: "workflow_dispatch", expectedBaseSha: "", expectedMergeContextSha: sourceSha });
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
@@ -61,10 +64,10 @@ test("native CI provenance verifier rejects malformed, missing, and contradictor
     assert.match(verifyFailure(verifierArguments(directory, { eventName: "pull_request", expectedBaseSha: baseSha, expectedMergeContextSha: mergeSha })), /pull-request base/);
 
     await writeContext({ schemaVersion: 1, eventName: "push", sourceSha, testedBaseSha: baseSha, mergeContextSha: sourceSha });
-    assert.match(verifyFailure(verifierArguments(directory, { eventName: "push", expectedBaseSha: "", expectedMergeContextSha: sourceSha })), /push CI context must omit or null/);
+    assert.match(verifyFailure(verifierArguments(directory, { eventName: "push", expectedBaseSha: "", expectedMergeContextSha: sourceSha })), /push and workflow-dispatch CI context must omit or null/);
 
     await writeContext({ schemaVersion: 1, eventName: "push", sourceSha, mergeContextSha: sourceSha });
-    assert.match(verifyFailure(verifierArguments(directory, { eventName: "push", expectedBaseSha: "not-a-sha", expectedMergeContextSha: sourceSha })), /push events must pass an explicitly empty/);
+    assert.match(verifyFailure(verifierArguments(directory, { eventName: "push", expectedBaseSha: "not-a-sha", expectedMergeContextSha: sourceSha })), /push and workflow-dispatch events must pass an explicitly empty/);
     assert.match(verifyFailure(verifierArguments(directory, { eventName: "push", expectedBaseSha: "", expectedMergeContextSha: "not-a-sha" })), /merge context SHA must be a full Git revision/);
     assert.match(verifyFailure(["--directory", directory, "--expected-source-sha", sourceSha, "--expected-event", "push", "--expected-base-sha", "", "--expected-platform", process.platform, "--expected-architecture", process.arch]), /Missing required --expected-merge-context-sha argument/);
 
@@ -98,7 +101,7 @@ test("native CI provenance verifier keeps source, event, digest, and host checks
 
     assert.match(verifyFailure(verifierArguments(directory, { ...expected, expectedSourceSha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" })), /native provenance must name the checked-out source revision/);
     assert.match(verifyFailure(verifierArguments(directory, { ...expected, expectedSourceSha: "not-a-sha" })), /source SHA must be a full Git revision/);
-    assert.match(verifyFailure(verifierArguments(directory, { ...expected, eventName: "workflow_dispatch" })), /event must be pull_request or push/);
+    assert.match(verifyFailure(verifierArguments(directory, { ...expected, eventName: "workflow_dispatch", expectedBaseSha: "", expectedMergeContextSha: sourceSha })), /CI context must record the triggering event/);
 
     await writeContext({ schemaVersion: 1, eventName: "pull_request", testedBaseSha: baseSha, mergeContextSha: mergeSha });
     assert.match(verifyFailure(verifierArguments(directory, expected)), /CI context source SHA must be a full Git revision/);

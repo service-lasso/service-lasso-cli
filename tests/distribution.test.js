@@ -29,7 +29,15 @@ function assertProtectedCandidateWorkflow(workflow) {
   assert.equal(workflow.permissions?.contents, "read");
   assert.equal(workflow.jobs?.identity?.if, "github.ref == 'refs/heads/develop'");
   assert.deepEqual(workflow.jobs?.native?.strategy?.matrix?.include?.map(({ target }) => target), ["win32-x64", "linux-x64", "darwin-arm64"]);
-  assert.match(workflow.jobs?.native?.steps?.find((step) => step.name === "Build target executable once and prove its no-Node fixture journey")?.run ?? "", /npm run smoke:native/);
+  const nativeBuild = workflow.jobs?.native?.steps?.find((step) => step.name === "Build target executable once, record dispatch context, and prove its no-Node fixture journey")?.run ?? "";
+  assert.equal((nativeBuild.match(/npm run package:native/g) ?? []).length, 1, "each target must build its executable once");
+  assert.match(nativeBuild, /write-native-ci-context\.mjs --directory native-assets --event-name workflow_dispatch/);
+  assert.match(nativeBuild, /--tested-base-sha "" --merge-context-sha "\$\{\{ needs\.identity\.outputs\.source_sha \}\}"/);
+  assert.match(nativeBuild, /npm run smoke:native .*--expected-version "\$\{\{ needs\.identity\.outputs\.candidate_version \}\}" --write-host-acceptance/);
+  assert.match(nativeBuild, /verify-native-ci-provenance\.mjs .*--expected-event workflow_dispatch/);
+  const archive = workflow.jobs?.native?.steps?.find((step) => step.name === "Archive the accepted native bytes without rebuilding")?.run ?? "";
+  assert.match(archive, /npm run archive:native/);
+  assert.doesNotMatch(archive, /package:native|smoke:native|write-native-ci-context/);
   assert.deepEqual(workflow.jobs?.assemble?.needs, ["identity", "portable", "native"]);
   assert.equal(workflow.jobs?.publish?.environment?.name, "development-candidate");
   assert.equal(workflow.jobs?.publish?.permissions?.contents, "write");
@@ -60,4 +68,7 @@ test("protected candidate workflow semantic assertions reject missing target and
   const unsafePublish = document.toJS();
   unsafePublish.jobs.publish.permissions.contents = "read";
   assert.throws(() => assertProtectedCandidateWorkflow(unsafePublish));
+  const missingAcceptance = document.toJS();
+  missingAcceptance.jobs.native.steps.find((step) => step.name === "Build target executable once, record dispatch context, and prove its no-Node fixture journey").run = "npm run package:native -- --output native-assets\nnpm run smoke:native -- --directory native-assets --expected-source-sha x --expected-version 0.1.0-dev.0000000";
+  assert.throws(() => assertProtectedCandidateWorkflow(missingAcceptance));
 });

@@ -59,7 +59,7 @@ jobs:
           set -euo pipefail
           source_sha="${{ steps.revision.outputs.source_sha }}"
           npm run package:native -- --output native-assets --source-sha "$source_sha" --version "0.1.0-dev.${source_sha::7}"
-      - name: Record CI event context separately from native provenance
+      - name: Record schema-closed CI event context separately from native provenance
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
@@ -68,12 +68,12 @@ jobs:
           MERGE_CONTEXT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          node -e 'const fs=require("fs"); fs.writeFileSync("native-assets/ci-context.json", `${JSON.stringify({schemaVersion:1,eventName:process.env.EVENT_NAME,sourceSha:process.env.SOURCE_SHA,testedBaseSha:process.env.TESTED_BASE_SHA||null,mergeContextSha:process.env.MERGE_CONTEXT_SHA},null,2)}\n`);'
+          node scripts/write-native-ci-context.mjs --directory native-assets --event-name "$EVENT_NAME" --source-sha "$SOURCE_SHA" --tested-base-sha "$TESTED_BASE_SHA" --merge-context-sha "$MERGE_CONTEXT_SHA"
       - name: Execute native binary with Node absent from PATH
         shell: bash
         run: |
           set -euo pipefail
-          npm run smoke:native -- --directory native-assets --expected-source-sha "${{ steps.revision.outputs.source_sha }}"
+          npm run smoke:native -- --directory native-assets --expected-source-sha "${{ steps.revision.outputs.source_sha }}" --expected-version "0.1.0-dev.${{ steps.revision.outputs.source_sha }}"
       - name: Verify exact-head provenance and CI event context
         shell: bash
         run: |

@@ -38,7 +38,9 @@
   separately authorised and remain unperformed. The bounded verifier increment
   now requires schema-closed CI-context and no-Node host-acceptance members in
   each native archive, raw duplicate-key rejection, finite gzip/tar/npm
-  inspection, and retained byte buffers. Updating hosted native jobs to emit
-  those records and establishing terminal CI acceptance remain later work.
+  inspection, and retained byte buffers. Native hosted jobs now produce the
+  closed workflow-dispatch context and no-Node acceptance records before
+  archiving the accepted bytes; terminal CI dispatch acceptance remains later
+  work.
 - [ ] Issue #28: enforce the event-specific native provenance contract with real verifier-subprocess proof. `github.sha` is an explicit expected merge context; pull requests require distinct full source, tested-base and merge-context SHAs, while pushes require an intentionally empty expected base, null/absent recorded base and source-equal merge context. Source, event, digest and host checks remain strict.
 - [ ] Complete the remaining Issue #1 workflow and automation-contract acceptance recorded in `.governance/project/BACKLOG.md` and `docs/capability-matrix.md`.
