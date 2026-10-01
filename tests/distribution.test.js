@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { parseDocument } from "yaml";
 
 const node = process.execPath;
 
@@ -23,17 +24,40 @@ test("candidate packager creates a checksum-bound Node 22 archive and clean-cons
   }
 });
 
+function assertProtectedCandidateWorkflow(workflow) {
+  assert.deepEqual(Object.keys(workflow.on ?? {}), ["workflow_dispatch"]);
+  assert.equal(workflow.permissions?.contents, "read");
+  assert.equal(workflow.jobs?.identity?.if, "github.ref == 'refs/heads/develop'");
+  assert.deepEqual(workflow.jobs?.native?.strategy?.matrix?.include?.map(({ target }) => target), ["win32-x64", "linux-x64", "darwin-arm64"]);
+  assert.match(workflow.jobs?.native?.steps?.find((step) => step.name === "Build target executable once and prove its no-Node fixture journey")?.run ?? "", /npm run smoke:native/);
+  assert.deepEqual(workflow.jobs?.assemble?.needs, ["identity", "portable", "native"]);
+  assert.equal(workflow.jobs?.publish?.environment?.name, "development-candidate");
+  assert.equal(workflow.jobs?.publish?.permissions?.contents, "write");
+  assert.match(workflow.jobs?.publish?.steps?.find((step) => step.name === "Preflight and write only accepted immutable bytes")?.run ?? "", /npm run publish:protected-candidate/);
+  assert.equal(workflow.jobs?.publish?.steps?.find((step) => step.name === "Preflight and write only accepted immutable bytes")?.env?.DEVELOPMENT_CANDIDATE_TOKEN, "${{ secrets.DEVELOPMENT_CANDIDATE_TOKEN }}");
+  for (const job of Object.values(workflow.jobs ?? {})) {
+    for (const step of job.steps ?? []) {
+      assert.notEqual(step.with?.["persist-credentials"], true);
+      assert.doesNotMatch(step.run ?? "", /gh release create/);
+    }
+  }
+}
+
 test("protected candidate workflow freezes develop, builds target bytes once, and gates write access", async () => {
-  const workflow = await readFile(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
-  assert.match(workflow, /workflow_dispatch:/);
-  assert.match(workflow, /github\.ref == 'refs\/heads\/develop'/);
-  assert.match(workflow, /native:\n[\s\S]*win32-x64[\s\S]*linux-x64[\s\S]*darwin-arm64/);
-  assert.match(workflow, /npm run smoke:native/);
-  assert.match(workflow, /assemble:protected-candidate/);
-  assert.match(workflow, /environment:\n      name: development-candidate/);
-  assert.match(workflow, /contents: write/);
-  assert.match(workflow, /DEVELOPMENT_CANDIDATE_TOKEN/);
-  assert.match(workflow, /publish:protected-candidate/);
-  assert.doesNotMatch(workflow, /persist-credentials: true/);
-  assert.doesNotMatch(workflow, /gh release create/);
+  const source = await readFile(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
+  const document = parseDocument(source, { version: "1.2" });
+  assert.equal(document.errors.length, 0, document.errors.map((error) => error.message).join("\n"));
+  assertProtectedCandidateWorkflow(document.toJS());
+});
+
+test("protected candidate workflow semantic assertions reject missing target and unsafe publication changes", async () => {
+  const source = await readFile(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
+  const document = parseDocument(source, { version: "1.2" });
+  assert.equal(document.errors.length, 0);
+  const missingTarget = document.toJS();
+  missingTarget.jobs.native.strategy.matrix.include.pop();
+  assert.throws(() => assertProtectedCandidateWorkflow(missingTarget));
+  const unsafePublish = document.toJS();
+  unsafePublish.jobs.publish.permissions.contents = "read";
+  assert.throws(() => assertProtectedCandidateWorkflow(unsafePublish));
 });

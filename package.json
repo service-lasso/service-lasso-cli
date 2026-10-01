@@ -37,6 +37,7 @@
     "@types/node": "^22.0.0",
     "esbuild": "0.28.2",
     "postject": "1.0.0-alpha.6",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "yaml": "^2.8.1"
   }
 }
