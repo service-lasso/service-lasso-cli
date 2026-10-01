@@ -1,15 +1,16 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { appendFile, mkdtemp, mkdir, rename, rm, readFile, readdir, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { materializeAcceptedTemplate } from "../dist/scaffold.js";
 
 const node = process.execPath;
 const bundle = Object.freeze({ repository: "service-lasso/service-template", tag: "template-v1.2.3-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", commit: "a".repeat(40), templateVersion: "1.2.3", contractDigest: "b".repeat(64), contractSha256: "c".repeat(64), archiveSha256: "d".repeat(64), catalogIdentity: "service-template/stable/1.2.3", inventory: [], files: [{ path: "service.json", bytes: Buffer.from('{"id":"safe"}\n'), mode: 0o644 }, { path: "config/example.env", bytes: Buffer.from("PORT=8080\n"), mode: 0o644 }] });
 async function awaitGate(gate, stage) { for (let i = 0; i < 400; i++) { try { if ((await readFile(`${gate}.ready`, "utf8")) === stage) return; } catch {} await new Promise((resolve) => setTimeout(resolve, 10)); } throw new Error(`timed out waiting for ${stage}`); }
 async function releaseGate(gate, stage) { await appendFile(`${gate}.continue`, `${stage}\n`); }
+function helperInput(destination) { return `${Buffer.from(destination).toString("base64")}\n${bundle.files.length}\n${bundle.files.map((file) => `${file.path}\t${file.mode.toString(8)}\t${file.bytes.toString("base64")}`).join("\n")}\n`; }
+function runHeldHelper(helper, destination) { const input = helperInput(destination); return new Promise((resolve, reject) => { const child = spawn(helper, ["--test-gate"], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true }); let stdout = "", stderr = ""; child.stdout.on("data", (value) => { stdout += value; }); child.stderr.on("data", (value) => { stderr += value; }); child.once("error", reject); child.once("close", (code) => { if (code === 0 && stderr === "" && /^ok\t[0-9a-f]{64}\n$/.test(stdout)) resolve(); else { const error = new Error(`held helper failed: ${stdout}${stderr}`); error.code = stdout.match(/^error\t([^\n]+)/)?.[1] ?? "write_rejected"; reject(error); } }); child.stdin.end(input); }); }
 
 test("native SEA packager records a direct host executable and smoke runs without Node on PATH", async () => {
   const output = await mkdtemp(join(tmpdir(), "service-lassoctl-native-"));
@@ -54,14 +55,14 @@ test("packaged confined helper keeps a held parent through a replacement and ret
   const output = join(root, "native");
   const sourceSha = "0123456789abcdef0123456789abcdef01234567";
   const version = "0.1.0-dev.0123456";
-  const priorHelper = process.env.SERVICE_LASSO_CONFINED_HELPER, priorGate = process.env.SERVICE_LASSO_CONFINED_TEST_GATE, priorStage = process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE, priorFail = process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE;
-  t.after(async () => { if (priorHelper === undefined) delete process.env.SERVICE_LASSO_CONFINED_HELPER; else process.env.SERVICE_LASSO_CONFINED_HELPER = priorHelper; if (priorGate === undefined) delete process.env.SERVICE_LASSO_CONFINED_TEST_GATE; else process.env.SERVICE_LASSO_CONFINED_TEST_GATE = priorGate; if (priorStage === undefined) delete process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE; else process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE = priorStage; if (priorFail === undefined) delete process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE; else process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE = priorFail; await rm(root, { recursive: true, force: true }); });
+  const priorGate = process.env.SERVICE_LASSO_CONFINED_TEST_GATE, priorStage = process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE, priorFail = process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE;
+  t.after(async () => { if (priorGate === undefined) delete process.env.SERVICE_LASSO_CONFINED_TEST_GATE; else process.env.SERVICE_LASSO_CONFINED_TEST_GATE = priorGate; if (priorStage === undefined) delete process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE; else process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE = priorStage; if (priorFail === undefined) delete process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE; else process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE = priorFail; await rm(root, { recursive: true, force: true }); });
   execFileSync(node, ["scripts/package-native.mjs", "--output", output, "--source-sha", sourceSha, "--version", version], { encoding: "utf8" });
   const provenance = JSON.parse(await readFile(join(output, "provenance.json"), "utf8"));
-  process.env.SERVICE_LASSO_CONFINED_HELPER = join(output, provenance.confinedWriter.name);
+  const helper = join(output, provenance.confinedWriter.name);
   const parent = join(root, "parent"), oldParent = join(root, "parent-held"), outside = join(root, "outside"), destination = join(parent, "project"), gate = join(root, "swap-gate");
   await mkdir(parent); await mkdir(outside); process.env.SERVICE_LASSO_CONFINED_TEST_GATE = gate; process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE = "before-project-create";
-  const creation = materializeAcceptedTemplate(destination, bundle);
+  const creation = runHeldHelper(helper, destination);
   await awaitGate(gate, "before-project-create");
   let replacementBlocked = false;
   try { await rename(parent, oldParent); await symlink(outside, parent, process.platform === "win32" ? "junction" : "dir"); } catch { replacementBlocked = true; }
@@ -71,16 +72,16 @@ test("packaged confined helper keeps a held parent through a replacement and ret
   if (process.platform !== "win32") {
     const leafParent = join(root, "leaf-parent"), leafDestination = join(leafParent, "project"), leafGate = join(root, "leaf-gate");
     await mkdir(leafParent); process.env.SERVICE_LASSO_CONFINED_TEST_GATE = leafGate; process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE = "before-project-commit"; delete process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE;
-    const leafCreation = materializeAcceptedTemplate(leafDestination, bundle); leafCreation.catch(() => {});
+    const leafCreation = runHeldHelper(helper, leafDestination); leafCreation.catch(() => {});
     await awaitGate(leafGate, "before-project-commit"); await mkdir(leafDestination); await writeFile(join(leafDestination, "unowned.txt"), "preserve"); await releaseGate(leafGate, "before-project-commit");
-    await assert.rejects(leafCreation, { code: "confined_writer_destination_exists" });
+    await assert.rejects(leafCreation, { code: "destination_exists" });
     assert.equal(await readFile(join(leafDestination, "unowned.txt"), "utf8"), "preserve"); await assert.rejects(readFile(join(leafDestination, "service.json")));
   }
   const failureParent = join(root, "failure-parent"), failureDestination = join(failureParent, "project"), failureGate = join(root, "failure-gate");
   await mkdir(failureParent); process.env.SERVICE_LASSO_CONFINED_TEST_GATE = failureGate; process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE = "after-file-write"; process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE = "after-file-write";
-  const failure = materializeAcceptedTemplate(failureDestination, bundle); failure.catch(() => {});
+  const failure = runHeldHelper(helper, failureDestination); failure.catch(() => {});
   await awaitGate(failureGate, "after-file-write"); if (process.platform !== "win32") await mkdir(failureDestination); await writeFile(join(failureDestination, "unowned.txt"), "preserve"); await releaseGate(failureGate, "after-file-write");
-  await assert.rejects(failure, { code: "confined_writer_write_rejected" });
+  await assert.rejects(failure, { code: "write_rejected" });
   assert.equal(await readFile(join(failureDestination, "unowned.txt"), "utf8"), "preserve");
   await assert.rejects(readFile(join(failureDestination, "service.json")));
   if (process.platform !== "win32") assert.deepEqual(await readdir(failureDestination), ["unowned.txt"]);

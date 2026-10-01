@@ -69,7 +69,7 @@ await build({
   target: "node22",
   nodePaths: [join(root, "node_modules")],
   alias: { commander: join(root, "node_modules", "commander", "index.js") },
-  define: { "process.env.SERVICE_LASSO_CANDIDATE_VERSION": JSON.stringify(version) },
+  define: { "process.env.SERVICE_LASSO_CANDIDATE_VERSION": JSON.stringify(version), "process.env.SERVICE_LASSO_CANDIDATE_SOURCE_SHA": JSON.stringify(sourceSha) },
   legalComments: "none",
 });
 await writeFile(seaConfig, `${JSON.stringify({ main: bundle, output: blob, disableExperimentalSEAWarning: true, useCodeCache: false, execArgvExtension: "none" }, null, 2)}\n`);

@@ -1,5 +1,6 @@
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,11 +13,31 @@ export function previewServiceScaffold(options: ServiceScaffoldOptions): Record<
 export function scaffoldFiles(options: ServiceScaffoldOptions): Record<string, string> { validateServiceId(options.id); return requireAcceptedTemplateIdentity(); }
 const helperName = `service-lasso-confined-scaffold${process.platform === "win32" ? ".exe" : ""}`;
 let sourceHelper: string | undefined;
+function sha256(value: Buffer | string): string { return createHash("sha256").update(value).digest("hex"); }
+function packagedHelper(): string | undefined {
+  // package-native replaces these expressions with immutable candidate values
+  // while bundling the SEA.  Ordinary source execution never treats ambient
+  // environment variables as a packaging claim.
+  const version = process.env.SERVICE_LASSO_CANDIDATE_VERSION;
+  const sourceSha = process.env.SERVICE_LASSO_CANDIDATE_SOURCE_SHA;
+  if (!/^\d+\.\d+\.\d+-dev\.[0-9a-f]{7}$/i.test(version ?? "") || !/^[0-9a-f]{40}$/i.test(sourceSha ?? "")) return undefined;
+  const directory = resolve(process.execPath, "..");
+  const candidate = resolve(directory, helperName);
+  const provenancePath = resolve(directory, "provenance.json");
+  try {
+    const provenance = JSON.parse(readFileSync(provenancePath, "utf8")) as { schemaVersion?: unknown; candidate?: { version?: unknown }; source?: { commit?: unknown }; confinedWriter?: { name?: unknown; sha256?: unknown; platform?: unknown; architecture?: unknown } };
+    const writer = provenance.confinedWriter;
+    if (provenance.schemaVersion !== 1 || provenance.candidate?.version !== version || provenance.source?.commit !== sourceSha || writer?.name !== helperName || writer.platform !== process.platform || writer.architecture !== process.arch || typeof writer.sha256 !== "string" || !/^[0-9a-f]{64}$/i.test(writer.sha256) || sha256(readFileSync(candidate)) !== writer.sha256) return undefined;
+    return candidate;
+  } catch { return undefined; }
+}
 function helperPath(): string {
-  if (process.env.SERVICE_LASSO_CONFINED_HELPER) return process.env.SERVICE_LASSO_CONFINED_HELPER;
-  // The SEA is shipped next to the accepted helper; source execution builds it
-  // from its checked-in source only for local developer/test use.
-  if (process.env.SERVICE_LASSO_CANDIDATE_VERSION) return resolve(process.execPath, "..", helperName);
+  const packaged = packagedHelper();
+  if (packaged) return packaged;
+  // Source execution builds the checked-in helper only for local developer and
+  // test use.  It is never native-candidate qualification evidence.  The
+  // directory is deliberately retained: Node cannot prove a recursively named
+  // cleanup target still belongs to this process after an attacker replaces it.
   const helperSource = fileURLToPath(new URL("../native/confined-scaffold", import.meta.url));
   if (sourceHelper) return sourceHelper;
   // Never compile into the repository: an inherited helper binary can be a
@@ -25,19 +46,19 @@ function helperPath(): string {
   const helperDirectory = mkdtempSync(join(tmpdir(), "service-lasso-confined-helper-"));
   const helperBinary = join(helperDirectory, helperName);
   const build = spawnSync("go", ["build", "-trimpath", "-o", helperBinary, "."], { cwd: helperSource, encoding: "utf8" });
-  if (build.status !== 0 || build.error) { rmSync(helperDirectory, { recursive: true, force: true }); throw new CliError("unsafe_scaffold_destination", "The confined writer is unavailable."); }
+  if (build.status !== 0 || build.error) throw new CliError("unsafe_scaffold_destination", "The confined writer is unavailable.");
   sourceHelper = helperBinary;
-  process.once("exit", () => rmSync(helperDirectory, { recursive: true, force: true }));
   return sourceHelper;
 }
 async function confinedMaterialize(destination: string, files: Awaited<ReturnType<typeof acceptedTemplateFiles>>): Promise<void> {
   const input = `${Buffer.from(destination).toString("base64")}\n${files.length}\n${files.map(file => `${file.path}\t${file.mode.toString(8)}\t${file.bytes.toString("base64")}`).join("\n")}\n`;
-  const stdout = await new Promise<string>((done, fail) => { const child = spawn(helperPath(), [], { stdio: ["pipe", "pipe", "ignore"], windowsHide: true }); let out = ""; child.stdout.on("data", value => { out += value; }); child.once("error", fail); child.once("close", () => done(out)); child.stdin.end(input); });
-  const result = stdout.trim();
-  if (result === "ok") return;
+  const expectedReceipt = sha256(input);
+  const outcome = await new Promise<{ stdout: string; stderr: string; code: number | null }>((done, fail) => { const child = spawn(helperPath(), [], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true }); let stdout = "", stderr = ""; child.stdout.on("data", value => { stdout += value; }); child.stderr.on("data", value => { stderr += value; }); child.once("error", fail); child.once("close", code => done({ stdout, stderr, code })); child.stdin.end(input); });
+  const result = outcome.stdout.trim();
+  if (outcome.code === 0 && outcome.stderr === "" && result === `ok\t${expectedReceipt}`) return;
   // The helper only emits these fixed, path-free failure codes.  Keep the
   // public CLI result stable while rejecting malformed helper output.
-  const match = /^error\t(destination_exists|parent_missing|permission_denied|write_rejected)$/.exec(result);
+  const match = outcome.code === 1 && outcome.stderr === "confined writer failed\n" && /^error\t(destination_exists|parent_missing|permission_denied|write_rejected)$/.exec(result);
   if (!match) throw new CliError("unsafe_scaffold_destination", "The project destination could not be created through the confined writer.");
   throw new CliError(`confined_writer_${match[1]}`, "The project destination could not be created through the confined writer.");
 }

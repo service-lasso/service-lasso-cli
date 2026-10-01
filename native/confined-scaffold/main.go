@@ -6,6 +6,7 @@ package main
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -22,6 +23,7 @@ type entry struct {
 }
 
 var errDestinationExists = errors.New("confined destination exists")
+var testGatesEnabled bool
 
 func fail(format string, args ...any) { fmt.Fprintf(os.Stderr, format+"\n", args...); os.Exit(2) }
 func decode(value string) []byte {
@@ -39,6 +41,7 @@ func componentSafe(value string) bool {
 // lets the integration suite prove held-handle confinement and failure safety.
 // It is deliberately unavailable through the materialization input protocol.
 func testGate(stage string) error {
+	if !testGatesEnabled { return nil }
 	if target := os.Getenv("SERVICE_LASSO_CONFINED_TEST_GATE_STAGE"); target != "" && target != stage {
 		return nil
 	}
@@ -61,17 +64,19 @@ func testGate(stage string) error {
 	}
 	return fmt.Errorf("test gate timed out")
 }
-func readPlan() (string, []entry) {
+func readPlan() (string, []entry, string) {
 	s := bufio.NewScanner(os.Stdin)
 	s.Buffer(make([]byte, 4096), 256*1024*1024)
-	if !s.Scan() {
+	hash := sha256.New()
+	scan := func() bool { if !s.Scan() { return false }; _, _ = hash.Write(append([]byte(s.Text()), '\n')); return true }
+	if !scan() {
 		fail("missing destination")
 	}
 	destination := string(decode(s.Text()))
 	if !strings.HasPrefix(destination, string(os.PathSeparator)) && !(len(destination) > 2 && destination[1] == ':') {
 		fail("destination is not absolute")
 	}
-	if !s.Scan() {
+	if !scan() {
 		fail("missing entry count")
 	}
 	count, err := strconv.Atoi(s.Text())
@@ -81,7 +86,7 @@ func readPlan() (string, []entry) {
 	out := make([]entry, 0, count)
 	seen := map[string]bool{}
 	for range count {
-		if !s.Scan() {
+		if !scan() {
 			fail("truncated entry")
 		}
 		fields := strings.Split(s.Text(), "\t")
@@ -110,17 +115,19 @@ func readPlan() (string, []entry) {
 	if s.Scan() || s.Err() != nil {
 		fail("trailing protocol data")
 	}
-	return destination, out
+	return destination, out, fmt.Sprintf("%x", hash.Sum(nil))
 }
 func main() {
 	if len(os.Args) == 2 && os.Args[1] == "--self-test" {
 		fmt.Println("ok")
 		return
 	}
-	if len(os.Args) != 1 {
+	if len(os.Args) == 2 && os.Args[1] == "--test-gate" {
+		testGatesEnabled = true
+	} else if len(os.Args) != 1 {
 		fail("invalid arguments")
 	}
-	destination, entries := readPlan()
+	destination, entries, receipt := readPlan()
 	if err := materialize(destination, entries); err != nil {
 		// This is intentionally a closed protocol response.  The TypeScript
 		// caller may use the fixed code for tests and operator diagnostics, but
@@ -129,7 +136,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "confined writer failed")
 		os.Exit(1)
 	}
-	fmt.Println("ok")
+	fmt.Printf("ok\t%s\n", receipt)
 }
 
 func failureCode(err error) string {
