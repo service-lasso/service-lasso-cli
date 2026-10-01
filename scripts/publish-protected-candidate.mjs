@@ -7,37 +7,41 @@ const METADATA_LIMIT = 1024 * 1024, ASSET_LIMIT = 256 * 1024 * 1024, DEADLINE_MS
 const argument = (name, args) => { const index = args.indexOf(name); if (index < 0 || !args[index + 1]) throw new Error(`Missing ${name}.`); return args[index + 1]; };
 const headers = (token, extra = {}) => ({ accept: "application/vnd.github+json", authorization: `Bearer ${token}`, ...extra });
 
-async function bytes(response, limit, label) {
+async function bytes(response, limit, label, signal) {
   const length = response.headers?.get("content-length");
-  if (length !== null && (!/^\d+$/.test(length) || Number(length) > limit)) fail(`${label} exceeds its byte limit.`);
+  const declared = length === null ? null : Number(length);
+  if (length !== null && (!/^\d+$/.test(length) || !Number.isSafeInteger(declared) || declared > limit)) fail(`${label} exceeds its byte limit.`);
   const reader = response.body?.getReader?.();
   if (!reader) fail(`${label} has no bounded streaming body.`);
   const parts = []; let total = 0;
-  try { while (true) { const next = await reader.read(); if (next.done) break; const part = Buffer.from(next.value); total += part.length; if (total > limit) fail(`${label} exceeds its byte limit.`); parts.push(part); } } catch (error) { await reader.cancel?.(); throw error; } finally { reader.releaseLock?.(); }
+  const expired = new Promise((_, reject) => signal?.addEventListener("abort", () => reject(new Error("deadline")), { once: true }));
+  try { while (true) { const next = await Promise.race([reader.read(), expired]); if (next.done) break; const part = Buffer.from(next.value); total += part.length; if (total > limit) fail(`${label} exceeds its byte limit.`); parts.push(part); } } catch (error) { void reader.cancel?.().catch?.(() => {}); throw error; } finally { reader.releaseLock?.(); }
+  if (declared !== null && total !== declared) fail(`${label} content length does not match its body.`);
   return Buffer.concat(parts, total);
 }
 
-async function request(fetchImpl, url, init, label, limit, { allowRedirect = false } = {}) {
-  const controller = new AbortController(), timer = setTimeout(() => controller.abort(), DEADLINE_MS);
+async function request(fetchImpl, url, init, label, limit, { allowRedirect = false, deadlineMs = DEADLINE_MS, setTimer = setTimeout, clearTimer = clearTimeout } = {}) {
+  if (!Number.isSafeInteger(deadlineMs) || deadlineMs < 1 || deadlineMs > DEADLINE_MS) fail("request deadline is invalid.");
+  const controller = new AbortController(), timer = setTimer(() => controller.abort(), deadlineMs);
   let response;
-  try { const expired = new Promise((_, reject) => controller.signal.addEventListener("abort", () => reject(new Error("deadline")), { once: true })); response = await Promise.race([fetchImpl(url, { ...init, signal: controller.signal }), expired]); if (allowRedirect && response.status >= 300 && response.status < 400) return response; return { response, body: await Promise.race([bytes(response, limit, label), expired]) }; } catch (error) { if (error instanceof Error && error.message.startsWith("Protected candidate rejected:")) throw error; fail(`${label} request failed.`); } finally { clearTimeout(timer); }
+  try { const expired = new Promise((_, reject) => controller.signal.addEventListener("abort", () => reject(new Error("deadline")), { once: true })); response = await Promise.race([fetchImpl(url, { ...init, signal: controller.signal }), expired]); if (allowRedirect && response.status >= 300 && response.status < 400) return response; return { response, body: await bytes(response, limit, label, controller.signal) }; } catch (error) { if (error instanceof Error && error.message.startsWith("Protected candidate rejected:")) throw error; fail(`${label} request failed.`); } finally { clearTimer(timer); }
 }
 
-export async function publishProtectedCandidate({ directory, version, sourceSha, repository = REPOSITORY, token, fetchImpl = fetch }) {
+export async function publishProtectedCandidate({ directory, version, sourceSha, repository = REPOSITORY, token, fetchImpl = fetch, requestOptions = {} }) {
   if (!token) fail("the protected environment token is unavailable.");
   if (repository !== REPOSITORY) fail("repository endpoint is not allowed.");
   const { manifest, held } = await verifyCandidateDirectory(directory, version, sourceSha), tag = manifest.candidateTag;
   const api = async (path, method = "GET", body) => {
-    const result = await request(fetchImpl, `${API}${path}`, { method, redirect: "error", headers: headers(token, body ? { "content-type": "application/json" } : {}), body: body ? JSON.stringify(body) : undefined }, "GitHub metadata", METADATA_LIMIT);
+    const result = await request(fetchImpl, `${API}${path}`, { method, redirect: "error", headers: headers(token, body ? { "content-type": "application/json" } : {}), body: body ? JSON.stringify(body) : undefined }, "GitHub metadata", METADATA_LIMIT, requestOptions);
     let value = null; if (result.body.length) value = parseStrictJson(result.body, "GitHub metadata");
     return { status: result.response.status, value };
   };
-  const upload = async (id, name) => { const result = await request(fetchImpl, `${UPLOADS}/repos/${repository}/releases/${id}/assets?name=${encodeURIComponent(name)}`, { method: "POST", redirect: "error", headers: headers(token, { "content-type": "application/octet-stream" }), body: held.get(name) }, "GitHub asset upload", METADATA_LIMIT); if (!result.response.ok) fail("GitHub asset upload failed."); };
+  const upload = async (id, name) => { const result = await request(fetchImpl, `${UPLOADS}/repos/${repository}/releases/${id}/assets?name=${encodeURIComponent(name)}`, { method: "POST", redirect: "error", headers: headers(token, { "content-type": "application/octet-stream" }), body: held.get(name) }, "GitHub asset upload", METADATA_LIMIT, requestOptions); if (!result.response.ok) fail("GitHub asset upload failed."); };
   const fetchedAsset = async (url, privateAsset, expectedBytes) => {
-    const first = await request(fetchImpl, url, { method: "GET", redirect: "manual", headers: privateAsset ? headers(token, { accept: "application/octet-stream" }) : { accept: "application/octet-stream" } }, privateAsset ? "private asset readback" : "public readback", expectedBytes, { allowRedirect: true });
+    const first = await request(fetchImpl, url, { method: "GET", redirect: "manual", headers: privateAsset ? headers(token, { accept: "application/octet-stream" }) : { accept: "application/octet-stream" } }, privateAsset ? "private asset readback" : "public readback", expectedBytes, { ...requestOptions, allowRedirect: true });
     if (first.body) return first;
     const location = first.headers?.get("location"); if (!location) fail("asset readback redirect has no location."); allowedRedirect(location);
-    return request(fetchImpl, location, { method: "GET", redirect: "error", headers: { accept: "application/octet-stream" } }, privateAsset ? "private asset readback" : "public readback", expectedBytes);
+    return request(fetchImpl, location, { method: "GET", redirect: "error", headers: { accept: "application/octet-stream" } }, privateAsset ? "private asset readback" : "public readback", expectedBytes, requestOptions);
   };
   const inventory = async (release, privateAssets) => {
     const names = [...held.keys()].sort(), assets = release?.assets;
@@ -56,7 +60,7 @@ export async function publishProtectedCandidate({ directory, version, sourceSha,
   const [release, ref] = await Promise.all([api(`/repos/${repository}/releases/tags/${encodeURIComponent(tag)}`), api(`/repos/${repository}/git/ref/tags/${encodeURIComponent(tag)}`)]);
   if (release.status === 200) {
     if (ref.status !== 200 || release.value?.immutable !== true || release.value?.tag_name !== tag || release.value?.target_commitish !== sourceSha || release.value?.prerelease !== true || release.value?.draft !== false) fail("existing candidate collision is not exact.");
-    let object = ref.value?.object; for (let depth = 0; depth < 4 && object?.type === "tag"; depth += 1) { if (!FULL_SHA.test(object.sha)) fail("candidate tag identity is invalid."); const tagObject = await api(`/repos/${repository}/git/tags/${object.sha}`); if (tagObject.status !== 200) fail("candidate tag cannot be dereferenced."); object = tagObject.value?.object; }
+    let object = ref.value?.object; if (object?.type !== "tag") fail("candidate tag is not annotated."); for (let depth = 0; depth < 4 && object?.type === "tag"; depth += 1) { if (!FULL_SHA.test(object.sha)) fail("candidate tag identity is invalid."); const tagObject = await api(`/repos/${repository}/git/tags/${object.sha}`); if (tagObject.status !== 200) fail("candidate tag cannot be dereferenced."); object = tagObject.value?.object; }
     if (object?.type !== "commit" || object.sha !== sourceSha) fail("candidate tag does not resolve to frozen commit."); await inventory(release.value, false); return { result: "readback-only", tag, sourceSha };
   }
   if (release.status !== 404 || ref.status !== 404) fail("existing tag or release collision is not safe to create.");
