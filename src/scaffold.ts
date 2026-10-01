@@ -14,13 +14,18 @@ export function scaffoldFiles(options: ServiceScaffoldOptions): Record<string, s
 const helperName = `service-lasso-confined-scaffold${process.platform === "win32" ? ".exe" : ""}`;
 let sourceHelper: string | undefined;
 function sha256(value: Buffer | string): string { return createHash("sha256").update(value).digest("hex"); }
+function candidateIdentity(): { version: string; sourceSha: string } | undefined {
+  const version = process.env.SERVICE_LASSO_CANDIDATE_VERSION;
+  const sourceSha = process.env.SERVICE_LASSO_CANDIDATE_SOURCE_SHA;
+  return /^\d+\.\d+\.\d+-dev\.[0-9a-f]{7}$/i.test(version ?? "") && /^[0-9a-f]{40}$/i.test(sourceSha ?? "") ? { version: version!, sourceSha: sourceSha! } : undefined;
+}
 function packagedHelper(): string | undefined {
   // package-native replaces these expressions with immutable candidate values
   // while bundling the SEA.  Ordinary source execution never treats ambient
   // environment variables as a packaging claim.
-  const version = process.env.SERVICE_LASSO_CANDIDATE_VERSION;
-  const sourceSha = process.env.SERVICE_LASSO_CANDIDATE_SOURCE_SHA;
-  if (!/^\d+\.\d+\.\d+-dev\.[0-9a-f]{7}$/i.test(version ?? "") || !/^[0-9a-f]{40}$/i.test(sourceSha ?? "")) return undefined;
+  const identity = candidateIdentity();
+  if (!identity) return undefined;
+  const { version, sourceSha } = identity;
   const directory = resolve(process.execPath, "..");
   const candidate = resolve(directory, helperName);
   const provenancePath = resolve(directory, "provenance.json");
@@ -34,6 +39,7 @@ function packagedHelper(): string | undefined {
 function helperPath(): string {
   const packaged = packagedHelper();
   if (packaged) return packaged;
+  if (candidateIdentity()) throw new CliError("unsafe_scaffold_destination", "The confined writer is unavailable.");
   // Source execution builds the checked-in helper only for local developer and
   // test use.  It is never native-candidate qualification evidence.  The
   // directory is deliberately retained: Node cannot prove a recursively named
