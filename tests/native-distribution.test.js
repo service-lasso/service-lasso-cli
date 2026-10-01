@@ -94,12 +94,26 @@ test("packaged confined helper keeps a held parent through a replacement and ret
   const failureParent = join(root, "failure-parent"), failureDestination = join(failureParent, "project"), failureGate = join(root, "failure-gate");
   await mkdir(failureParent); process.env.SERVICE_LASSO_CONFINED_TEST_GATE = failureGate; process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE = "after-file-write"; process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE = "after-file-write";
   const failure = runHeldHelper(helper, failureDestination); failure.catch(() => {});
-  await awaitGate(failureGate, "after-file-write"); if (process.platform !== "win32") await mkdir(failureDestination); await writeFile(join(failureDestination, "unowned.txt"), "preserve"); await releaseGate(failureGate, "after-file-write");
+  await awaitGate(failureGate, "after-file-write");
+  // The Windows writer deliberately holds its private project directory with
+  // FILE_SHARE_READ only.  A concurrent caller therefore cannot add a file
+  // while the native rollback boundary is live.  POSIX instead proves that an
+  // independently-created replacement is retained without recursive cleanup.
+  if (process.platform !== "win32") {
+    await mkdir(failureDestination);
+    await writeFile(join(failureDestination, "unowned.txt"), "preserve");
+  }
+  await releaseGate(failureGate, "after-file-write");
   await assert.rejects(failure, { code: "write_rejected" });
-  assert.equal(await readFile(join(failureDestination, "unowned.txt"), "utf8"), "preserve");
-  await assert.rejects(readFile(join(failureDestination, "service.json")));
+  if (process.platform !== "win32") {
+    assert.equal(await readFile(join(failureDestination, "unowned.txt"), "utf8"), "preserve");
+    await assert.rejects(readFile(join(failureDestination, "service.json")));
+  }
   if (process.platform !== "win32") assert.deepEqual(await readdir(failureDestination), ["unowned.txt"]);
   if (process.platform === "win32") {
+    delete process.env.SERVICE_LASSO_CONFINED_TEST_GATE;
+    delete process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE;
+    delete process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE;
     // A permissive caller-selected parent must not flow into new project
     // objects. The writer applies its protected OWNER RIGHTS DACL at creation.
     const hostileParent = join(root, "hostile-parent"), hostileDestination = join(hostileParent, "project");

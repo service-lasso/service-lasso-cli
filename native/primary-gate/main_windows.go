@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 	"unsafe"
 
 	"github.com/Microsoft/go-winio"
@@ -25,6 +26,76 @@ import (
 // leaf capabilities prevent a replacement or rename between verification and
 // process creation.
 const privateStageDacl = "D:P(A;;FA;;;OW)"
+
+// CreateFile's directory API creates a pathname and only then returns an open
+// handle.  That is not sufficient here: a same-owner process could acquire a
+// delete or write handle in that interval.  Use NtCreateFile with the final
+// stage name (or a held parent) so creation and the non-sharing handle are one
+// kernel operation.
+const (
+	gateObjCaseInsensitive        = 0x40
+	gateObjDontReparse            = 0x1000
+	gateFileListDirectory         = 0x0001
+	gateFileWriteData             = 0x0002
+	gateDeleteAccess              = 0x10000
+	gateReadControl               = 0x20000
+	gateSynchronize               = 0x100000
+	gateShareRead                 = 0x0001
+	gateFileOpen                  = 1
+	gateFileCreate                = 2
+	gateFileDirectoryFile         = 0x0001
+	gateFileSynchronousIoNonalert = 0x20
+	gateFileOpenReparsePoint      = 0x200000
+)
+
+type gateUnicodeString struct {
+	length, maximumLength uint16
+	buffer                *uint16
+}
+type gateObjectAttributes struct {
+	length                   uint32
+	rootDirectory            syscall.Handle
+	objectName               *gateUnicodeString
+	attributes               uint32
+	securityDescriptor       uintptr
+	securityQualityOfService uintptr
+}
+type gateIOStatusBlock struct{ status, information uintptr }
+
+var gateNtDll = syscall.NewLazyDLL("ntdll.dll")
+var gateNtCreateFile = gateNtDll.NewProc("NtCreateFile")
+
+func gateOpen(name string, parent windows.Handle, access, disposition, options uint32, descriptor *windows.SECURITY_DESCRIPTOR) (windows.Handle, error) {
+	if parent == 0 && filepath.IsAbs(name) {
+		// NtCreateFile receives an NT object-manager path when no RootDirectory
+		// is supplied; Win32's C:\\ spelling is not an NT object name.
+		name = `\??\` + name
+	}
+	pointer, err := syscall.UTF16PtrFromString(name)
+	if err != nil {
+		return 0, err
+	}
+	length := uint16(len(syscall.StringToUTF16(name))-1) * 2
+	u := gateUnicodeString{length, length + 2, pointer}
+	var securityDescriptor uintptr
+	if descriptor != nil {
+		securityDescriptor = uintptr(unsafe.Pointer(descriptor))
+	}
+	attributes := gateObjectAttributes{uint32(unsafe.Sizeof(gateObjectAttributes{})), syscall.Handle(parent), &u, gateObjCaseInsensitive | gateObjDontReparse, securityDescriptor, 0}
+	var handle windows.Handle
+	var iosb gateIOStatusBlock
+	if disposition == gateFileOpen {
+		options |= gateFileOpenReparsePoint
+	}
+	status, _, callErr := gateNtCreateFile.Call(uintptr(unsafe.Pointer(&handle)), uintptr(access), uintptr(unsafe.Pointer(&attributes)), uintptr(unsafe.Pointer(&iosb)), 0, 0, gateShareRead, uintptr(disposition), uintptr(options), 0, 0)
+	if int32(status) < 0 {
+		if callErr != syscall.Errno(0) {
+			return 0, callErr
+		}
+		return 0, fmt.Errorf("NtCreateFile status 0x%x", status)
+	}
+	return handle, nil
+}
 
 func privateAttributes() (*windows.SecurityAttributes, error) {
 	descriptor, err := windows.SecurityDescriptorFromString(privateStageDacl)
@@ -56,10 +127,7 @@ func stageDirectory() (string, windows.Handle, error) {
 	if err != nil {
 		return "", 0, err
 	}
-	if err = windows.CreateDirectory(windows.StringToUTF16Ptr(path), attributes); err != nil {
-		return "", 0, err
-	}
-	handle, err := windows.CreateFile(windows.StringToUTF16Ptr(path), windows.GENERIC_READ, windows.FILE_SHARE_READ, nil, windows.OPEN_EXISTING, windows.FILE_FLAG_BACKUP_SEMANTICS|windows.FILE_FLAG_OPEN_REPARSE_POINT, 0)
+	handle, err := gateOpen(path, 0, gateFileListDirectory|gateDeleteAccess|gateReadControl|gateSynchronize, gateFileCreate, gateFileDirectoryFile|gateFileSynchronousIoNonalert, attributes.SecurityDescriptor)
 	if err != nil {
 		return "", 0, err
 	}
@@ -70,12 +138,17 @@ func stageDirectory() (string, windows.Handle, error) {
 	return path, handle, nil
 }
 
-func stageImage(path string, value []byte) (windows.Handle, error) {
+func stageImage(directory string, name string, value []byte) (windows.Handle, error) {
 	attributes, err := privateAttributes()
 	if err != nil {
 		return 0, err
 	}
-	handle, err := windows.CreateFile(windows.StringToUTF16Ptr(path), windows.GENERIC_READ|windows.GENERIC_WRITE, windows.FILE_SHARE_READ, attributes, windows.CREATE_NEW, windows.FILE_ATTRIBUTE_NORMAL, 0)
+	// CREATE_NEW returns the newly created leaf handle as part of the same
+	// kernel operation.  The stage directory is already held with no DELETE
+	// sharing, so this absolute spelling cannot be redirected after creation.
+	// The retained read handle then rejects any pre-existing writable/delete
+	// client during the intentional writer-close/reopen transition.
+	handle, err := windows.CreateFile(windows.StringToUTF16Ptr(filepath.Join(directory, name)), windows.GENERIC_READ|windows.GENERIC_WRITE, windows.FILE_SHARE_READ, attributes, windows.CREATE_NEW, windows.FILE_ATTRIBUTE_NORMAL|windows.FILE_FLAG_OPEN_REPARSE_POINT, 0)
 	if err != nil {
 		return 0, err
 	}
@@ -99,7 +172,7 @@ func stageImage(path string, value []byte) (windows.Handle, error) {
 	if err = windows.CloseHandle(handle); err != nil {
 		return 0, err
 	}
-	handle, err = windows.CreateFile(windows.StringToUTF16Ptr(path), windows.GENERIC_READ, windows.FILE_SHARE_READ, nil, windows.OPEN_EXISTING, windows.FILE_ATTRIBUTE_NORMAL|windows.FILE_FLAG_OPEN_REPARSE_POINT, 0)
+	handle, err = windows.CreateFile(windows.StringToUTF16Ptr(filepath.Join(directory, name)), windows.GENERIC_READ, windows.FILE_SHARE_READ, nil, windows.OPEN_EXISTING, windows.FILE_ATTRIBUTE_NORMAL|windows.FILE_FLAG_OPEN_REPARSE_POINT, 0)
 	if err != nil {
 		return 0, err
 	}
@@ -130,14 +203,14 @@ func main() {
 	}
 	defer windows.CloseHandle(directoryHandle)
 	defer os.RemoveAll(directory)
-	path := filepath.Join(directory, "service-lassoctl.sea.exe")
-	helper := filepath.Join(directory, "service-lasso-confined-scaffold.exe")
-	seaHandle, err := stageImage(path, seaBytes)
+	seaName := "service-lassoctl.sea.exe"
+	helperName := "service-lasso-confined-scaffold.exe"
+	seaHandle, err := stageImage(directory, seaName, seaBytes)
 	if err != nil {
 		failAt("SEA image")
 	}
 	defer windows.CloseHandle(seaHandle)
-	helperHandle, err := stageImage(helper, confinedWriterBytes)
+	helperHandle, err := stageImage(directory, helperName, confinedWriterBytes)
 	if err != nil {
 		failAt("writer image")
 	}
@@ -152,8 +225,12 @@ func main() {
 		failAt("private pipe")
 	}
 	defer listener.Close()
-	go serveWindows(listener, helper)
-	child := exec.Command(path, os.Args[1:]...)
+	go serveWindows(listener, helperName)
+	// CreateProcess still consumes a name.  The file itself was created and
+	// reopened relative to the held directory; its retained no-write/no-delete
+	// handle prevents an incompatible client handle from surviving the writer
+	// close or appearing before this launch.
+	child := exec.Command(filepath.Join(directory, seaName), os.Args[1:]...)
 	child.Stdin, child.Stdout, child.Stderr = os.Stdin, os.Stdout, os.Stderr
 	child.Env = append(os.Environ(), "SERVICE_LASSO_PRIMARY_GATE=windows-v1", "SERVICE_LASSO_PRIMARY_GATE_PIPE="+pipe)
 	if err := child.Run(); err != nil {
