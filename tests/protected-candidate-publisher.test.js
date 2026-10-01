@@ -79,6 +79,15 @@ test("CLI30 closed candidate verifier accepts only a complete frozen inventory",
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
+test("CLI30 candidate pack preserves a literal spaced output path", async () => {
+  const root = await mkdtemp(join(tmpdir(), "service-lassoctl spaced-parent-"));
+  const portable = join(root, "portable output with spaces");
+  try {
+    execFileSync(node, ["scripts/package-candidate.mjs", "--output", portable, "--version", version, "--source-sha", sourceSha], { encoding: "utf8" });
+    assert.equal((await readFile(join(portable, "candidate.json"), "utf8")).includes(`"version": "${version}"`), true);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
 test("CLI30 raw JSON parser rejects duplicate keys before JSON.parse loses them", () => {
   assert.throws(() => parseStrictJson(Buffer.from('{"source":{"commit":"a","commit":"b"}}'), "fixture"), /duplicate JSON key/);
 });
