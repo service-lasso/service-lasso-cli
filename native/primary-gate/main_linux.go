@@ -61,11 +61,18 @@ func main() {
 	// IPC process resolves this process's sealed descriptor on every request.
 	heldHelper = os.NewFile(uintptr(helper), "service-lasso-confined-writer")
 	heldExecutionPath = "/proc/self/fd/3"
-	go serve(listener, "@held")
+	// The socket name is only a routing value. Authentication happens on every
+	// accepted connection through SO_PEERCRED against this exact, still-held
+	// SEA process. A same-owner process that learns the pathname cannot submit
+	// a plan because it cannot impersonate the live child PID.
 	child := exec.Command(fmt.Sprintf("/proc/self/fd/%d", sea), os.Args[1:]...)
 	child.Stdin, child.Stdout, child.Stderr = os.Stdin, os.Stdout, os.Stderr
 	child.Env = append(os.Environ(), "SERVICE_LASSO_PRIMARY_GATE=linux-v1", "SERVICE_LASSO_PRIMARY_GATE_PIPE="+endpoint)
-	if err = child.Run(); err != nil {
+	if err = child.Start(); err != nil {
+		fail()
+	}
+	go serveLinux(listener, "@held", child.Process.Pid, child)
+	if err = child.Wait(); err != nil {
 		if exit, ok := err.(*exec.ExitError); ok {
 			os.Exit(exit.ExitCode())
 		}
@@ -74,12 +81,36 @@ func main() {
 }
 
 func fail() { fmt.Fprintln(os.Stderr, "The native primary gate could not start."); os.Exit(1) }
-func serve(listener net.Listener, helper string) {
+func serveLinux(listener net.Listener, helper string, pid int, child *exec.Cmd) {
 	for {
 		connection, err := listener.Accept()
 		if err != nil {
 			return
 		}
-		go materialize(connection, helper)
+		if child.ProcessState != nil || !linuxPeerIs(connection, pid) {
+			_ = connection.Close()
+			continue
+		}
+		materialize(connection, helper)
+		return
 	}
+}
+
+func linuxPeerIs(connection net.Conn, expectedPID int) bool {
+	unixConnection, ok := connection.(*net.UnixConn)
+	if !ok {
+		return false
+	}
+	raw, err := unixConnection.SyscallConn()
+	if err != nil {
+		return false
+	}
+	matched := false
+	if raw.Control(func(fd uintptr) {
+		credential, credentialErr := unix.GetsockoptUcred(int(fd), unix.SOL_SOCKET, unix.SO_PEERCRED)
+		matched = credentialErr == nil && credential.Pid == int32(expectedPID)
+	}) != nil {
+		return false
+	}
+	return matched
 }

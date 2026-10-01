@@ -32,7 +32,9 @@ func materialize(connection net.Conn, helper string) {
 		return
 	}
 	var value request
-	if json.Unmarshal(line, &value) != nil || value.Version != 1 || len(value.Input) > 6<<20 {
+	decoder := json.NewDecoder(bytesReader(line))
+	decoder.DisallowUnknownFields()
+	if decoder.Decode(&value) != nil || decoder.Decode(&struct{}{}) != io.EOF || value.Version != 1 || len(value.Input) == 0 || len(value.Input) > 6<<20 {
 		return
 	}
 	input, err := base64.StdEncoding.DecodeString(value.Input)
