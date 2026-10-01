@@ -23,7 +23,10 @@
   `OBJ_DONT_REPARSE`, `FILE_OPEN_REPARSE_POINT`, and a verified protected
   owner-only DACL for every new project object. The SEA never trusts mutable
   provenance for helper execution: it verifies the baked helper digest and
-  launches a private copy from the verified bytes. Darwin is fail-closed until
+  launches a private copy from the verified bytes. Its request endpoint is an
+  inherited non-routable capability, never a mutable Unix socket pathname;
+  admission is serialized with the held child lifecycle identity rather than a
+  PID or an unsynchronised process-state snapshot. Darwin is fail-closed until
   non-interactive privilege activates and reads back `SF_IMMUTABLE` on the leaf
   and held parent while denying a pre-open writer; Windows pipe requests are
   admitted only from the live SEA PID. It never treats pathname checks as race

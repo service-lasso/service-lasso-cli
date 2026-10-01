@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 
 	"golang.org/x/sys/unix"
 )
@@ -104,14 +105,23 @@ func main() {
 	if err != nil {
 		fail()
 	}
-	endpoint := filepath.Join(directory, "primary.sock")
-	listener, err := net.Listen("unix", endpoint)
+	pair, err := unix.Socketpair(unix.AF_UNIX, unix.SOCK_STREAM, 0)
 	if err != nil {
 		fail()
 	}
-	defer listener.Close()
-	// Bind the endpoint while the directory is mutable, then freeze its parent
-	// before publishing it to the child. No later actor can replace the socket.
+	unix.CloseOnExec(pair[0])
+	unix.CloseOnExec(pair[1])
+	serverFile := os.NewFile(uintptr(pair[0]), "service-lasso-primary-server")
+	clientFile := os.NewFile(uintptr(pair[1]), "service-lasso-primary-client")
+	defer serverFile.Close()
+	server, err := net.FileConn(serverFile)
+	if err != nil {
+		fail()
+	}
+	defer server.Close()
+	// Freeze both images and their parent before publishing the held directory
+	// descriptor to the child. The request endpoint is the separate inherited
+	// socketpair and never appears in this mutable filesystem namespace.
 	if verifyImmutableImage(seaWriter, seaReader, seaPath, seaBytes) != nil || verifyImmutableImage(helperWriter, helperReader, helperPath, confinedWriterBytes) != nil || immutable(directoryFD, directory) != nil {
 		fail()
 	}
@@ -126,17 +136,21 @@ func main() {
 	// Resolve only from the held immutable directory descriptor. The SEA and
 	// writer leaf names cannot be substituted after the flag readback.
 	heldHelper = os.NewFile(uintptr(directoryFD), "service-lasso-immutable-directory")
-	heldExecutionPath = "/dev/fd/3/service-lasso-confined-scaffold"
+	heldExecutionPath = "/dev/fd/4/service-lasso-confined-scaffold"
 	directoryFile := os.NewFile(uintptr(directoryFD), "service-lasso-immutable-directory")
-	child := exec.Command("/dev/fd/3/service-lassoctl.sea", os.Args[1:]...)
-	child.ExtraFiles = []*os.File{directoryFile}
+	child := exec.Command("/dev/fd/4/service-lassoctl.sea", os.Args[1:]...)
+	child.ExtraFiles = []*os.File{clientFile, directoryFile}
 	child.Stdin, child.Stdout, child.Stderr = os.Stdin, os.Stdout, os.Stderr
-	child.Env = append(os.Environ(), "SERVICE_LASSO_PRIMARY_GATE=darwin-v2", "SERVICE_LASSO_PRIMARY_GATE_PIPE="+endpoint)
+	child.Env = append(os.Environ(), "SERVICE_LASSO_PRIMARY_GATE=darwin-v3", "SERVICE_LASSO_PRIMARY_GATE_FD=3")
 	if err := child.Start(); err != nil {
 		fail()
 	}
-	go serveDarwin(listener, "@held", child.Process.Pid, child)
-	if err := child.Wait(); err != nil {
+	_ = clientFile.Close()
+	lifecycle := &darwinLifecycle{}
+	exit := make(chan error, 1)
+	go func() { err := child.Wait(); lifecycle.terminate(); exit <- err }()
+	go serveDarwin(server, "@held", lifecycle)
+	if err := <-exit; err != nil {
 		if exit, ok := err.(*exec.ExitError); ok {
 			os.Exit(exit.ExitCode())
 		}
@@ -146,36 +160,21 @@ func main() {
 
 func fail() { fmt.Fprintln(os.Stderr, "The native primary gate could not start."); os.Exit(1) }
 
-func serveDarwin(listener net.Listener, helper string, pid int, child *exec.Cmd) {
-	for {
-		connection, err := listener.Accept()
-		if err != nil {
-			return
-		}
-		if child.ProcessState != nil || !darwinPeerIs(connection, pid) {
-			_ = connection.Close()
-			continue
-		}
-		materialize(connection, helper)
-		return
-	}
+type darwinLifecycle struct {
+	mu         sync.Mutex
+	terminated bool
 }
 
-func darwinPeerIs(connection net.Conn, expectedPID int) bool {
-	unixConnection, ok := connection.(*net.UnixConn)
-	if !ok {
-		return false
+func (l *darwinLifecycle) terminate() { l.mu.Lock(); l.terminated = true; l.mu.Unlock() }
+func (l *darwinLifecycle) admit(connection net.Conn, helper string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.terminated {
+		_ = connection.Close()
+		return
 	}
-	raw, err := unixConnection.SyscallConn()
-	if err != nil {
-		return false
-	}
-	matched := false
-	if raw.Control(func(fd uintptr) {
-		pid, peerErr := unix.GetsockoptInt(int(fd), unix.SOL_LOCAL, unix.LOCAL_PEERPID)
-		matched = peerErr == nil && pid == expectedPID
-	}) != nil {
-		return false
-	}
-	return matched
+	materialize(connection, helper)
+}
+func serveDarwin(connection net.Conn, helper string, lifecycle *darwinLifecycle) {
+	lifecycle.admit(connection, helper)
 }

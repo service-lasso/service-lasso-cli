@@ -7,7 +7,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"path/filepath"
+	"sync"
 
 	"golang.org/x/sys/unix"
 )
@@ -46,33 +46,46 @@ func main() {
 		fail()
 	}
 	defer unix.Close(helper)
-	directory, err := os.MkdirTemp("", "service-lasso-primary-")
+	pair, err := unix.Socketpair(unix.AF_UNIX, unix.SOCK_STREAM, 0)
 	if err != nil {
 		fail()
 	}
-	defer os.RemoveAll(directory)
-	endpoint := filepath.Join(directory, "primary.sock")
-	listener, err := net.Listen("unix", endpoint)
+	unix.CloseOnExec(pair[0])
+	unix.CloseOnExec(pair[1])
+	serverFile := os.NewFile(uintptr(pair[0]), "service-lasso-primary-server")
+	clientFile := os.NewFile(uintptr(pair[1]), "service-lasso-primary-client")
+	defer serverFile.Close()
+	server, err := net.FileConn(serverFile)
 	if err != nil {
 		fail()
 	}
-	defer listener.Close()
+	defer server.Close()
 	// Pass the held descriptor path, rather than an extracted writer path. The
 	// IPC process resolves this process's sealed descriptor on every request.
 	heldHelper = os.NewFile(uintptr(helper), "service-lasso-confined-writer")
 	heldExecutionPath = "/proc/self/fd/3"
-	// The socket name is only a routing value. Authentication happens on every
-	// accepted connection through SO_PEERCRED against this exact, still-held
-	// SEA process. A same-owner process that learns the pathname cannot submit
-	// a plan because it cannot impersonate the live child PID.
+	// The SEA receives one end of a connected socketpair as fd 3.  There is no
+	// filesystem or namespace endpoint to discover, replace, or pre-bind.
+	// The retained end is the capability boundary; a PID is never authority.
 	child := exec.Command(fmt.Sprintf("/proc/self/fd/%d", sea), os.Args[1:]...)
+	child.ExtraFiles = []*os.File{clientFile}
 	child.Stdin, child.Stdout, child.Stderr = os.Stdin, os.Stdout, os.Stderr
-	child.Env = append(os.Environ(), "SERVICE_LASSO_PRIMARY_GATE=linux-v1", "SERVICE_LASSO_PRIMARY_GATE_PIPE="+endpoint)
+	child.Env = append(os.Environ(), "SERVICE_LASSO_PRIMARY_GATE=linux-v2", "SERVICE_LASSO_PRIMARY_GATE_FD=3")
 	if err = child.Start(); err != nil {
 		fail()
 	}
-	go serveLinux(listener, "@held", child.Process.Pid, child)
-	if err = child.Wait(); err != nil {
+	// A pidfd is a held kernel identity, not an integer that may be recycled.
+	pidfd, err := unix.PidfdOpen(child.Process.Pid, 0)
+	if err != nil {
+		fail()
+	}
+	defer unix.Close(pidfd)
+	_ = clientFile.Close()
+	lifecycle := &linuxLifecycle{pidfd: pidfd}
+	exit := make(chan error, 1)
+	go func() { err := child.Wait(); lifecycle.terminate(); exit <- err }()
+	go serveLinux(server, "@held", lifecycle)
+	if err = <-exit; err != nil {
 		if exit, ok := err.(*exec.ExitError); ok {
 			os.Exit(exit.ExitCode())
 		}
@@ -81,36 +94,28 @@ func main() {
 }
 
 func fail() { fmt.Fprintln(os.Stderr, "The native primary gate could not start."); os.Exit(1) }
-func serveLinux(listener net.Listener, helper string, pid int, child *exec.Cmd) {
-	for {
-		connection, err := listener.Accept()
-		if err != nil {
-			return
-		}
-		if child.ProcessState != nil || !linuxPeerIs(connection, pid) {
-			_ = connection.Close()
-			continue
-		}
-		materialize(connection, helper)
-		return
-	}
+
+type linuxLifecycle struct {
+	mu         sync.Mutex
+	pidfd      int
+	terminated bool
 }
 
-func linuxPeerIs(connection net.Conn, expectedPID int) bool {
-	unixConnection, ok := connection.(*net.UnixConn)
-	if !ok {
-		return false
+func (l *linuxLifecycle) terminate() { l.mu.Lock(); l.terminated = true; l.mu.Unlock() }
+func (l *linuxLifecycle) admit(connection net.Conn, helper string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.terminated {
+		_ = connection.Close()
+		return
 	}
-	raw, err := unixConnection.SyscallConn()
-	if err != nil {
-		return false
+	ready, err := unix.Poll([]unix.PollFd{{Fd: int32(l.pidfd), Events: unix.POLLIN}}, 0)
+	if err != nil || ready != 0 {
+		_ = connection.Close()
+		return
 	}
-	matched := false
-	if raw.Control(func(fd uintptr) {
-		credential, credentialErr := unix.GetsockoptUcred(int(fd), unix.SOL_SOCKET, unix.SO_PEERCRED)
-		matched = credentialErr == nil && credential.Pid == int32(expectedPID)
-	}) != nil {
-		return false
-	}
-	return matched
+	materialize(connection, helper)
+}
+func serveLinux(connection net.Conn, helper string, lifecycle *linuxLifecycle) {
+	lifecycle.admit(connection, helper)
 }

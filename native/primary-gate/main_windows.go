@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"unsafe"
 
@@ -235,8 +236,18 @@ func main() {
 	if err := child.Start(); err != nil {
 		fail()
 	}
-	go serveWindows(listener, helperName, child.Process.Pid, child)
-	if err := child.Wait(); err != nil {
+	// Keep a separate real process-object handle.  Its identity survives PID
+	// lookup and makes PID reuse impossible while admission is active.
+	process, err := windows.OpenProcess(windows.SYNCHRONIZE|windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(child.Process.Pid))
+	if err != nil {
+		failAt("child process identity")
+	}
+	defer windows.CloseHandle(process)
+	lifecycle := &windowsLifecycle{process: process, pid: uint32(child.Process.Pid)}
+	exit := make(chan error, 1)
+	go func() { err := child.Wait(); lifecycle.terminate(); exit <- err }()
+	go serveWindows(listener, helperName, lifecycle)
+	if err := <-exit; err != nil {
 		if exit, ok := err.(*exec.ExitError); ok {
 			os.Exit(exit.ExitCode())
 		}
@@ -249,27 +260,47 @@ func failAt(_ string) { fail() }
 
 var getNamedPipeClientProcessID = windows.NewLazySystemDLL("kernel32.dll").NewProc("GetNamedPipeClientProcessId")
 
-func windowsPeerIs(connection net.Conn, expectedPID int) bool {
+func windowsPeerIs(connection net.Conn, expectedPID uint32) bool {
 	fdConnection, ok := connection.(interface{ Fd() uintptr })
 	if !ok {
 		return false
 	}
 	var actual uint32
 	result, _, callErr := getNamedPipeClientProcessID.Call(fdConnection.Fd(), uintptr(unsafe.Pointer(&actual)))
-	return result != 0 && callErr == syscall.Errno(0) && actual == uint32(expectedPID)
+	return result != 0 && callErr == syscall.Errno(0) && actual == expectedPID
 }
 
-func serveWindows(listener net.Listener, helper string, pid int, child *exec.Cmd) {
+type windowsLifecycle struct {
+	mu         sync.Mutex
+	process    windows.Handle
+	pid        uint32
+	terminated bool
+}
+
+func (l *windowsLifecycle) terminate() { l.mu.Lock(); l.terminated = true; l.mu.Unlock() }
+func (l *windowsLifecycle) admit(connection net.Conn, helper string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.terminated || !windowsPeerIs(connection, l.pid) {
+		return false
+	}
+	state, err := windows.WaitForSingleObject(l.process, 0)
+	if err != nil || state != uint32(windows.WAIT_TIMEOUT) {
+		return false
+	}
+	materialize(connection, helper)
+	return true
+}
+func serveWindows(listener net.Listener, helper string, lifecycle *windowsLifecycle) {
 	for {
 		connection, err := listener.Accept()
 		if err != nil {
 			return
 		}
-		if child.ProcessState != nil || !windowsPeerIs(connection, pid) {
+		if !lifecycle.admit(connection, helper) {
 			_ = connection.Close()
 			continue
 		}
-		materialize(connection, helper)
 		return
 	}
 }
