@@ -32,11 +32,18 @@ async function bytes(response, limit, label, signal) {
   return Buffer.concat(parts, total);
 }
 
+function discardRedirectBody(response) {
+  const reader = response.body?.getReader?.();
+  if (!reader) return;
+  try { void Promise.resolve(reader.cancel?.()).catch(() => {}); } catch { /* A redirect body is never trusted or read. */ }
+  try { reader.releaseLock?.(); } catch { /* Disposal must not delay the request boundary. */ }
+}
+
 async function request(fetchImpl, url, init, label, limit, { allowRedirect = false, deadlineMs = DEADLINE_MS, setTimer = setTimeout, clearTimer = clearTimeout } = {}) {
   if (!Number.isSafeInteger(deadlineMs) || deadlineMs < 1 || deadlineMs > DEADLINE_MS) fail("request deadline is invalid.");
   const controller = new AbortController(), timer = setTimer(() => controller.abort(), deadlineMs);
   let response;
-  try { const expired = controller.signal.aborted ? Promise.reject(new Error("deadline")) : new Promise((_, reject) => controller.signal.addEventListener("abort", () => reject(new Error("deadline")), { once: true })); response = await Promise.race([fetchImpl(url, { ...init, signal: controller.signal }), expired]); if (allowRedirect && response.status >= 300 && response.status < 400) return response; return { response, body: await bytes(response, limit, label, controller.signal) }; } catch (error) { if (error instanceof Error && error.message.startsWith("Protected candidate rejected:")) throw error; fail(`${label} request failed.`); } finally { clearTimer(timer); }
+  try { const expired = controller.signal.aborted ? Promise.reject(new Error("deadline")) : new Promise((_, reject) => controller.signal.addEventListener("abort", () => reject(new Error("deadline")), { once: true })); response = await Promise.race([fetchImpl(url, { ...init, signal: controller.signal }), expired]); if (!response || !Number.isSafeInteger(response.status) || response.status < 100 || response.status > 599) fail(`${label} has an invalid response.`); if (allowRedirect && response.status >= 300 && response.status < 400) { discardRedirectBody(response); return { kind: "redirect", response }; } return { kind: "body", response, body: await bytes(response, limit, label, controller.signal) }; } catch (error) { if (error instanceof Error && error.message.startsWith("Protected candidate rejected:")) throw error; fail(`${label} request failed.`); } finally { clearTimer(timer); }
 }
 
 export async function publishProtectedCandidate({ directory, version, sourceSha, repository = REPOSITORY, token, fetchImpl = fetch, requestOptions = {} }) {
@@ -51,8 +58,8 @@ export async function publishProtectedCandidate({ directory, version, sourceSha,
   const upload = async (id, name) => { const result = await request(fetchImpl, `${UPLOADS}/repos/${repository}/releases/${id}/assets?name=${encodeURIComponent(name)}`, { method: "POST", redirect: "error", headers: headers(token, { "content-type": "application/octet-stream" }), body: held.get(name) }, "GitHub asset upload", METADATA_LIMIT, requestOptions); if (!result.response.ok) fail("GitHub asset upload failed."); };
   const fetchedAsset = async (url, privateAsset, expectedBytes) => {
     const first = await request(fetchImpl, url, { method: "GET", redirect: "manual", headers: privateAsset ? headers(token, { accept: "application/octet-stream" }) : { accept: "application/octet-stream" } }, privateAsset ? "private asset readback" : "public readback", expectedBytes, { ...requestOptions, allowRedirect: true });
-    if (first.body) return first;
-    const location = first.headers?.get("location"); if (!location) fail("asset readback redirect has no location."); allowedRedirect(location);
+    if (first.kind === "body") return first;
+    const location = first.response.headers?.get("location"); if (!location) fail("asset readback redirect has no location."); allowedRedirect(location);
     return request(fetchImpl, location, { method: "GET", redirect: "error", headers: { accept: "application/octet-stream" } }, privateAsset ? "private asset readback" : "public readback", expectedBytes, requestOptions);
   };
   const inventory = async (release, privateAssets) => {

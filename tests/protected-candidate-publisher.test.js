@@ -49,7 +49,7 @@ async function candidateDirectory(root) {
 function json(value, status = 200) { return new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } }); }
 
 function providerPolicy() {
-  return { immutable: { enabled: true }, branch: { name: "develop", protected: true }, protection: { required_status_checks: { strict: true, contexts: ["ci"] }, required_pull_request_reviews: { required_approving_review_count: 1 }, enforce_admins: { enabled: true }, allow_force_pushes: { enabled: false } }, environment: { name: "development-candidate", protection_rules: [{ type: "required_reviewers", prevent_self_review: true, reviewers: [{ type: "User", reviewer: { id: 1 } }] }], deployment_branch_policy: { custom_branch_policies: true, protected_branches: false } }, policies: { branch_policies: [{ name: "develop" }] } };
+  return { immutable: { enabled: true }, branch: { name: "develop", protected: true }, protection: { required_status_checks: { strict: true, contexts: ["ci"] }, required_pull_request_reviews: { required_approving_review_count: 1, bypass_pull_request_allowances: { users: [], teams: [], apps: [] } }, enforce_admins: { enabled: true }, allow_force_pushes: { enabled: false } }, environment: { name: "development-candidate", protection_rules: [{ type: "required_reviewers", prevent_self_review: true, reviewers: [{ type: "User", reviewer: { id: 1 } }] }], deployment_branch_policy: { custom_branch_policies: true, protected_branches: false } }, policies: { branch_policies: [{ name: "develop" }] } };
 }
 
 function emptyPrivateRelease(id, tag) { return { id, tag_name: tag, draft: true, prerelease: true, target_commitish: sourceSha, assets: [] }; }
@@ -133,12 +133,13 @@ test("CLI30 schema rejects duplicates, unexpected fields and forged source ident
 });
 
 test("CLI30 provider preflight and public URL fail closed", () => {
-  const preflight = { immutable: { enabled: true }, branch: { name: "develop", protected: true }, protection: { required_status_checks: { strict: true, contexts: ["CI"] }, required_pull_request_reviews: { required_approving_review_count: 1 }, enforce_admins: { enabled: true }, allow_force_pushes: { enabled: false } }, environment: { name: "development-candidate", protection_rules: [{ type: "required_reviewers", prevent_self_review: true, reviewers: [{ type: "User", reviewer: { id: 1 } }] }], deployment_branch_policy: { custom_branch_policies: true, protected_branches: false } }, branchPolicies: [{ name: "develop" }] };
+  const preflight = { immutable: { enabled: true }, branch: { name: "develop", protected: true }, protection: { required_status_checks: { strict: true, contexts: ["CI"] }, required_pull_request_reviews: { required_approving_review_count: 1, bypass_pull_request_allowances: { users: [], teams: [], apps: [] } }, enforce_admins: { enabled: true }, allow_force_pushes: { enabled: false } }, environment: { name: "development-candidate", protection_rules: [{ type: "required_reviewers", prevent_self_review: true, reviewers: [{ type: "User", reviewer: { id: 1 } }] }], deployment_branch_policy: { custom_branch_policies: true, protected_branches: false } }, branchPolicies: [{ name: "develop" }] };
   assert.doesNotThrow(() => assertProviderPreflight(preflight));
   assert.throws(() => assertProviderPreflight({ ...preflight, immutable: { enabled: false } }));
   assert.throws(() => assertProviderPreflight({ ...preflight, protection: { ...preflight.protection, required_pull_request_reviews: null } }));
   assert.throws(() => assertProviderPreflight({ ...preflight, protection: { ...preflight.protection, required_pull_request_reviews: { required_approving_review_count: 0 } } }));
   assert.throws(() => assertProviderPreflight({ ...preflight, protection: { ...preflight.protection, enforce_admins: { enabled: false } } }));
+  for (const bypasses of [undefined, null, {}, { users: [], teams: [], apps: [], unexpected: [] }, { users: ["owner"], teams: [], apps: [] }, { users: [], teams: ["owners"], apps: [] }, { users: [], teams: [], apps: ["publisher"] }]) assert.throws(() => assertProviderPreflight({ ...preflight, protection: { ...preflight.protection, required_pull_request_reviews: { ...preflight.protection.required_pull_request_reviews, bypass_pull_request_allowances: bypasses } } }));
   assert.doesNotThrow(() => canonicalPublicAssetUrl("https://github.com/service-lasso/service-lasso-cli/releases/download/x/service-lassoctl-a.tgz", "service-lassoctl-a.tgz", "x"));
   assert.throws(() => canonicalPublicAssetUrl("https://attacker.invalid/a", "a"));
 });
@@ -228,7 +229,8 @@ test("CLI30 actual adapter rejects every unavailable or unsafe provider prefligh
   await withCandidate(async (_root, directory) => {
     const variants = [
       ["immutable unavailable", "immutable", 404], ["branch unavailable", "branch", 404], ["protection unavailable", "protection", 404], ["environment unavailable", "environment", 404], ["policy unavailable", "policies", 404],
-      ["reviews absent", "reviews", null], ["reviews empty", "reviews", { required_approving_review_count: 0 }], ["admin disabled", "admin", false], ["checks non-strict", "strict", false], ["checks empty", "contexts", []], ["force allowed", "force", true], ["branch unprotected", "protected", false], ["immutable disabled", "enabled", false], ["environment malformed", "environment", {}], ["self review allowed", "self-review", false], ["reviewer identity malformed", "reviewers", [{ type: "User", reviewer: {} }]], ["branch policy wrong", "policies", { branch_policies: [{ name: "other" }] }]
+      ["immutable unauthenticated", "immutable", 401], ["branch forbidden", "branch", 403], ["protection unauthenticated", "protection", 401], ["environment forbidden", "environment", 403], ["policy unauthenticated", "policies", 401],
+      ["reviews absent", "reviews", null], ["reviews empty", "reviews", { required_approving_review_count: 0 }], ["bypasses missing", "bypasses", undefined], ["bypasses malformed", "bypasses", {}], ["bypasses unknown", "bypasses", { users: [], teams: [], apps: [], unexpected: [] }], ["bypass user", "bypasses", { users: ["owner"], teams: [], apps: [] }], ["bypass team", "bypasses", { users: [], teams: ["owners"], apps: [] }], ["bypass app", "bypasses", { users: [], teams: [], apps: ["publisher"] }], ["admin disabled", "admin", false], ["checks non-strict", "strict", false], ["checks empty", "contexts", []], ["force allowed", "force", true], ["branch unprotected", "protected", false], ["immutable disabled", "enabled", false], ["environment malformed", "environment", {}], ["self review allowed", "self-review", false], ["reviewer identity malformed", "reviewers", [{ type: "User", reviewer: {} }]], ["branch policy wrong", "policies", { branch_policies: [{ name: "other" }] }]
     ];
     for (const [name, field, value] of variants) {
       const events = [], policy = providerPolicy();
@@ -241,12 +243,12 @@ test("CLI30 actual adapter rejects every unavailable or unsafe provider prefligh
         if (field === "policies" && path.endsWith("/deployment-branch-policies")) return json(value ?? policy.policies, typeof value === "number" ? value : 200);
         if (path.endsWith("/immutable-releases")) { if (field === "enabled") policy.immutable.enabled = value; return json(policy.immutable); }
         if (path.endsWith("/branches/develop")) { if (field === "protected") policy.branch.protected = value; return json(policy.branch); }
-        if (path.endsWith("/branches/develop/protection")) { if (field === "reviews") policy.protection.required_pull_request_reviews = value; if (field === "admin") policy.protection.enforce_admins.enabled = value; if (field === "strict") policy.protection.required_status_checks.strict = value; if (field === "contexts") policy.protection.required_status_checks.contexts = value; if (field === "force") policy.protection.allow_force_pushes.enabled = value; return json(policy.protection); }
+        if (path.endsWith("/branches/develop/protection")) { if (field === "reviews") policy.protection.required_pull_request_reviews = value; if (field === "bypasses") { if (value === undefined) delete policy.protection.required_pull_request_reviews.bypass_pull_request_allowances; else policy.protection.required_pull_request_reviews.bypass_pull_request_allowances = value; } if (field === "admin") policy.protection.enforce_admins.enabled = value; if (field === "strict") policy.protection.required_status_checks.strict = value; if (field === "contexts") policy.protection.required_status_checks.contexts = value; if (field === "force") policy.protection.allow_force_pushes.enabled = value; return json(policy.protection); }
         if (path.endsWith("/environments/development-candidate")) { if (field === "self-review") policy.environment.protection_rules[0].prevent_self_review = value; if (field === "reviewers") policy.environment.protection_rules[0].reviewers = value; return json(policy.environment); }
         if (path.endsWith("/deployment-branch-policies")) return json(policy.policies);
         throw new Error(`unexpected ${name}`);
       };
-      await assert.rejects(() => publishProtectedCandidate({ directory, version, sourceSha, token: "secret-sentinel", fetchImpl }), /provider protection|reviewed|administrator|immutable|protected|environment/);
+      await assert.rejects(() => publishProtectedCandidate({ directory, version, sourceSha, token: "secret-sentinel", fetchImpl }), /provider protection|reviewed|administrator|immutable|protected|environment|bypass/);
       assert.equal(events.some((event) => event.method !== "GET"), false, name);
     }
   });
@@ -477,6 +479,39 @@ test("CLI30 aborts stalled private-ID and canonical-public fetches and bodies, c
       await new Promise((resolve) => setImmediate(resolve));
       assert.equal(kind === "fetch" ? aborted : cancelled, true, `${route} ${kind}`);
       if (route === "private") assert.equal(events.some((event) => event.method === "PATCH"), false, `${route} ${kind}`); else assert.equal(events.some((event) => ["POST", "PATCH", "DELETE"].includes(event.method)), false, `${route} ${kind}`);
+    }
+  });
+});
+
+test("CLI30 treats nonempty private and public 3xx bodies as disposable redirect metadata", async () => {
+  await withCandidate(async (_root, directory) => {
+    const verified = await verifyCandidateDirectory(directory, version, sourceSha), tag = verified.manifest.candidateTag;
+    const makeAssets = () => [...verified.held.entries()].map(([name, bytes], index) => ({ id: index + 1, name, bytes, browser_download_url: `https://github.com/service-lasso/service-lasso-cli/releases/download/${tag}/${encodeURIComponent(name)}` }));
+    for (const route of ["private", "public"]) for (const [name, location, malformed] of [["allowed", "https://objects.githubusercontent.com/candidate/1", false], ["missing location", null, false], ["rejected host", "https://attacker.invalid/candidate/1", false], ["malformed redirect", "https://objects.githubusercontent.com/candidate/1", true]]) for (const cancelMode of name === "allowed" ? ["settled", "stall", "throws"] : ["settled"]) {
+      const assets = makeAssets(), policy = providerPolicy(), events = [], redirected = { cancelled: false }; let draft = true;
+      const redirect = () => malformed ? { status: "302", headers: new Headers({ location }), body: null } : { status: 302, headers: new Headers(location ? { location } : {}), body: { getReader() { return { async read() { return { done: false, value: Buffer.from("untrusted redirect body") }; }, cancel() { redirected.cancelled = true; if (cancelMode === "stall") return new Promise(() => {}); if (cancelMode === "throws") throw new Error("dispose failure"); }, releaseLock() {} }; } } };
+      const fetchImpl = async (url, init) => {
+        const parsed = new URL(url), path = parsed.pathname; events.push({ url: parsed.href, method: init.method, authorization: init.headers?.authorization });
+        if (path.endsWith("/immutable-releases")) return json(policy.immutable); if (path.endsWith("/branches/develop")) return json(policy.branch); if (path.endsWith("/branches/develop/protection")) return json(policy.protection); if (path.endsWith("/environments/development-candidate")) return json(policy.environment); if (path.endsWith("/deployment-branch-policies")) return json(policy.policies);
+        if (route === "public" && path.includes("/releases/tags/")) return json({ id: 9, immutable: true, tag_name: tag, draft: false, prerelease: true, target_commitish: sourceSha, assets });
+        if (route === "public" && path.includes("/git/ref/tags/")) return json({ object: { type: "tag", sha: "a".repeat(40) } });
+        if (route === "public" && path.endsWith(`/git/tags/${"a".repeat(40)}`)) return json({ object: { type: "commit", sha: sourceSha } });
+        if (route === "private" && (path.includes("/releases/tags/") || path.includes("/git/ref/tags/"))) return json({}, 404);
+        if (route === "private" && path.endsWith("/git/tags")) return json({ sha: "a".repeat(40) }, 201); if (route === "private" && path.endsWith("/git/refs")) return json({}, 201); if (route === "private" && path.endsWith("/releases") && init.method === "POST") return json(emptyPrivateRelease(77, tag), 201);
+        if (route === "private" && parsed.hostname === "uploads.github.com") return json({}, 201);
+        if (route === "private" && path.endsWith("/releases/77") && init.method === "GET") return json({ id: 77, tag_name: tag, draft, prerelease: true, target_commitish: sourceSha, assets });
+        if (route === "private" && path.endsWith("/releases/77") && init.method === "PATCH") { draft = false; return json({ id: 77, immutable: true, tag_name: tag, draft, prerelease: true, target_commitish: sourceSha, assets }); }
+        const privateAsset = /\/releases\/assets\/(\d+)$/.exec(path), publicAsset = assets.find((asset) => asset.browser_download_url === parsed.href), asset = privateAsset ? assets[Number(privateAsset[1]) - 1] : publicAsset;
+        if (asset && (privateAsset || publicAsset)) return asset.id === 1 ? redirect() : responseBytes(asset.bytes);
+        if (parsed.hostname === "objects.githubusercontent.com") return responseBytes(assets[0].bytes);
+        throw new Error(`unexpected ${route} ${path}`);
+      };
+      const outcome = publishProtectedCandidate({ directory, version, sourceSha, token: "secret-sentinel", fetchImpl });
+      if (name === "allowed") { const result = await Promise.race([outcome, new Promise((_, reject) => setTimeout(() => reject(new Error("redirect disposal exceeded its test bound")), 1000))]); assert.equal(result.result, route === "private" ? "published" : "readback-only"); assert.equal(events.find((event) => event.url.includes("objects.githubusercontent.com")).authorization, undefined); }
+      else await assert.rejects(() => outcome, /redirect|response|request failed/);
+      if (!malformed) assert.equal(redirected.cancelled, true, `${route} ${name} ${cancelMode}`);
+      if (route === "private") assert.equal(events.some((event) => event.method === "PATCH"), name === "allowed", `${route} ${name} ${cancelMode}`);
+      else assert.equal(events.some((event) => ["POST", "PATCH", "DELETE"].includes(event.method)), false, `${route} ${name} ${cancelMode}`);
     }
   });
 });
