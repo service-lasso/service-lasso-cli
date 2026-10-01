@@ -55,6 +55,16 @@ jobs:
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
           go-version: "1.22.x"
+      - name: Establish isolated native qualification custody before dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          qualification_root="$RUNNER_TEMP/service-lasso-native-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_JOB}-${RUNNER_OS}"
+          echo "SERVICE_LASSO_WORKSPACE_ROOT=$qualification_root/workspace" >> "$GITHUB_ENV"
+          echo "SERVICE_LASSO_INSTANCE_REGISTRY_PATH=$qualification_root/instance/registry.json" >> "$GITHUB_ENV"
+          echo "SERVICE_LASSO_HOST_PORT_REGISTRY_PATH=$qualification_root/host-port/registry.json" >> "$GITHUB_ENV"
+          echo "SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS=$GITHUB_WORKSPACE/native-qualification-receipts" >> "$GITHUB_ENV"
+          SERVICE_LASSO_WORKSPACE_ROOT="$qualification_root/workspace" SERVICE_LASSO_INSTANCE_REGISTRY_PATH="$qualification_root/instance/registry.json" SERVICE_LASSO_HOST_PORT_REGISTRY_PATH="$qualification_root/host-port/registry.json" node scripts/prepare-native-qualification-receipt.mjs --receipt-directory "$GITHUB_WORKSPACE/native-qualification-receipts"
       - run: npm ci
       - run: npm run typecheck
       - name: Build host-native executable and provenance
@@ -82,6 +92,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            probe="$(mktemp "$RUNNER_TEMP/service-lasso-sf-immutable.XXXXXX")"
+            trap 'sudo -n /usr/bin/chflags noschg "$probe" 2>/dev/null || true; rm -f "$probe"' EXIT
+            sudo -n /usr/bin/chflags schg "$probe"
+            test "$(/usr/bin/stat -f %Sf "$probe")" = "schg"
+            sudo -n /usr/bin/chflags noschg "$probe"
+            rm -f "$probe"
+            trap - EXIT
+          fi
           node --test --test-name-pattern "controlled source admission" tests/native-distribution.test.js
       - name: Verify Darwin process-exit admission rejection
         if: runner.os == 'macOS'
@@ -102,10 +121,24 @@ jobs:
         env:
           EXPECTED_PLATFORM: ${{ matrix.expected_platform }}
           EXPECTED_ARCHITECTURE: ${{ matrix.expected_architecture }}
+      - name: Close native qualification receipt from the accepted executable
+        shell: bash
+        run: |
+          set -euo pipefail
+          executable="native-assets/service-lassoctl"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
+          node scripts/close-native-qualification-receipt.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --executable "$executable" --exit 0
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: service-lassoctl-sea-${{ matrix.expected_platform }}-${{ matrix.expected_architecture }}-${{ steps.revision.outputs.source_sha }}
           path: native-assets/
+          if-no-files-found: error
+          retention-days: 90
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-qualification-receipts-${{ matrix.expected_platform }}-${{ matrix.expected_architecture }}-${{ github.sha }}
+          path: native-qualification-receipts/
           if-no-files-found: error
           retention-days: 90
 

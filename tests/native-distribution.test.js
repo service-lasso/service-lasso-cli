@@ -92,15 +92,11 @@ test("controlled source admission exercises the native primary to SEA to gate to
     const executable = join(output, process.platform === "win32" ? "service-lassoctl.exe" : "service-lassoctl");
     const { SERVICE_LASSO_PRIMARY_GATE, SERVICE_LASSO_PRIMARY_GATE_PIPE, SERVICE_LASSO_PRIMARY_GATE_FD, SERVICE_LASSO_PRIMARY_GATE_CAPABILITY, ...inherited } = process.env;
     const result = await runNative(executable, ["service", "init", "controlled-primary", "--template-root", templateRoot, "--directory", destination, "--json"], { ...inherited, PATH: hostileDirectory, SERVICE_LASSO_PRIMARY_GATE: "hostile", SERVICE_LASSO_PRIMARY_GATE_PIPE: "\\\\.\\pipe\\service-lasso-primary-0000000000000000000000000000000000000000000000000000000000000000", SERVICE_LASSO_PRIMARY_GATE_FD: "7", SERVICE_LASSO_PRIMARY_GATE_CAPABILITY: Buffer.alloc(32).toString("base64") });
-    if (process.platform === "darwin") {
-      // macOS activation requires the non-interactive system immutable flag.
-      // Hosted runners without that privilege must reject the route before any
-      // writer can run; this remains distinct from the Linux/Windows proof.
-      assert.equal(result.code, 1);
-      assert.match(result.stderr, /The native primary gate could not start\./);
-      await assert.rejects(readFile(join(destination, "service.json")));
-      return;
-    }
+    // This is deliberately a positive native-host proof on every supported
+    // target. Darwin's primary only reaches this point after its private
+    // images and held parent have read back SF_IMMUTABLE and rejected the
+    // pre-open writer. A host that cannot supply that privilege fails this
+    // test; it must not turn the expected failure into a passing receipt.
     assert.equal(result.code, 0, result.stderr);
     assert.match(result.stdout, /"dryRun": false/);
     assert.equal(await readFile(join(destination, "service.json"), "utf8"), '{"id":"controlled-primary"}\n');
