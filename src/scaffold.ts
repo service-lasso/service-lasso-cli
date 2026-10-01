@@ -79,7 +79,11 @@ async function primaryMaterialize(input: string): Promise<{ stdout: string; stde
     const close = () => { socket.destroy(); done(undefined); };
     socket.setEncoding("utf8");
     socket.once("error", close);
-    socket.once("connect", () => socket.write(request));
+    // An inherited Unix socketpair endpoint is already connected. Waiting for
+    // a future connect event would leave the one-shot capability idle; named
+    // pipes still use their ordinary asynchronous connection event.
+    if (/^[3-9][0-9]*$/.test(process.env.SERVICE_LASSO_PRIMARY_GATE_FD ?? "")) queueMicrotask(() => socket.write(request));
+    else socket.once("connect", () => socket.write(request));
     socket.on("data", (chunk: string) => {
       response += chunk;
       const end = response.indexOf("\n");
