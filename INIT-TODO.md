@@ -20,7 +20,9 @@
   shipped in each native archive. POSIX uses held directory descriptors with
   `openat`/`mkdirat`; Windows uses `NtCreateFile` relative to held handles with
   `OBJ_DONT_REPARSE` and `FILE_OPEN_REPARSE_POINT`. It never treats pathname
-  checks as race protection. Direct template/Core and three-host acceptance
+  checks as race protection. A POSIX write failure retains its named partial
+  leaf rather than attempting a race-prone unlink; Windows deletes only via
+  held owned handles. Direct template/Core and three-host acceptance
   remain blocked on an owner-published accepted template tuple.
 - [x] Define Issue #16 `CLI-REAL-CORE-ACCEPTANCE`: run the source-built compiled
   CLI against pinned Core `develop` `d9e2ae799244317940c862fe1261dfd22b7bdda1`
