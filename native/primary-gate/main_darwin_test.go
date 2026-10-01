@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"testing"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 func TestDarwinLifecycleRejectsAdmissionAfterObservedChildExit(t *testing.T) {
@@ -18,7 +20,7 @@ func TestDarwinLifecycleRejectsAdmissionAfterObservedChildExit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer close(lifecycle.kqueue)
+	defer unix.Close(lifecycle.kqueue)
 	if err = child.Wait(); err != nil {
 		t.Fatal(err)
 	}

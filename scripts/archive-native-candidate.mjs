@@ -25,6 +25,10 @@ const executableBytes = await readFile(join(directory, executable));
 if (sha256(executableBytes) !== provenance.executable.sha256) throw new Error("Native executable does not match its provenance digest.");
 const confinedWriterBytes = await readFile(join(directory, confinedWriter));
 if (sha256(confinedWriterBytes) !== provenance.confinedWriter.sha256) throw new Error("Confined writer does not match its provenance digest.");
+if (target === "darwin-arm64") {
+  const helper = provenance.darwinImmutableHelper;
+  if (!helper || helper.name !== "service-lasso-darwin-immutable-helper" || helper.platform !== "darwin" || helper.architecture !== "arm64" || !/^[0-9a-f]{64}$/i.test(helper.sha256) || !/^[0-9a-f]{64}$/i.test(helper.sourceSha256) || sha256(await readFile(join(directory, helper.name))) !== helper.sha256) throw new Error("Darwin privileged helper does not retain its source-built identity.");
+}
 let contextBytes, acceptanceBytes;
 try { contextBytes = await readFile(join(directory, "ci-context.json")); } catch { throw new Error("Native archive requires ci-context.json from the target-host verification step."); }
 try { acceptanceBytes = await readFile(join(directory, "host-acceptance.json")); } catch { throw new Error("Native archive requires host-acceptance.json from the target-host verification step."); }

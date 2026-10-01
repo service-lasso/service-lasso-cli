@@ -54,6 +54,12 @@ assert.equal(provenance.candidate.version, expectedVersion);
 assert.equal(provenance.executable.version, expectedVersion);
 assert.equal(provenance.confinedWriter.platform, process.platform);
 assert.equal(provenance.confinedWriter.architecture, process.arch);
+if (process.platform === "darwin") {
+  assert.deepEqual(provenance.darwinImmutableHelper?.platform, "darwin");
+  assert.equal(provenance.darwinImmutableHelper?.architecture, "arm64");
+  const helper = join(directory, provenance.darwinImmutableHelper.name);
+  assert.equal(createHash("sha256").update(await readFile(helper)).digest("hex"), provenance.darwinImmutableHelper.sha256, "Darwin privileged helper must retain its accepted digest");
+}
 const confinedWriter = join(directory, provenance.confinedWriter.name);
 assert.equal(createHash("sha256").update(await readFile(confinedWriter)).digest("hex"), provenance.confinedWriter.sha256, "confined writer must retain its accepted digest");
 

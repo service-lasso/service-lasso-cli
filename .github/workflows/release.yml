@@ -105,22 +105,36 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ needs.identity.outputs.source_sha }}"
           npm run package:native -- --output native-assets --source-sha "${{ needs.identity.outputs.source_sha }}" --version "${{ needs.identity.outputs.candidate_version }}"
           node scripts/write-native-ci-context.mjs --directory native-assets --event-name workflow_dispatch --source-sha "${{ needs.identity.outputs.source_sha }}" --tested-base-sha "" --merge-context-sha "${{ needs.identity.outputs.source_sha }}"
-          npm run smoke:native -- --directory native-assets --expected-source-sha "${{ needs.identity.outputs.source_sha }}" --expected-version "${{ needs.identity.outputs.candidate_version }}" --write-host-acceptance
           node scripts/verify-native-ci-provenance.mjs --directory native-assets --expected-source-sha "${{ needs.identity.outputs.source_sha }}" --expected-event workflow_dispatch --expected-base-sha "" --expected-merge-context-sha "${{ needs.identity.outputs.source_sha }}" --expected-platform "${{ runner.os == 'Windows' && 'win32' || runner.os == 'Linux' && 'linux' || 'darwin' }}" --expected-architecture "${{ matrix.target == 'darwin-arm64' && 'arm64' || 'x64' }}"
+      - name: Provision the bounded Darwin descriptor helper
+        if: matrix.target == 'darwin-arm64'
+        shell: bash
+        run: |
+          set -euo pipefail
+          helper_root="$RUNNER_TEMP/service-lasso-privileged-helper-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_JOB}"
+          sudo -n /usr/bin/install -d -o root -g wheel -m 0755 "$helper_root"
+          sudo -n /usr/bin/install -o root -g wheel -m 0555 native-assets/service-lasso-darwin-immutable-helper "$helper_root/service-lasso-darwin-immutable-helper"
+          echo "SERVICE_LASSO_DARWIN_PRIVILEGED_HELPER=$helper_root/service-lasso-darwin-immutable-helper" >> "$GITHUB_ENV"
+      - name: Record actual native smoke close result
+        shell: bash
+        run: |
+          set -euo pipefail
+          executable="native-assets/service-lassoctl"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
+          node scripts/run-native-qualification-phase.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --phase smoke --executable "$executable" -- npm run smoke:native -- --directory native-assets --expected-source-sha "${{ needs.identity.outputs.source_sha }}" --expected-version "${{ needs.identity.outputs.candidate_version }}" --write-host-acceptance
       - name: Require actual Darwin primary-route materialization under system immutability
         if: matrix.target == 'darwin-arm64'
         shell: bash
         run: |
           set -euo pipefail
-          probe="$(mktemp "$RUNNER_TEMP/service-lasso-sf-immutable.XXXXXX")"
-          trap 'sudo -n /usr/bin/chflags noschg "$probe" 2>/dev/null || true; rm -f "$probe"' EXIT
-          sudo -n /usr/bin/chflags schg "$probe"
-          test "$(/usr/bin/stat -f %Sf "$probe")" = "schg"
-          sudo -n /usr/bin/chflags noschg "$probe"
-          rm -f "$probe"
-          trap - EXIT
-          node --test --test-name-pattern "controlled source admission" tests/native-distribution.test.js
           (cd native/primary-gate && go test ./...)
+      - name: Record actual controlled primary route close result
+        shell: bash
+        run: |
+          set -euo pipefail
+          executable="native-assets/service-lassoctl"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
+          node scripts/run-native-qualification-phase.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --phase route --executable "$executable" -- node --test --test-name-pattern "controlled source admission" tests/native-distribution.test.js
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         if: matrix.target == 'linux-x64'
         with:
@@ -142,7 +156,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p native-release
-          npm run archive:native -- --directory native-assets --output native-release --version "${{ needs.identity.outputs.candidate_version }}" --source-sha "${{ needs.identity.outputs.source_sha }}"
+          executable="native-assets/service-lassoctl"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
+          archive="native-release/service-lassoctl-${{ needs.identity.outputs.candidate_version }}-${{ runner.os == 'Windows' && 'win32' || runner.os == 'Linux' && 'linux' || 'darwin' }}-${{ matrix.target == 'darwin-arm64' && 'arm64' || 'x64' }}.tar.gz"
+          node scripts/run-native-qualification-phase.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --phase archive --executable "$executable" --artifact "$archive" -- npm run archive:native -- --directory native-assets --output native-release --version "${{ needs.identity.outputs.candidate_version }}" --source-sha "${{ needs.identity.outputs.source_sha }}"
           cp native-assets/provenance.json native-release/provenance.json
       - name: Close native qualification receipt from the accepted executable
         shell: bash
@@ -150,7 +167,7 @@ jobs:
           set -euo pipefail
           executable="native-assets/service-lassoctl"
           if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
-          node scripts/close-native-qualification-receipt.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --executable "$executable" --exit 0
+          node scripts/close-native-qualification-receipt.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --executable "$executable"
           cp "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS"/*.json native-release/
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

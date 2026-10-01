@@ -48,6 +48,15 @@ test("native SEA packager records a direct host executable and smoke runs withou
     assert.equal(acceptance.version, version);
     assert.equal(acceptance.sourceSha, sourceSha);
     assert.equal(acceptance.nodeAbsentFromPath, true);
+    if (process.platform === "darwin") {
+      const provisioned = process.env.SERVICE_LASSO_DARWIN_PRIVILEGED_HELPER;
+      assert.ok(provisioned, "Darwin qualification requires the provisioned descriptor helper");
+      assert.equal(provenance.darwinImmutableHelper?.name, "service-lasso-darwin-immutable-helper");
+      // The same job identity attempts replacement after the primary has
+      // checked the helper's root-owned parent and embedded binary digest.
+      // The provisioned boundary must reject this before any privileged use.
+      await assert.rejects(writeFile(provisioned, "replacement"));
+    }
     // The published primary contains its SEA and writer. Mutable archive
     // neighbours are evidence only; replacing either must not change normal
     // primary execution.

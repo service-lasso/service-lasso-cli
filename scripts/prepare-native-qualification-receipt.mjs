@@ -30,7 +30,7 @@ const rawHead = git("show", "--format=raw", "--no-patch", "HEAD");
 const tree = git("ls-tree", "-r", "-t", "HEAD");
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const receipt = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   runId: randomUUID(),
   sourceHead: head,
   rawHeadSha256: hash(rawHead),
@@ -44,7 +44,9 @@ const receipt = {
   // prevents a source-tree digest from being misrepresented as a native hash.
   nativeExecutableSha256: null,
   ownedBirth: true,
-  actualCloseExit: null,
+  // A close is only derived from durable raw child-close records. No workflow
+  // argument may claim a passing close on behalf of an unobserved child.
+  actualClose: null,
 };
 await writeFile(join(receiptDirectory, "initial.json"), `${JSON.stringify(receipt, null, 2)}\n`, { flag: "wx" });
 process.stdout.write(`${JSON.stringify({ sourceHead: head, receipt: join(receiptDirectory, "initial.json") })}\n`);

@@ -4,25 +4,61 @@ package main
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 
 	"golang.org/x/sys/unix"
 )
 
-// Darwin does not offer Linux's sealed memfd execution. A read descriptor or
-// unlink is insufficient because another same-identity process can retain a
-// writable descriptor. The system immutable flag is required; unavailable
-// non-interactive privilege is a closed launch failure, never a downgrade.
-func immutable(fd int, path string) error {
-	command := exec.Command("/usr/bin/sudo", "-n", "/usr/bin/chflags", "schg", path)
-	if err := command.Run(); err != nil {
-		return err
+// Darwin does not offer Linux's sealed memfd execution. The provisioned helper
+// accepts a held descriptor and its device/inode identity only; it never opens
+// a caller path or exposes generic chflags authority. Its own bytes and parent
+// must already be root-owned and non-writable by this job before sudo exec.
+func darwinHelper() (string, error) {
+	path := os.Getenv("SERVICE_LASSO_DARWIN_PRIVILEGED_HELPER")
+	if path == "" || !filepath.IsAbs(path) || filepath.Clean(path) != path {
+		return "", fmt.Errorf("Darwin privileged helper is not provisioned")
 	}
+	var file, parent unix.Stat_t
+	if err := unix.Lstat(path, &file); err != nil || file.Mode&unix.S_IFMT != unix.S_IFREG || file.Uid != 0 || file.Mode&0022 != 0 {
+		return "", fmt.Errorf("Darwin privileged helper is not protected")
+	}
+	if err := unix.Lstat(filepath.Dir(path), &parent); err != nil || parent.Mode&unix.S_IFMT != unix.S_IFDIR || parent.Uid != 0 || parent.Mode&0022 != 0 {
+		return "", fmt.Errorf("Darwin privileged helper parent is not protected")
+	}
+	bytes, err := os.ReadFile(path)
+	digest := sha256.Sum256(bytes)
+	if err != nil || !strings.EqualFold(strings.TrimSpace(darwinHelperSHA256), hex.EncodeToString(digest[:])) {
+		return "", fmt.Errorf("Darwin privileged helper binary does not match the embedded source-built digest")
+	}
+	return path, nil
+}
+
+func setImmutable(fd int, mode string) error {
+	helper, err := darwinHelper()
+	if err != nil { return err }
+	var stat unix.Stat_t
+	if err = unix.Fstat(fd, &stat); err != nil || stat.Uid != uint32(os.Getuid()) { return fmt.Errorf("Darwin image is not job-owned") }
+	// sudo -C 4 preserves only the explicit descriptor passed as fd 3. A host
+	// without this provisioned, non-interactive boundary fails closed.
+	command := exec.Command("/usr/bin/sudo", "-n", "-C", "4", "--", helper, "--fd", "3", "--device", strconv.FormatUint(uint64(stat.Dev), 10), "--inode", strconv.FormatUint(stat.Ino, 10), "--mode", mode)
+	command.ExtraFiles = []*os.File{os.NewFile(uintptr(fd), "service-lasso-owned-image")}
+	if err = command.Run(); err != nil { return err }
+	if err = unix.Fstat(fd, &stat); err != nil { return err }
+	if mode == "set" && stat.Flags&unix.SF_IMMUTABLE == 0 { return fmt.Errorf("system immutable readback failed") }
+	if mode == "clear" && stat.Flags&unix.SF_IMMUTABLE != 0 { return fmt.Errorf("system immutable clear readback failed") }
+	return nil
+}
+
+func immutable(fd int) error {
+	if err := setImmutable(fd, "set"); err != nil { return err }
 	var stat unix.Stat_t
 	if err := unix.Fstat(fd, &stat); err != nil || stat.Flags&unix.SF_IMMUTABLE == 0 {
 		return fmt.Errorf("system immutable readback failed")
@@ -30,8 +66,8 @@ func immutable(fd int, path string) error {
 	return nil
 }
 
-func releaseImmutable(path string) error {
-	return exec.Command("/usr/bin/sudo", "-n", "/usr/bin/chflags", "noschg", path).Run()
+func releaseImmutable(fd int) error {
+	return setImmutable(fd, "clear")
 }
 
 func writeImage(path string, value []byte) (int, int, error) {
@@ -59,8 +95,8 @@ func writeImage(path string, value []byte) (int, int, error) {
 	return writer, reader, nil
 }
 
-func verifyImmutableImage(writer, reader int, path string, expected []byte) error {
-	if err := immutable(reader, path); err != nil {
+func verifyImmutableImage(writer, reader int, expected []byte) error {
+	if err := immutable(reader); err != nil {
 		return err
 	}
 	// A later writable open is insufficient proof: the pre-open writer must
@@ -123,14 +159,14 @@ func main() {
 	// Freeze both images and their parent before publishing the held directory
 	// descriptor to the child. The request endpoint is the separate inherited
 	// socketpair and never appears in this mutable filesystem namespace.
-	if verifyImmutableImage(seaWriter, seaReader, seaPath, seaBytes) != nil || verifyImmutableImage(helperWriter, helperReader, helperPath, confinedWriterBytes) != nil || immutable(directoryFD, directory) != nil {
+	if verifyImmutableImage(seaWriter, seaReader, seaBytes) != nil || verifyImmutableImage(helperWriter, helperReader, confinedWriterBytes) != nil || immutable(directoryFD) != nil {
 		fail()
 	}
 	defer unix.Close(directoryFD)
 	defer func() {
 		// A failed release retains the protected object for recovery instead of
 		// recursively deleting a target whose ownership cannot be proved.
-		if releaseImmutable(seaPath) == nil && releaseImmutable(helperPath) == nil && releaseImmutable(directory) == nil {
+		if releaseImmutable(seaReader) == nil && releaseImmutable(helperReader) == nil && releaseImmutable(directoryFD) == nil {
 			_ = os.RemoveAll(directory)
 		}
 	}()

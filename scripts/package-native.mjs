@@ -55,6 +55,14 @@ async function confinedWriterSourceSha256() {
   return sha256(Buffer.concat(contents));
 }
 
+async function darwinHelperSourceSha256() {
+  const directory = join(root, "native", "darwin-immutable-helper");
+  const names = (await readdir(directory)).filter((name) => name.endsWith(".go") || name === "go.mod" || name === "go.sum").sort();
+  const contents = [];
+  for (const name of names) contents.push(Buffer.from(`${name}\0`, "utf8"), await readFile(join(directory, name)), Buffer.from("\0", "utf8"));
+  return sha256(Buffer.concat(contents));
+}
+
 if (process.versions.node !== nodeVersion) throw new Error(`Node ${nodeVersion} is required; found ${process.versions.node}.`);
 
 const output = resolve(argument("--output"));
@@ -71,6 +79,8 @@ const bundle = join(output, "service-lassoctl.cjs");
 const blob = join(output, "service-lassoctl.blob");
 const executable = join(output, executableName);
 const confinedWriter = join(output, confinedWriterName);
+const darwinHelperName = "service-lasso-darwin-immutable-helper";
+const darwinHelper = join(output, darwinHelperName);
 const embeddedSea = join(output, embeddedSeaName);
 const seaConfig = join(output, "sea-config.json");
 
@@ -78,6 +88,11 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 command("go", ["build", "-trimpath", "-o", confinedWriter, "."], join(root, "native", "confined-scaffold"));
 const confinedWriterSha256 = sha256(await readFile(confinedWriter));
+let darwinHelperSha256 = null;
+if (process.platform === "darwin") {
+  command("go", ["build", "-trimpath", "-o", darwinHelper, "."], join(root, "native", "darwin-immutable-helper"));
+  darwinHelperSha256 = sha256(await readFile(darwinHelper));
+}
 // This fixed tuple is solely an executable integration fixture. It is never
 // present in a normal candidate and cannot be supplied by a caller at runtime.
 const controlledPayload = { "service.json": '{"id":"controlled-primary"}\n', "config/example.env": "PORT=8080\n" };
@@ -142,6 +157,12 @@ await Promise.all([
   copyFile(embeddedSea, join(gateBuild, "assets", "service-lassoctl.sea")),
   copyFile(confinedWriter, join(gateBuild, "assets", "service-lasso-confined-scaffold")),
 ]);
+if (process.platform === "darwin") {
+  await Promise.all([
+    copyFile(join(gateSource, "main_darwin_helper.go"), join(gateBuild, "main_darwin_helper.go")),
+    writeFile(join(gateBuild, "assets", "service-lasso-darwin-immutable-helper.sha256"), `${darwinHelperSha256}\n`),
+  ]);
+}
 command("go", ["build", "-trimpath", "-o", executable, "."], gateBuild);
 await rm(gateBuild, { recursive: true, force: true });
 await rm(embeddedSea, { force: true });
@@ -153,6 +174,7 @@ const provenance = {
   source: { commit: sourceSha },
   executable: { name: executableName, sha256: sha256(await readFile(executable)), platform: process.platform, architecture: process.arch, version },
   confinedWriter: { name: confinedWriterName, sha256: confinedWriterSha256, sourceSha256: await confinedWriterSourceSha256(), platform: process.platform, architecture: process.arch },
+  ...(process.platform === "darwin" ? { darwinImmutableHelper: { name: darwinHelperName, sha256: darwinHelperSha256, sourceSha256: await darwinHelperSourceSha256(), platform: process.platform, architecture: process.arch } } : {}),
   tools: { node: nodeVersion, esbuild: esbuildVersion, postject: postjectVersion },
   sea: { mainFormat: "commonjs", useCodeCache: false, execArgvExtension: "none" },
 };
