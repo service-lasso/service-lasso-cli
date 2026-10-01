@@ -78,7 +78,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/verify-native-ci-provenance.mjs --directory native-assets --expected-source-sha "${{ steps.revision.outputs.source_sha }}" --expected-event "${{ github.event_name }}" --expected-base-sha "${{ steps.revision.outputs.tested_base_sha }}" --expected-platform "${{ matrix.expected_platform }}" --expected-architecture "${{ matrix.expected_architecture }}"
+          node scripts/verify-native-ci-provenance.mjs --directory native-assets --expected-source-sha "${{ steps.revision.outputs.source_sha }}" --expected-event "${{ github.event_name }}" --expected-base-sha "${{ steps.revision.outputs.tested_base_sha }}" --expected-merge-context-sha "${{ github.sha }}" --expected-platform "${{ matrix.expected_platform }}" --expected-architecture "${{ matrix.expected_architecture }}"
       - name: Verify declared host target
         shell: bash
         run: |

@@ -93,7 +93,7 @@ before a complete create-to-running-service workflow can be implemented.
     checks for literal wildcard, punctuation, whitespace and quote prefixes and
     hosted bash/zsh shell checks establish only CLI completion behavior, not
     a release, native binary or full Issue #1 qualification.
-17. Issue #26 builds a bundled CommonJS Node 22.23.2 SEA main script with
+17. Issues #26 and #28 build a bundled CommonJS Node 22.23.2 SEA main script with
     pinned `esbuild` and `postject`, then binds every target-host executable to
     its source commit, SHA-256, operating system and architecture. The native
     fixture journey runs preview, changed-context rejection, one confirmed
@@ -112,6 +112,16 @@ before a complete create-to-running-service workflow can be implemented.
     requirement is not evidence that settings are protected, a workflow ran,
     any bytes are public, Core can consume the assets, a release occurred, or
     GA is qualified.
+19. Native CI provenance accepts only two event contracts. The verifier receives
+    the full expected merge-context SHA from `github.sha` and requires the
+    recorded value to equal it. A `pull_request` requires a full tested-base SHA;
+    its source head, base and actual merge context are all distinct full SHAs. A
+    `push` requires an explicitly empty expected-base argument and a recorded
+    `testedBaseSha` that is null or absent; its expected and recorded merge
+    context must equal the source SHA. Both contracts require full source and
+    event identity plus executable digest, platform and architecture checks.
+    Malformed, missing or contradictory event, base, source, merge-context,
+    digest or host data fails verification.
 
 ## Framework decision traceability
 

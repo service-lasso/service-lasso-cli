@@ -21,9 +21,9 @@ for (const asset of expected) {
 }
 const assets = [];
 for (const item of expected) { const path = join(output, item.name); const bytes = await readFile(path); assets.push({ ...item, sha256: sha256(bytes), size: (await stat(path)).size }); }
-const manifest = { schemaVersion: 1, version, candidateTag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}`, source: { repository: "service-lasso/service-lasso-cli", commit: sourceSha }, assets };
+const manifest = { schemaVersion: 1, version, candidateTag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}`, source: { repository: "service-lasso/service-lasso-cli", commit: sourceSha }, checksums: { algorithm: "sha256", file: "SHA256SUMS.txt", entries: ["development-candidate.json", ...assets.map((asset) => asset.name)].sort() }, assets };
 const manifestBytes = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
 await writeFile(join(output, "development-candidate.json"), manifestBytes);
-await writeFile(join(output, "SHA256SUMS.txt"), [...assets, { name: "development-candidate.json", sha256: sha256(manifestBytes) }].map((asset) => `${asset.sha256}  ${asset.name}\n`).join(""));
+await writeFile(join(output, "SHA256SUMS.txt"), [{ name: "development-candidate.json", sha256: sha256(manifestBytes) }, ...assets].sort((a, b) => a.name.localeCompare(b.name)).map((asset) => `${asset.sha256}  ${asset.name}\n`).join(""));
 await verifyCandidateDirectory(output, version, sourceSha);
 process.stdout.write(`${JSON.stringify({ candidateTag: manifest.candidateTag, sourceSha, assets: assets.map((asset) => asset.name) })}\n`);
