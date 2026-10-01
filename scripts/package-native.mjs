@@ -106,6 +106,7 @@ await Promise.all([
   copyFile(join(gateSource, "ipc.go"), join(gateBuild, "ipc.go")),
   copyFile(join(gateSource, "main_windows.go"), join(gateBuild, "main_windows.go")),
   copyFile(join(gateSource, "main_unix.go"), join(gateBuild, "main_unix.go")),
+  copyFile(join(gateSource, "main_linux.go"), join(gateBuild, "main_linux.go")),
   copyFile(embeddedSea, join(gateBuild, "assets", "service-lassoctl.sea")),
   copyFile(confinedWriter, join(gateBuild, "assets", "service-lasso-confined-scaffold")),
 ]);

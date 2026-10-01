@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"os/exec"
 )
 
@@ -20,6 +21,8 @@ type response struct {
 	Stdout  string `json:"stdout"`
 	Stderr  string `json:"stderr"`
 }
+
+var heldHelper *os.File
 
 func materialize(connection net.Conn, helper string) {
 	defer connection.Close()
@@ -36,6 +39,10 @@ func materialize(connection net.Conn, helper string) {
 		return
 	}
 	child := exec.Command(helper)
+	if heldHelper != nil {
+		child = exec.Command("/proc/self/fd/3")
+		child.ExtraFiles = []*os.File{heldHelper}
+	}
 	child.Stdin = bytesReader(input)
 	var stdout, stderr limitedBuffer
 	child.Stdout, child.Stderr = &stdout, &stderr
