@@ -49,7 +49,10 @@ func materialize(destination string, entries []entry) error {
 	if len(parts) == 0 {
 		return fmt.Errorf("root destination")
 	}
-	root, err := unix.Open("/", unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW, 0)
+	// "/" is the process-independent filesystem root, not an untrusted
+	// descendant. Darwin rejects O_NOFOLLOW on this already-rooted directory;
+	// every caller-controlled component below still opens through openDir.
+	root, err := unix.Open("/", unix.O_RDONLY|unix.O_DIRECTORY, 0)
 	if err != nil {
 		return err
 	}
@@ -77,6 +80,9 @@ func materialize(destination string, entries []entry) error {
 		parent = next
 	}
 	leaf := parts[len(parts)-1]
+	if err = testGate("before-project-create"); err != nil {
+		return err
+	}
 	if err = unix.Mkdirat(parent, leaf, 0700); err != nil {
 		return err
 	}
@@ -150,6 +156,10 @@ func materialize(destination string, entries []entry) error {
 		if e = unix.Fsync(fd); e != nil {
 			rollback()
 			return e
+		}
+		if err = testGate("after-file-write"); err != nil {
+			rollback()
+			return err
 		}
 	}
 	return nil

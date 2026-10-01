@@ -1,5 +1,5 @@
 import { build } from "esbuild";
-import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
@@ -31,6 +31,14 @@ function command(file, args, cwd = root) {
 
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
+}
+
+async function confinedWriterSourceSha256() {
+  const directory = join(root, "native", "confined-scaffold");
+  const names = (await readdir(directory)).filter((name) => name.endsWith(".go") || name === "go.mod" || name === "go.sum").sort();
+  const contents = [];
+  for (const name of names) contents.push(Buffer.from(`${name}\0`, "utf8"), await readFile(join(directory, name)), Buffer.from("\0", "utf8"));
+  return sha256(Buffer.concat(contents));
 }
 
 if (process.versions.node !== nodeVersion) throw new Error(`Node ${nodeVersion} is required; found ${process.versions.node}.`);
@@ -80,7 +88,7 @@ const provenance = {
   candidate: { version, tag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}` },
   source: { commit: sourceSha },
   executable: { name: executableName, sha256: sha256(await readFile(executable)), platform: process.platform, architecture: process.arch, version },
-  confinedWriter: { name: confinedWriterName, sha256: sha256(await readFile(confinedWriter)), sourceSha256: sha256(await readFile(join(root, "native", "confined-scaffold", "main.go"))), platform: process.platform, architecture: process.arch },
+  confinedWriter: { name: confinedWriterName, sha256: sha256(await readFile(confinedWriter)), sourceSha256: await confinedWriterSourceSha256(), platform: process.platform, architecture: process.arch },
   tools: { node: nodeVersion, esbuild: esbuildVersion, postject: postjectVersion },
   sea: { mainFormat: "commonjs", useCodeCache: false, execArgvExtension: "none" },
 };

@@ -83,7 +83,9 @@ func materializeNt(destination string, entries []entry) error {
 	if volume == "" || rest == "" {
 		return fmt.Errorf("invalid absolute destination")
 	}
-	root, err := nativeOpen(`\??\`+volume+`\`, 0, fileListDirectory|deleteAccess|synchronize, fileOpen, fileDirectoryFile|fileSynchronousIoNonalert)
+	// A volume designator is not a directory object.  Keep the trailing
+	// separator so this opens the volume root as the held directory handle.
+	root, err := nativeOpen(`\??\`+volume+`\`, 0, fileListDirectory|synchronize, fileOpen, fileDirectoryFile|fileSynchronousIoNonalert)
 	if err != nil {
 		return err
 	}
@@ -103,12 +105,15 @@ func materializeNt(destination string, entries []entry) error {
 	current := root
 	pieces := strings.FieldsFunc(rest, func(r rune) bool { return r == '\\' || r == '/' })
 	for _, piece := range pieces[:len(pieces)-1] {
-		child, e := nativeOpen(piece, current, fileListDirectory|deleteAccess|synchronize, fileOpen, fileDirectoryFile|fileSynchronousIoNonalert)
+		child, e := nativeOpen(piece, current, fileListDirectory|synchronize, fileOpen, fileDirectoryFile|fileSynchronousIoNonalert)
 		if e != nil {
 			return e
 		}
 		handles = append(handles, child)
 		current = child
+	}
+	if err = testGate("before-project-create"); err != nil {
+		return err
 	}
 	project, e := nativeOpen(pieces[len(pieces)-1], current, fileListDirectory|deleteAccess|synchronize, fileCreate, fileDirectoryFile|fileSynchronousIoNonalert)
 	if e != nil {
@@ -121,7 +126,7 @@ func materializeNt(destination string, entries []entry) error {
 		current = project
 		pieces = strings.Split(item.path, "/")
 		for _, piece := range pieces[:len(pieces)-1] {
-			child, e := nativeOpen(piece, current, fileListDirectory|deleteAccess|synchronize, fileOpen, fileDirectoryFile|fileSynchronousIoNonalert)
+			child, e := nativeOpen(piece, current, fileListDirectory|synchronize, fileOpen, fileDirectoryFile|fileSynchronousIoNonalert)
 			if e != nil {
 				child, e = nativeOpen(piece, current, fileListDirectory|deleteAccess|synchronize, fileCreate, fileDirectoryFile|fileSynchronousIoNonalert)
 				if e != nil {
@@ -151,6 +156,10 @@ func materializeNt(destination string, entries []entry) error {
 		if e = syscall.FlushFileBuffers(file); e != nil {
 			rollback()
 			return e
+		}
+		if err = testGate("after-file-write"); err != nil {
+			rollback()
+			return err
 		}
 	}
 	return nil
