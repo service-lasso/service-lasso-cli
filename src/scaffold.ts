@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
@@ -26,11 +26,14 @@ function candidateIdentity(): { version: string; sourceSha: string; helperSha256
   return /^\d+\.\d+\.\d+-dev\.[0-9a-f]{7}$/i.test(version ?? "") && /^[0-9a-f]{40}$/i.test(sourceSha ?? "") && /^[0-9a-f]{64}$/i.test(helperSha256 ?? "") ? { version: version!, sourceSha: sourceSha!, helperSha256: helperSha256! } : undefined;
 }
 function packagedHelper(): string | undefined {
-  // package-native bakes the complete helper digest into the SEA.  The mutable
-  // provenance sidecar remains archive evidence only; it is never an execution
-  // authority.  Read the installed helper once, verify those held bytes, then
-  // execute a private copy made from that buffer.  A replacement beside the SEA
-  // before or after this read therefore cannot change the launched bytes.
+  // A candidate SEA may inspect the adjacent helper only to reject a broken
+  // package. It must never turn verified bytes into a temporary pathname and
+  // ask Node to spawn that pathname: spawn re-resolves the name after the
+  // check. The compiled primary launch gate owns candidate materialization and
+  // retains the verified helper identity through process creation over its
+  // inherited private IPC channel. This source SEA deliberately fails closed
+  // until that gate protocol is present; source execution below remains a
+  // developer-only writer path and is never candidate evidence.
   const identity = candidateIdentity();
   if (!identity) return undefined;
   const directory = resolve(process.execPath, "..");
@@ -38,13 +41,7 @@ function packagedHelper(): string | undefined {
   try {
     const helperBytes = readFileSync(candidate);
     if (sha256(helperBytes) !== identity.helperSha256) return undefined;
-    const heldDirectory = mkdtempSync(join(tmpdir(), "service-lasso-confined-sea-"));
-    chmodSync(heldDirectory, 0o700);
-    const heldHelper = join(heldDirectory, helperName);
-    writeFileSync(heldHelper, helperBytes, { flag: "wx", mode: 0o700 });
-    chmodSync(heldHelper, 0o700);
-    if (sha256(readFileSync(heldHelper)) !== identity.helperSha256) return undefined;
-    return heldHelper;
+    return undefined;
   } catch { return undefined; }
 }
 function helperPath(): string {

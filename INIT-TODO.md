@@ -16,7 +16,7 @@
   `bdeb24b84f97e702372ccbcba0794ce30888ad53` is `1.0.0-dev` source-only, so
   default scaffold output and direct generated-project/Core validation stay
   blocked until the owning template release supplies that tuple.
-  Its materializer uses a target-host compiled, SEA-baked-checksummed confined writer
+  Its materializer uses a target-host compiled primary launch gate which embeds and verifies both the SEA and a confined writer, retains their execution identity through a private IPC materialization request, and never lets the SEA spawn a verified-then-re-resolved helper pathname. Linux uses descriptor execution; Windows stages with no write/delete sharing and a verified protected DACL held through `CreateProcess`; macOS remains unqualified until target-host native execution proof. The writer itself
   shipped in each native archive. POSIX uses held directory descriptors with
   `openat`/`mkdirat`, an owned temporary candidate, and an exclusive native
   rename into the absent destination; Windows uses `NtCreateFile` relative to held handles with
