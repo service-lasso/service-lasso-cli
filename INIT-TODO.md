@@ -27,10 +27,13 @@
   inherited non-routable capability, never a mutable Unix socket pathname;
   admission is serialized with the held child lifecycle identity and a commit
   guard rather than a
-  PID or an unsynchronised process-state snapshot. Darwin is fail-closed until
+  PID or an unsynchronised process-state snapshot. The mutual gate proof uses
+  a fresh inherited runtime capability, never a packaged private signing key.
+  Darwin is fail-closed until
   non-interactive privilege activates and reads back `SF_IMMUTABLE` on the leaf
   and held parent while denying a pre-open writer; Windows pipe requests are
-  admitted only from the live SEA PID. It never treats pathname checks as race
+  admitted only from the live SEA PID and capability proof, and starts its
+  writer from the held protected staged image rather than `PATH`. It never treats pathname checks as race
   protection. A POSIX write failure leaves the named destination
   absent; a temporary candidate that cannot be proved owned for deletion is
   retained as unknown state rather than being mistaken for a completed project.

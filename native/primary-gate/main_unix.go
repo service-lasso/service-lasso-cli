@@ -83,6 +83,7 @@ func verifyImmutableImage(writer, reader int, path string, expected []byte) erro
 }
 
 func main() {
+	if !newGateCapability() { fail() }
 	directory, err := os.MkdirTemp("", "service-lasso-primary-")
 	if err != nil {
 		fail()
@@ -135,21 +136,26 @@ func main() {
 	}()
 	// Resolve only from the held immutable directory descriptor. The SEA and
 	// writer leaf names cannot be substituted after the flag readback.
+	// ipc.go maps its sole ExtraFiles entry to fd 3 for the writer.  Preserve
+	// the held immutable directory, never a pathname or an unmapped fd 4.
 	heldHelper = os.NewFile(uintptr(directoryFD), "service-lasso-immutable-directory")
-	heldExecutionPath = "/dev/fd/4/service-lasso-confined-scaffold"
+	heldExecutionPath = "/dev/fd/3/service-lasso-confined-scaffold"
 	directoryFile := os.NewFile(uintptr(directoryFD), "service-lasso-immutable-directory")
+	defer directoryFile.Close()
 	child := exec.Command("/dev/fd/4/service-lassoctl.sea", os.Args[1:]...)
 	child.ExtraFiles = []*os.File{clientFile, directoryFile}
 	child.Stdin, child.Stdout, child.Stderr = os.Stdin, os.Stdout, os.Stderr
-	child.Env = append(os.Environ(), "SERVICE_LASSO_PRIMARY_GATE=darwin-v3", "SERVICE_LASSO_PRIMARY_GATE_FD=3")
+	child.Env = gateEnvironment(os.Environ(), "darwin-v4", "", 3)
 	if err := child.Start(); err != nil {
 		fail()
 	}
 	_ = clientFile.Close()
-	lifecycle := &darwinLifecycle{}
+	lifecycle, err := newDarwinLifecycle(child.Process.Pid)
+	if err != nil { fail() }
+	defer unix.Close(lifecycle.kqueue)
 	exit := make(chan error, 1)
 	go func() { err := child.Wait(); lifecycle.terminate(); exit <- err }()
-	go serveDarwin(server, "@held", lifecycle)
+	go serveDarwin(server, lifecycle)
 	if err := <-exit; err != nil {
 		if exit, ok := err.(*exec.ExitError); ok {
 			os.Exit(exit.ExitCode())
@@ -162,19 +168,37 @@ func fail() { fmt.Fprintln(os.Stderr, "The native primary gate could not start."
 
 type darwinLifecycle struct {
 	mu         sync.Mutex
+	kqueue     int
 	terminated bool
 }
 
+func newDarwinLifecycle(pid int) (*darwinLifecycle, error) {
+	queue, err := unix.Kqueue()
+	if err != nil { return nil, err }
+	change := unix.Kevent_t{Ident: uint64(pid), Filter: unix.EVFILT_PROC, Flags: unix.EV_ADD | unix.EV_ONESHOT, Fflags: unix.NOTE_EXIT}
+	if _, err = unix.Kevent(queue, []unix.Kevent_t{change}, nil, nil); err != nil { unix.Close(queue); return nil, err }
+	return &darwinLifecycle{kqueue: queue}, nil
+}
 func (l *darwinLifecycle) terminate() { l.mu.Lock(); l.terminated = true; l.mu.Unlock() }
-func (l *darwinLifecycle) admit(connection net.Conn, helper string) {
+func (l *darwinLifecycle) exited() bool {
+	events := make([]unix.Kevent_t, 1)
+	timeout := unix.Timespec{}
+	count, err := unix.Kevent(l.kqueue, nil, events, &timeout)
+	return err != nil || count != 0
+}
+func (l *darwinLifecycle) admit(connection net.Conn) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if l.terminated {
+	// kqueue is registered for this child process before the endpoint is
+	// offered. It observes the original process exit without consulting a
+	// reusable PID or an asynchronous boolean alone.
+	if l.terminated || l.exited() {
+		l.terminated = true
 		_ = connection.Close()
 		return
 	}
-	materialize(connection, helper)
+	materialize(connection)
 }
-func serveDarwin(connection net.Conn, helper string, lifecycle *darwinLifecycle) {
-	lifecycle.admit(connection, helper)
+func serveDarwin(connection net.Conn, lifecycle *darwinLifecycle) {
+	lifecycle.admit(connection)
 }

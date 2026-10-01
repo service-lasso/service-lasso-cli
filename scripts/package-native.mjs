@@ -1,7 +1,7 @@
 import { build } from "esbuild";
 import { copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
-import { createHash, generateKeyPairSync } from "node:crypto";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { basename, dirname, join, resolve } from "node:path";
 
@@ -63,10 +63,6 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 command("go", ["build", "-trimpath", "-o", confinedWriter, "."], join(root, "native", "confined-scaffold"));
 const confinedWriterSha256 = sha256(await readFile(confinedWriter));
-const gateKeyPair = generateKeyPairSync("ed25519");
-const gatePublicKey = gateKeyPair.publicKey.export({ format: "der", type: "spki" }).toString("base64");
-const gatePrivateDer = gateKeyPair.privateKey.export({ format: "der", type: "pkcs8" });
-const gateSeed = gatePrivateDer.subarray(-32);
 await build({
   bundle: true,
   entryPoints: [join(root, "dist", "sea-entry.js")],
@@ -82,7 +78,6 @@ await build({
     __SERVICE_LASSO_CANDIDATE_VERSION__: JSON.stringify(version),
     __SERVICE_LASSO_CANDIDATE_SOURCE_SHA__: JSON.stringify(sourceSha),
     __SERVICE_LASSO_CONFINED_HELPER_SHA256__: JSON.stringify(confinedWriterSha256),
-    __SERVICE_LASSO_PRIMARY_GATE_PUBLIC_KEY__: JSON.stringify(gatePublicKey),
   },
   legalComments: "none",
 });
@@ -115,7 +110,6 @@ await Promise.all([
   copyFile(embeddedSea, join(gateBuild, "assets", "service-lassoctl.sea")),
   copyFile(confinedWriter, join(gateBuild, "assets", "service-lasso-confined-scaffold")),
 ]);
-await writeFile(join(gateBuild, "gate_auth.go"), `package main\n\nvar gateSigningSeed = [32]byte{${[...gateSeed].map((value) => `0x${value.toString(16).padStart(2, "0")}`).join(", ")}}\n`);
 command("go", ["build", "-trimpath", "-o", executable, "."], gateBuild);
 await rm(gateBuild, { recursive: true, force: true });
 await rm(embeddedSea, { force: true });

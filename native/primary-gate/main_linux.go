@@ -36,6 +36,7 @@ func sealedImage(name string, value []byte) (int, error) {
 }
 
 func main() {
+	if !newGateCapability() { fail() }
 	sea, err := sealedImage("service-lassoctl-sea", seaBytes)
 	if err != nil {
 		fail()
@@ -70,7 +71,7 @@ func main() {
 	child := exec.Command(fmt.Sprintf("/proc/self/fd/%d", sea), os.Args[1:]...)
 	child.ExtraFiles = []*os.File{clientFile}
 	child.Stdin, child.Stdout, child.Stderr = os.Stdin, os.Stdout, os.Stderr
-	child.Env = append(os.Environ(), "SERVICE_LASSO_PRIMARY_GATE=linux-v2", "SERVICE_LASSO_PRIMARY_GATE_FD=3")
+	child.Env = gateEnvironment(os.Environ(), "linux-v3", "", 3)
 	if err = child.Start(); err != nil {
 		fail()
 	}
@@ -84,7 +85,7 @@ func main() {
 	lifecycle := &linuxLifecycle{pidfd: pidfd}
 	exit := make(chan error, 1)
 	go func() { err := child.Wait(); lifecycle.terminate(); exit <- err }()
-	go serveLinux(server, "@held", lifecycle)
+	go serveLinux(server, lifecycle)
 	if err = <-exit; err != nil {
 		if exit, ok := err.(*exec.ExitError); ok {
 			os.Exit(exit.ExitCode())
@@ -102,7 +103,7 @@ type linuxLifecycle struct {
 }
 
 func (l *linuxLifecycle) terminate() { l.mu.Lock(); l.terminated = true; l.mu.Unlock() }
-func (l *linuxLifecycle) admit(connection net.Conn, helper string) {
+func (l *linuxLifecycle) admit(connection net.Conn) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.terminated {
@@ -114,8 +115,8 @@ func (l *linuxLifecycle) admit(connection net.Conn, helper string) {
 		_ = connection.Close()
 		return
 	}
-	materialize(connection, helper)
+	materialize(connection)
 }
-func serveLinux(connection net.Conn, helper string, lifecycle *linuxLifecycle) {
-	lifecycle.admit(connection, helper)
+func serveLinux(connection net.Conn, lifecycle *linuxLifecycle) {
+	lifecycle.admit(connection)
 }

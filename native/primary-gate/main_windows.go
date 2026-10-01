@@ -198,6 +198,7 @@ func stageImage(directory windows.Handle, name string, value []byte) (windows.Ha
 	return handle, nil
 }
 func main() {
+	if !newGateCapability() { fail() }
 	directory, directoryHandle, err := stageDirectory()
 	if err != nil {
 		failAt("private directory")
@@ -216,6 +217,9 @@ func main() {
 		failAt("writer image")
 	}
 	defer windows.CloseHandle(helperHandle)
+	// This is the exact protected image staged relative to directoryHandle.
+	// Never pass helperName to exec.Command: that would reintroduce PATH lookup.
+	heldExecutionPath = filepath.Join(directory, helperName)
 	if err = verifyPrivate(seaHandle); err != nil {
 		failAt("SEA DACL")
 	}
@@ -232,7 +236,7 @@ func main() {
 	// close or appearing before this launch.
 	child := exec.Command(filepath.Join(directory, seaName), os.Args[1:]...)
 	child.Stdin, child.Stdout, child.Stderr = os.Stdin, os.Stdout, os.Stderr
-	child.Env = append(os.Environ(), "SERVICE_LASSO_PRIMARY_GATE=windows-v1", "SERVICE_LASSO_PRIMARY_GATE_PIPE="+pipe)
+	child.Env = gateEnvironment(os.Environ(), "windows-v2", pipe, 0)
 	if err := child.Start(); err != nil {
 		fail()
 	}
@@ -246,7 +250,7 @@ func main() {
 	lifecycle := &windowsLifecycle{process: process, pid: uint32(child.Process.Pid)}
 	exit := make(chan error, 1)
 	go func() { err := child.Wait(); lifecycle.terminate(); exit <- err }()
-	go serveWindows(listener, helperName, lifecycle)
+	go serveWindows(listener, lifecycle)
 	if err := <-exit; err != nil {
 		if exit, ok := err.(*exec.ExitError); ok {
 			os.Exit(exit.ExitCode())
@@ -278,7 +282,7 @@ type windowsLifecycle struct {
 }
 
 func (l *windowsLifecycle) terminate() { l.mu.Lock(); l.terminated = true; l.mu.Unlock() }
-func (l *windowsLifecycle) admit(connection net.Conn, helper string) bool {
+func (l *windowsLifecycle) admit(connection net.Conn) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.terminated || !windowsPeerIs(connection, l.pid) {
@@ -288,16 +292,16 @@ func (l *windowsLifecycle) admit(connection net.Conn, helper string) bool {
 	if err != nil || state != uint32(windows.WAIT_TIMEOUT) {
 		return false
 	}
-	materialize(connection, helper)
+	materialize(connection)
 	return true
 }
-func serveWindows(listener net.Listener, helper string, lifecycle *windowsLifecycle) {
+func serveWindows(listener net.Listener, lifecycle *windowsLifecycle) {
 	for {
 		connection, err := listener.Accept()
 		if err != nil {
 			return
 		}
-		if !lifecycle.admit(connection, helper) {
+		if !lifecycle.admit(connection) {
 			_ = connection.Close()
 			continue
 		}

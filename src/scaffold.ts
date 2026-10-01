@@ -1,6 +1,6 @@
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync } from "node:fs";
-import { createHash, createPublicKey, verify } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,7 +18,6 @@ function sha256(value: Buffer | string): string { return createHash("sha256").up
 declare const __SERVICE_LASSO_CANDIDATE_VERSION__: string | undefined;
 declare const __SERVICE_LASSO_CANDIDATE_SOURCE_SHA__: string | undefined;
 declare const __SERVICE_LASSO_CONFINED_HELPER_SHA256__: string | undefined;
-declare const __SERVICE_LASSO_PRIMARY_GATE_PUBLIC_KEY__: string | undefined;
 function candidateIdentity(): { version: string; sourceSha: string; helperSha256: string } | undefined {
   // These globals are replaced while the SEA is built.  `typeof` keeps normal
   // source execution independent of ambient packaging-looking environment.
@@ -76,16 +75,22 @@ function gateSocket(): Socket | undefined {
   const pipe = process.env.SERVICE_LASSO_PRIMARY_GATE_PIPE;
   return pipe && /^\\\\\.\\pipe\\service-lasso-primary-[0-9a-f-]+$/i.test(pipe) ? connect(pipe) : undefined;
 }
-function verifyGateGreeting(value: unknown): string | undefined {
+function gateCapability(): Buffer | undefined {
+  const encoded = process.env.SERVICE_LASSO_PRIMARY_GATE_CAPABILITY;
+  if (typeof encoded !== "string" || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) return undefined;
+  try { const value = Buffer.from(encoded, "base64"); return value.length === 32 ? value : undefined; } catch { return undefined; }
+}
+function gateProof(capability: Buffer, label: string, nonce: string): string { return createHmac("sha256", capability).update(`service-lasso-primary-v2:${label}:${nonce}`).digest("base64"); }
+function verifyGateGreeting(value: unknown, capability: Buffer): string | undefined {
   if (!value || typeof value !== "object") return undefined;
-  const record = value as { version?: unknown; nonce?: unknown; signature?: unknown };
-  if (record.version !== 1 || typeof record.nonce !== "string" || !/^[0-9a-f]{64}$/i.test(record.nonce) || typeof record.signature !== "string") return undefined;
-  const publicKey = typeof __SERVICE_LASSO_PRIMARY_GATE_PUBLIC_KEY__ === "string" ? __SERVICE_LASSO_PRIMARY_GATE_PUBLIC_KEY__ : "";
-  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(publicKey)) return undefined;
-  try { return verify(null, Buffer.from(`service-lasso-primary-v1:${record.nonce}`), createPublicKey({ key: Buffer.from(publicKey, "base64"), format: "der", type: "spki" }), Buffer.from(record.signature, "base64")) ? record.nonce : undefined; } catch { return undefined; }
+  const record = value as { version?: unknown; nonce?: unknown; proof?: unknown };
+  if (record.version !== 1 || typeof record.nonce !== "string" || !/^[0-9a-f]{64}$/i.test(record.nonce) || typeof record.proof !== "string") return undefined;
+  try { const supplied = Buffer.from(record.proof, "base64"), expected = Buffer.from(gateProof(capability, "gate", record.nonce), "base64"); return supplied.length === expected.length && timingSafeEqual(supplied, expected) ? record.nonce : undefined; } catch { return undefined; }
 }
 async function primaryMaterialize(input: string): Promise<{ stdout: string; stderr: string; code: number } | undefined> {
   if (!candidateIdentity() || !packagedPrimaryGate()) return undefined;
+  const capability = gateCapability();
+  if (!capability) return undefined;
   const socket = gateSocket();
   if (!socket) return undefined;
   return await new Promise((done) => {
@@ -108,9 +113,9 @@ async function primaryMaterialize(input: string): Promise<{ stdout: string; stde
         const value: unknown = JSON.parse(response.slice(0, end));
         response = response.slice(end + 1);
         if (!nonce) {
-          nonce = verifyGateGreeting(value);
+          nonce = verifyGateGreeting(value, capability);
           if (!nonce) return close();
-          socket.write(`${JSON.stringify({ version: 1, nonce, input: Buffer.from(input).toString("base64") })}\n`);
+          socket.write(`${JSON.stringify({ version: 1, nonce, proof: gateProof(capability, "sea", nonce), input: Buffer.from(input).toString("base64") })}\n`);
           return;
         }
         socket.removeListener("error", close); socket.end();
