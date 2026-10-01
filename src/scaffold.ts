@@ -1,6 +1,6 @@
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync } from "node:fs";
-import { createHash } from "node:crypto";
+import { createHash, createPublicKey, verify } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,6 +18,7 @@ function sha256(value: Buffer | string): string { return createHash("sha256").up
 declare const __SERVICE_LASSO_CANDIDATE_VERSION__: string | undefined;
 declare const __SERVICE_LASSO_CANDIDATE_SOURCE_SHA__: string | undefined;
 declare const __SERVICE_LASSO_CONFINED_HELPER_SHA256__: string | undefined;
+declare const __SERVICE_LASSO_PRIMARY_GATE_PUBLIC_KEY__: string | undefined;
 function candidateIdentity(): { version: string; sourceSha: string; helperSha256: string } | undefined {
   // These globals are replaced while the SEA is built.  `typeof` keeps normal
   // source execution independent of ambient packaging-looking environment.
@@ -40,9 +41,10 @@ function packagedPrimaryGate(): boolean {
   // The compiled primary, not this SEA, owns the embedded helper bytes. The
   // inherited endpoint is capability-style authority: a neighbouring path,
   // provenance sidecar, or caller environment cannot manufacture it.
-  return (/^\\\\\.\\pipe\\service-lasso-primary-[0-9a-f-]+$/i.test(process.env.SERVICE_LASSO_PRIMARY_GATE_PIPE ?? "") ||
-    /^\/[^\0\n]+\/primary\.sock$/.test(process.env.SERVICE_LASSO_PRIMARY_GATE_PIPE ?? "")) ||
-    /^[3-9][0-9]*$/.test(process.env.SERVICE_LASSO_PRIMARY_GATE_FD ?? "");
+  // The gate passes a fixed inherited descriptor. An endpoint name in the
+  // environment is routing data controlled by the process launcher, not a
+  // capability: never use one as a fallback.
+  return true;
 }
 function helperPath(): string {
   if (candidateIdentity()) throw new CliError("unsafe_scaffold_destination", "The confined writer is available only through the native primary gate.");
@@ -64,36 +66,57 @@ function helperPath(): string {
   return sourceHelper;
 }
 function gateSocket(): Socket | undefined {
-  const fd = process.env.SERVICE_LASSO_PRIMARY_GATE_FD;
-  if (fd && /^[3-9][0-9]*$/.test(fd)) return new Socket({ fd: Number(fd), readable: true, writable: true });
+  // fd 3 is populated only by the compiled primary on Unix. On Windows the
+  // primary supplies a named pipe, but the SEA accepts it only after the
+  // signed gate greeting below; its environment spelling alone is never
+  // authority.
+  if (process.platform !== "win32") {
+    try { return new Socket({ fd: 3, readable: true, writable: true }); } catch { return undefined; }
+  }
   const pipe = process.env.SERVICE_LASSO_PRIMARY_GATE_PIPE;
-  return pipe && (/^\\\\\.\\pipe\\service-lasso-primary-[0-9a-f-]+$/i.test(pipe) || /^\/[^\0\n]+\/primary\.sock$/.test(pipe)) ? connect(pipe) : undefined;
+  return pipe && /^\\\\\.\\pipe\\service-lasso-primary-[0-9a-f-]+$/i.test(pipe) ? connect(pipe) : undefined;
+}
+function verifyGateGreeting(value: unknown): string | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const record = value as { version?: unknown; nonce?: unknown; signature?: unknown };
+  if (record.version !== 1 || typeof record.nonce !== "string" || !/^[0-9a-f]{64}$/i.test(record.nonce) || typeof record.signature !== "string") return undefined;
+  const publicKey = typeof __SERVICE_LASSO_PRIMARY_GATE_PUBLIC_KEY__ === "string" ? __SERVICE_LASSO_PRIMARY_GATE_PUBLIC_KEY__ : "";
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(publicKey)) return undefined;
+  try { return verify(null, Buffer.from(`service-lasso-primary-v1:${record.nonce}`), createPublicKey({ key: Buffer.from(publicKey, "base64"), format: "der", type: "spki" }), Buffer.from(record.signature, "base64")) ? record.nonce : undefined; } catch { return undefined; }
 }
 async function primaryMaterialize(input: string): Promise<{ stdout: string; stderr: string; code: number } | undefined> {
   if (!candidateIdentity() || !packagedPrimaryGate()) return undefined;
   const socket = gateSocket();
   if (!socket) return undefined;
-  const request = `${JSON.stringify({ version: 1, input: Buffer.from(input).toString("base64") })}\n`;
   return await new Promise((done) => {
     let response = "";
+    let nonce: string | undefined;
     const close = () => { socket.destroy(); done(undefined); };
     socket.setEncoding("utf8");
     socket.once("error", close);
     // An inherited Unix socketpair endpoint is already connected. Waiting for
     // a future connect event would leave the one-shot capability idle; named
     // pipes still use their ordinary asynchronous connection event.
-    if (/^[3-9][0-9]*$/.test(process.env.SERVICE_LASSO_PRIMARY_GATE_FD ?? "")) queueMicrotask(() => socket.write(request));
-    else socket.once("connect", () => socket.write(request));
+    const writeRequest = () => { /* the signed greeting is always first */ };
+    if (process.platform !== "win32") queueMicrotask(writeRequest);
+    else socket.once("connect", writeRequest);
     socket.on("data", (chunk: string) => {
       response += chunk;
       const end = response.indexOf("\n");
       if (end < 0) return;
-      socket.removeListener("error", close); socket.end();
       try {
         const value: unknown = JSON.parse(response.slice(0, end));
+        response = response.slice(end + 1);
+        if (!nonce) {
+          nonce = verifyGateGreeting(value);
+          if (!nonce) return close();
+          socket.write(`${JSON.stringify({ version: 1, nonce, input: Buffer.from(input).toString("base64") })}\n`);
+          return;
+        }
+        socket.removeListener("error", close); socket.end();
         if (!value || typeof value !== "object") return done(undefined);
-        const record = value as { version?: unknown; code?: unknown; stdout?: unknown; stderr?: unknown };
-        if (record.version !== 1 || !Number.isInteger(record.code) || typeof record.stdout !== "string" || typeof record.stderr !== "string") return done(undefined);
+        const record = value as { version?: unknown; nonce?: unknown; code?: unknown; stdout?: unknown; stderr?: unknown };
+        if (record.version !== 1 || record.nonce !== nonce || !Number.isInteger(record.code) || typeof record.stdout !== "string" || typeof record.stderr !== "string") return done(undefined);
         done({ code: record.code as number, stdout: Buffer.from(record.stdout, "base64").toString(), stderr: Buffer.from(record.stderr, "base64").toString() });
       } catch { done(undefined); }
     });
