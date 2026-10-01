@@ -3,9 +3,10 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"golang.org/x/sys/unix"
-	"path/filepath"
 	"strings"
 )
 
@@ -17,60 +18,41 @@ import (
 // racy.  Therefore rollback deliberately retains a named partial leaf rather
 // than risk deleting a concurrent replacement.  Windows can delete through
 // its held file handle and does so in its platform implementation.
-type owned struct {
-	parent    int
-	name      string
-	dev, ino  uint64
-	directory bool
-	handle    int
-}
-
 func openDir(name string, parent int) (int, error) {
 	return unix.Openat(parent, name, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW, 0)
-}
-func id(fd int) (uint64, uint64, error) {
-	var st unix.Stat_t
-	if err := unix.Fstat(fd, &st); err != nil {
-		return 0, 0, err
-	}
-	return uint64(st.Dev), uint64(st.Ino), nil
 }
 func closeAll(handles []int) {
 	for i := len(handles) - 1; i >= 0; i-- {
 		_ = unix.Close(handles[i])
 	}
 }
+func createCandidate(parent int) (string, error) {
+	for range 32 {
+		bytes := make([]byte, 16)
+		if _, err := rand.Read(bytes); err != nil {
+			return "", err
+		}
+		name := ".service-lasso-txn-" + hex.EncodeToString(bytes)
+		if err := unix.Mkdirat(parent, name, 0700); err == nil {
+			return name, nil
+		} else if err != unix.EEXIST {
+			return "", err
+		}
+	}
+	return "", fmt.Errorf("candidate name collision")
+}
 func materialize(destination string, entries []entry) error {
-	clean := filepath.Clean(destination)
-	if clean != destination {
-		return fmt.Errorf("noncanonical destination")
+	parts, err := destinationParts(destination)
+	if err != nil {
+		return err
 	}
-	parts := strings.Split(strings.TrimPrefix(clean, "/"), "/")
-	if len(parts) == 0 {
-		return fmt.Errorf("root destination")
-	}
-	// "/" is the process-independent filesystem root, not an untrusted
-	// descendant. Darwin rejects O_NOFOLLOW on this already-rooted directory;
-	// every caller-controlled component below still opens through openDir.
-	root, err := unix.Open("/", unix.O_RDONLY|unix.O_DIRECTORY, 0)
+	root, err := openFilesystemRoot()
 	if err != nil {
 		return err
 	}
 	handles := []int{root}
 	parent := root
-	ownedEntries := []owned{}
 	defer closeAll(handles)
-	rollback := func() {
-		// Never resolve a leaf again for deletion.  An attacker can rename it after
-		// a stat, and POSIX offers no identity-anchored unlink.  Its held descriptor
-		// is still closed below, so no handle leaks across a failed invocation.
-		for i := len(ownedEntries) - 1; i >= 0; i-- {
-			if ownedEntries[i].handle >= 0 {
-				_ = unix.Close(ownedEntries[i].handle)
-				ownedEntries[i].handle = -1
-			}
-		}
-	}
 	for _, part := range parts[:len(parts)-1] {
 		next, e := openDir(part, parent)
 		if e != nil {
@@ -83,20 +65,16 @@ func materialize(destination string, entries []entry) error {
 	if err = testGate("before-project-create"); err != nil {
 		return err
 	}
-	if err = unix.Mkdirat(parent, leaf, 0700); err != nil {
-		return err
-	}
-	project, e := openDir(leaf, parent)
+	// Build beneath a held parent under an unguessable, invocation-owned
+	// candidate.  The final leaf is untouched until the exclusive commit.
+	candidate, e := createCandidate(parent)
 	if e != nil {
-		rollback()
 		return e
 	}
-	d, n, e := id(project)
+	project, e := openDir(candidate, parent)
 	if e != nil {
-		rollback()
 		return e
 	}
-	ownedEntries = append(ownedEntries, owned{parent, leaf, d, n, true, project})
 	handles = append(handles, project)
 	for _, item := range entries {
 		current := project
@@ -105,24 +83,15 @@ func materialize(destination string, entries []entry) error {
 			child, e := openDir(part, current)
 			if e != nil {
 				if e != unix.ENOENT {
-					rollback()
 					return e
 				}
 				if e = unix.Mkdirat(current, part, 0700); e != nil {
-					rollback()
 					return e
 				}
 				child, e = openDir(part, current)
 				if e != nil {
-					rollback()
 					return e
 				}
-				cd, cn, e := id(child)
-				if e != nil {
-					rollback()
-					return e
-				}
-				ownedEntries = append(ownedEntries, owned{current, part, cd, cn, true, child})
 			}
 			handles = append(handles, child)
 			current = child
@@ -130,37 +99,33 @@ func materialize(destination string, entries []entry) error {
 		name := parts[len(parts)-1]
 		fd, e := unix.Openat(current, name, unix.O_WRONLY|unix.O_CREAT|unix.O_EXCL|unix.O_NOFOLLOW, uint32(item.mode))
 		if e != nil {
-			rollback()
 			return e
 		}
-		fdDev, fdIno, e := id(fd)
-		if e != nil {
-			_ = unix.Close(fd)
-			rollback()
-			return e
-		}
-		ownedEntries = append(ownedEntries, owned{current, name, fdDev, fdIno, false, fd})
+		handles = append(handles, fd)
 		written := 0
 		for written < len(item.bytes) {
 			count, we := unix.Write(fd, item.bytes[written:])
 			if we != nil {
-				rollback()
 				return we
 			}
 			if count == 0 {
-				rollback()
 				return fmt.Errorf("short native write")
 			}
 			written += count
 		}
 		if e = unix.Fsync(fd); e != nil {
-			rollback()
 			return e
 		}
 		if err = testGate("after-file-write"); err != nil {
-			rollback()
 			return err
 		}
 	}
-	return nil
+	if err = testGate("before-project-commit"); err != nil {
+		return err
+	}
+	// Each supported POSIX host supplies an atomic no-replace rename relative
+	// to the same held parent.  A concurrent leaf wins intact; it is never
+	// overwritten or removed.  A failed candidate is deliberately retained as
+	// unknown state because POSIX has no unlink-by-held-object primitive.
+	return exclusiveCommit(parent, candidate, leaf)
 }

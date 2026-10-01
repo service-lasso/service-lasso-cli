@@ -18,11 +18,13 @@
   blocked until the owning template release supplies that tuple.
   Its materializer uses a target-host compiled, checksummed confined writer
   shipped in each native archive. POSIX uses held directory descriptors with
-  `openat`/`mkdirat`; Windows uses `NtCreateFile` relative to held handles with
+  `openat`/`mkdirat`, an owned temporary candidate, and an exclusive native
+  rename into the absent destination; Windows uses `NtCreateFile` relative to held handles with
   `OBJ_DONT_REPARSE` and `FILE_OPEN_REPARSE_POINT`. It never treats pathname
-  checks as race protection. A POSIX write failure retains its named partial
-  leaf rather than attempting a race-prone unlink; Windows deletes only via
-  held owned handles. Packaged-helper integration tests coordinate parent
+  checks as race protection. A POSIX write failure leaves the named destination
+  absent; a temporary candidate that cannot be proved owned for deletion is
+  retained as unknown state rather than being mistaken for a completed project.
+  Windows deletes only via held owned handles. Packaged-helper integration tests coordinate parent
   replacement and concurrent unowned failure content; the helper provenance
   hashes its complete source set. Direct template/Core and three-host acceptance
   remain blocked on an owner-published accepted template tuple.

@@ -7,6 +7,7 @@ package main
 import (
 	"bufio"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -19,6 +20,8 @@ type entry struct {
 	mode  os.FileMode
 	bytes []byte
 }
+
+var errDestinationExists = errors.New("confined destination exists")
 
 func fail(format string, args ...any) { fmt.Fprintf(os.Stderr, format+"\n", args...); os.Exit(2) }
 func decode(value string) []byte {
@@ -119,11 +122,25 @@ func main() {
 	}
 	destination, entries := readPlan()
 	if err := materialize(destination, entries); err != nil {
-		fmt.Fprintln(os.Stderr, "confined writer rejected destination")
-		if os.Getenv("SERVICE_LASSO_CONFINED_TEST_DIAGNOSTICS") == "1" {
-			fmt.Fprintln(os.Stderr, "confined writer test diagnostic:", err)
-		}
+		// This is intentionally a closed protocol response.  The TypeScript
+		// caller may use the fixed code for tests and operator diagnostics, but
+		// never forwards OS errors, paths, or private filesystem state.
+		fmt.Printf("error\t%s\n", failureCode(err))
+		fmt.Fprintln(os.Stderr, "confined writer failed")
 		os.Exit(1)
 	}
 	fmt.Println("ok")
+}
+
+func failureCode(err error) string {
+	switch {
+	case errors.Is(err, os.ErrExist), errors.Is(err, errDestinationExists):
+		return "destination_exists"
+	case errors.Is(err, os.ErrNotExist):
+		return "parent_missing"
+	case errors.Is(err, os.ErrPermission):
+		return "permission_denied"
+	default:
+		return "write_rejected"
+	}
 }

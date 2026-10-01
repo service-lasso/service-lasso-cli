@@ -65,6 +65,11 @@ func nativeOpen(name string, parent syscall.Handle, access uint32, disposition u
 	var iosb ioStatusBlock
 	status, _, callErr := ntCreateFile.Call(uintptr(unsafe.Pointer(&handle)), uintptr(access), uintptr(unsafe.Pointer(&attributes)), uintptr(unsafe.Pointer(&iosb)), 0, 0, shareRead, uintptr(disposition), uintptr(options|fileOpenReparsePoint), 0, 0)
 	if int32(status) < 0 {
+		// STATUS_OBJECT_NAME_COLLISION is the only expected collision from a
+		// FILE_CREATE operation. Preserve it as a closed protocol code.
+		if status == 0xc0000035 {
+			return 0, errDestinationExists
+		}
 		if callErr != syscall.Errno(0) {
 			return 0, callErr
 		}

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { appendFile, mkdtemp, mkdir, rename, rm, readFile, symlink, writeFile } from "node:fs/promises";
+import { appendFile, mkdtemp, mkdir, rename, rm, readFile, readdir, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import assert from "node:assert/strict";
@@ -68,11 +68,20 @@ test("packaged confined helper keeps a held parent through a replacement and ret
   await releaseGate(gate, "before-project-create"); await creation;
   await assert.rejects(readFile(join(outside, "project", "service.json")));
   assert.equal(await readFile(join(replacementBlocked ? parent : oldParent, "project", "service.json"), "utf8"), '{"id":"safe"}\n');
+  if (process.platform !== "win32") {
+    const leafParent = join(root, "leaf-parent"), leafDestination = join(leafParent, "project"), leafGate = join(root, "leaf-gate");
+    await mkdir(leafParent); process.env.SERVICE_LASSO_CONFINED_TEST_GATE = leafGate; process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE = "before-project-commit"; delete process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE;
+    const leafCreation = materializeAcceptedTemplate(leafDestination, bundle); leafCreation.catch(() => {});
+    await awaitGate(leafGate, "before-project-commit"); await mkdir(leafDestination); await writeFile(join(leafDestination, "unowned.txt"), "preserve"); await releaseGate(leafGate, "before-project-commit");
+    await assert.rejects(leafCreation, { code: "confined_writer_destination_exists" });
+    assert.equal(await readFile(join(leafDestination, "unowned.txt"), "utf8"), "preserve"); await assert.rejects(readFile(join(leafDestination, "service.json")));
+  }
   const failureParent = join(root, "failure-parent"), failureDestination = join(failureParent, "project"), failureGate = join(root, "failure-gate");
   await mkdir(failureParent); process.env.SERVICE_LASSO_CONFINED_TEST_GATE = failureGate; process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE = "after-file-write"; process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE = "after-file-write";
   const failure = materializeAcceptedTemplate(failureDestination, bundle); failure.catch(() => {});
-  await awaitGate(failureGate, "after-file-write"); await writeFile(join(failureDestination, "unowned.txt"), "preserve"); await releaseGate(failureGate, "after-file-write");
-  await assert.rejects(failure, { code: "unsafe_scaffold_destination" });
+  await awaitGate(failureGate, "after-file-write"); if (process.platform !== "win32") await mkdir(failureDestination); await writeFile(join(failureDestination, "unowned.txt"), "preserve"); await releaseGate(failureGate, "after-file-write");
+  await assert.rejects(failure, { code: "confined_writer_write_rejected" });
   assert.equal(await readFile(join(failureDestination, "unowned.txt"), "utf8"), "preserve");
-  if (process.platform === "win32") await assert.rejects(readFile(join(failureDestination, "service.json")));
+  await assert.rejects(readFile(join(failureDestination, "service.json")));
+  if (process.platform !== "win32") assert.deepEqual(await readdir(failureDestination), ["unowned.txt"]);
 });

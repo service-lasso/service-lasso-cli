@@ -1,5 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
-import { relative, resolve, sep } from "node:path";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CliError } from "./errors.js";
 import { AcceptedTemplateBundle, acceptedTemplateFiles, loadAcceptedTemplateBundle, requireAcceptedTemplateIdentity, templateContractPreview } from "./template.js";
@@ -9,22 +11,35 @@ export function validateServiceId(id: string): string { if (!/^[a-z][a-z0-9-]{1,
 export function previewServiceScaffold(options: ServiceScaffoldOptions): Record<string, unknown> { return { directory: resolve(options.directory), serviceId: validateServiceId(options.id), dryRun: true, files: [], writes: false, runtimeMutation: false, template: templateContractPreview() }; }
 export function scaffoldFiles(options: ServiceScaffoldOptions): Record<string, string> { validateServiceId(options.id); return requireAcceptedTemplateIdentity(); }
 const helperName = `service-lasso-confined-scaffold${process.platform === "win32" ? ".exe" : ""}`;
+let sourceHelper: string | undefined;
 function helperPath(): string {
   if (process.env.SERVICE_LASSO_CONFINED_HELPER) return process.env.SERVICE_LASSO_CONFINED_HELPER;
   // The SEA is shipped next to the accepted helper; source execution builds it
   // from its checked-in source only for local developer/test use.
   if (process.env.SERVICE_LASSO_CANDIDATE_VERSION) return resolve(process.execPath, "..", helperName);
   const helperSource = fileURLToPath(new URL("../native/confined-scaffold", import.meta.url));
-  const helperBinary = resolve(helperSource, helperName);
+  if (sourceHelper) return sourceHelper;
+  // Never compile into the repository: an inherited helper binary can be a
+  // retained audit artifact.  This output directory is unique to this process
+  // and removed only by its owner on exit.
+  const helperDirectory = mkdtempSync(join(tmpdir(), "service-lasso-confined-helper-"));
+  const helperBinary = join(helperDirectory, helperName);
   const build = spawnSync("go", ["build", "-trimpath", "-o", helperBinary, "."], { cwd: helperSource, encoding: "utf8" });
-  if (build.status !== 0 || build.error) throw new CliError("unsafe_scaffold_destination", "The confined writer is unavailable.");
-  return helperBinary;
+  if (build.status !== 0 || build.error) { rmSync(helperDirectory, { recursive: true, force: true }); throw new CliError("unsafe_scaffold_destination", "The confined writer is unavailable."); }
+  sourceHelper = helperBinary;
+  process.once("exit", () => rmSync(helperDirectory, { recursive: true, force: true }));
+  return sourceHelper;
 }
 async function confinedMaterialize(destination: string, files: Awaited<ReturnType<typeof acceptedTemplateFiles>>): Promise<void> {
   const input = `${Buffer.from(destination).toString("base64")}\n${files.length}\n${files.map(file => `${file.path}\t${file.mode.toString(8)}\t${file.bytes.toString("base64")}`).join("\n")}\n`;
-  const stdout = await new Promise<string>((done, fail) => { const child = spawn(helperPath(), [], { stdio: ["pipe", "pipe", "ignore"], windowsHide: true }); let out = ""; child.stdout.on("data", value => { out += value; }); child.once("error", fail); child.once("close", code => code === 0 ? done(out) : fail(new Error(out))); child.stdin.end(input); });
-  if (stdout.trim() === "ok") return;
-  throw new CliError("unsafe_scaffold_destination", "The project destination could not be created through the confined writer.");
+  const stdout = await new Promise<string>((done, fail) => { const child = spawn(helperPath(), [], { stdio: ["pipe", "pipe", "ignore"], windowsHide: true }); let out = ""; child.stdout.on("data", value => { out += value; }); child.once("error", fail); child.once("close", () => done(out)); child.stdin.end(input); });
+  const result = stdout.trim();
+  if (result === "ok") return;
+  // The helper only emits these fixed, path-free failure codes.  Keep the
+  // public CLI result stable while rejecting malformed helper output.
+  const match = /^error\t(destination_exists|parent_missing|permission_denied|write_rejected)$/.exec(result);
+  if (!match) throw new CliError("unsafe_scaffold_destination", "The project destination could not be created through the confined writer.");
+  throw new CliError(`confined_writer_${match[1]}`, "The project destination could not be created through the confined writer.");
 }
 export async function createServiceScaffold(options: ServiceScaffoldOptions): Promise<ServiceScaffoldResult> { validateServiceId(options.id); const destination = resolve(options.directory); if (!options.templateRoot) return requireAcceptedTemplateIdentity(); const bundle = await loadAcceptedTemplateBundle(options.templateRoot); return materializeAcceptedTemplate(destination, bundle, Boolean(options.dryRun)); }
 /** Materialize only a bundle already admitted by the source-owned resolver. */
@@ -32,6 +47,6 @@ export async function materializeAcceptedTemplate(destinationInput: string, bund
   const destination = resolve(destinationInput), files = await acceptedTemplateFiles(bundle);
   if (dryRun) return { directory: destination, files: files.map(file => file.path), dryRun: true };
   if (files.some(file => !resolve(destination, file.path).startsWith(destination + sep) || relative(destination, resolve(destination, file.path)).startsWith(".."))) throw new CliError("invalid_template_bundle", "Template inventory contains an unsafe path.");
-  try { await confinedMaterialize(destination, files); } catch { throw new CliError("unsafe_scaffold_destination", "The project destination could not be created through the confined writer."); }
+  try { await confinedMaterialize(destination, files); } catch (error) { if (error instanceof CliError && error.code.startsWith("confined_writer_")) throw error; throw new CliError("unsafe_scaffold_destination", "The project destination could not be created through the confined writer."); }
   return { directory: destination, files: files.map(file => file.path), dryRun: false };
 }
