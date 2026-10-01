@@ -16,9 +16,12 @@ if (!new Set(["win32-x64", "linux-x64", "darwin-arm64"]).has(target) || provenan
 const executable = provenance.executable.name;
 const executableBytes = await readFile(join(directory, executable));
 if (sha256(executableBytes) !== provenance.executable.sha256) throw new Error("Native executable does not match its provenance digest.");
+for (const record of ["ci-context.json", "host-acceptance.json"]) {
+  try { await readFile(join(directory, record)); } catch { throw new Error(`Native archive requires ${record} from the target-host verification step.`); }
+}
 const archive = `service-lassoctl-${version}-${target}.tar.gz`;
 const archivePath = join(output, archive);
 await rm(archivePath, { force: true });
-const result = spawnSync("tar", ["-czf", archivePath, "-C", directory, "--", executable, "provenance.json"], { encoding: "utf8" });
+const result = spawnSync("tar", ["-czf", archivePath, "-C", directory, "--", executable, "provenance.json", "ci-context.json", "host-acceptance.json"], { encoding: "utf8" });
 if (result.status !== 0 || result.error) throw new Error(`Native archive failed: ${result.error?.message ?? result.stderr ?? result.stdout}`);
 process.stdout.write(`${JSON.stringify({ archive, sha256: sha256(await readFile(archivePath)), executable: basename(executable), target })}\n`);
