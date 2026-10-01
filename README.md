@@ -70,10 +70,12 @@ acceptance; that needs a supported authenticated Core endpoint and separately
 authorised credentials.
 
 `service init` accepts an already-acquired immutable template bundle through
-`--template-root`. It verifies the versioned candidate tag, archive and
-contract checksums, full inventory bytes and modes, provenance, and catalog
-identity before it creates a caller-selected absent directory. `--dry-run`
-performs that verification and reports the full file list without writing.
+`--template-root` only when its complete tuple exactly matches a versioned,
+owner-controlled CLI admission entry. It verifies duplicate-free closed
+metadata, bounded archive members and modes, payload equality, checksums,
+provenance and catalog identity before it creates a caller-selected absent
+directory. `--dry-run` performs that verification and reports the full file
+list without writing. A locally assembled tuple cannot create its own admission.
 The command never registers, installs, starts, or contacts Core.
 
 Without `--template-root`, `service template --json` exposes the current
