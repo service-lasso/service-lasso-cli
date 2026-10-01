@@ -146,8 +146,8 @@ test("CLI30 actual publisher verifies private asset IDs before its one publish t
       if (parsed.pathname.endsWith("/git/tags")) return json({ sha: "a".repeat(40) }, 201);
       if (parsed.pathname.endsWith("/git/refs")) return json({}, 201);
       if (parsed.pathname.endsWith("/releases") && init.method === "POST") return json({ id: 77 }, 201);
-      if (parsed.pathname.endsWith("/releases/77") && init.method === "GET") return json({ id: 77, draft, target_commitish: sourceSha, assets });
-      if (parsed.pathname.endsWith("/releases/77") && init.method === "PATCH") { draft = false; return json({ id: 77, draft, prerelease: true, target_commitish: sourceSha, assets }); }
+      if (parsed.pathname.endsWith("/releases/77") && init.method === "GET") return json({ id: 77, tag_name: tag, draft, prerelease: true, target_commitish: sourceSha, assets });
+      if (parsed.pathname.endsWith("/releases/77") && init.method === "PATCH") { draft = false; return json({ id: 77, immutable: true, tag_name: tag, draft, prerelease: true, target_commitish: sourceSha, assets }); }
       const privateMatch = /\/releases\/assets\/(\d+)$/.exec(parsed.pathname); if (privateMatch) return new Response(assets[Number(privateMatch[1]) - 1].bytes, { status: 200 });
       const publicAsset = assets.find((asset) => parsed.href === asset.browser_download_url); if (publicAsset) return new Response(publicAsset.bytes, { status: 200 });
       throw new Error(`unexpected ${parsed.href}`);
