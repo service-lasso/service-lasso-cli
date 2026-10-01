@@ -49,8 +49,10 @@ async function candidateDirectory(root) {
 function json(value, status = 200) { return new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } }); }
 
 function providerPolicy() {
-  return { immutable: { enabled: true }, branch: { name: "develop", protected: true }, protection: { required_status_checks: { strict: true, contexts: ["ci"] }, required_pull_request_reviews: { required_approving_review_count: 1 }, enforce_admins: { enabled: true }, allow_force_pushes: { enabled: false } }, environment: { name: "development-candidate", protection_rules: [{ type: "required_reviewers", reviewers: [{ type: "User", reviewer: { id: 1 } }] }], deployment_branch_policy: { custom_branch_policies: true, protected_branches: false } }, policies: { branch_policies: [{ name: "develop" }] } };
+  return { immutable: { enabled: true }, branch: { name: "develop", protected: true }, protection: { required_status_checks: { strict: true, contexts: ["ci"] }, required_pull_request_reviews: { required_approving_review_count: 1 }, enforce_admins: { enabled: true }, allow_force_pushes: { enabled: false } }, environment: { name: "development-candidate", protection_rules: [{ type: "required_reviewers", prevent_self_review: true, reviewers: [{ type: "User", reviewer: { id: 1 } }] }], deployment_branch_policy: { custom_branch_policies: true, protected_branches: false } }, policies: { branch_policies: [{ name: "develop" }] } };
 }
+
+function emptyPrivateRelease(id, tag) { return { id, tag_name: tag, draft: true, prerelease: true, target_commitish: sourceSha, assets: [] }; }
 
 function responseBytes(bytes, { declared, chunks } = {}) {
   const values = chunks ?? [bytes];
@@ -131,7 +133,7 @@ test("CLI30 schema rejects duplicates, unexpected fields and forged source ident
 });
 
 test("CLI30 provider preflight and public URL fail closed", () => {
-  const preflight = { immutable: { enabled: true }, branch: { name: "develop", protected: true }, protection: { required_status_checks: { strict: true, contexts: ["CI"] }, required_pull_request_reviews: { required_approving_review_count: 1 }, enforce_admins: { enabled: true }, allow_force_pushes: { enabled: false } }, environment: { name: "development-candidate", protection_rules: [{ type: "required_reviewers", reviewers: [{ type: "User", reviewer: { id: 1 } }] }], deployment_branch_policy: { custom_branch_policies: true, protected_branches: false } }, branchPolicies: [{ name: "develop" }] };
+  const preflight = { immutable: { enabled: true }, branch: { name: "develop", protected: true }, protection: { required_status_checks: { strict: true, contexts: ["CI"] }, required_pull_request_reviews: { required_approving_review_count: 1 }, enforce_admins: { enabled: true }, allow_force_pushes: { enabled: false } }, environment: { name: "development-candidate", protection_rules: [{ type: "required_reviewers", prevent_self_review: true, reviewers: [{ type: "User", reviewer: { id: 1 } }] }], deployment_branch_policy: { custom_branch_policies: true, protected_branches: false } }, branchPolicies: [{ name: "develop" }] };
   assert.doesNotThrow(() => assertProviderPreflight(preflight));
   assert.throws(() => assertProviderPreflight({ ...preflight, immutable: { enabled: false } }));
   assert.throws(() => assertProviderPreflight({ ...preflight, protection: { ...preflight.protection, required_pull_request_reviews: null } }));
@@ -139,6 +141,50 @@ test("CLI30 provider preflight and public URL fail closed", () => {
   assert.throws(() => assertProviderPreflight({ ...preflight, protection: { ...preflight.protection, enforce_admins: { enabled: false } } }));
   assert.doesNotThrow(() => canonicalPublicAssetUrl("https://github.com/service-lasso/service-lasso-cli/releases/download/x/service-lassoctl-a.tgz", "service-lassoctl-a.tgz", "x"));
   assert.throws(() => canonicalPublicAssetUrl("https://attacker.invalid/a", "a"));
+});
+
+test("CLI30 provider preflight requires GitHub's self-review flag and identifiable reviewers", () => {
+  const policy = providerPolicy();
+  assert.doesNotThrow(() => assertProviderPreflight({ immutable: policy.immutable, branch: policy.branch, protection: policy.protection, environment: policy.environment, branchPolicies: policy.policies.branch_policies }));
+  for (const mutate of [
+    rule => { rule.prevent_self_review = false; },
+    rule => { rule.prevent_self_review = undefined; },
+    rule => { rule.reviewers = []; },
+    rule => { rule.reviewers = [{ type: "User", reviewer: {} }]; },
+    rule => { rule.reviewers = [{ type: "Organization", reviewer: { id: 1 } }]; }
+  ]) {
+    const variant = providerPolicy();
+    mutate(variant.environment.protection_rules[0]);
+    assert.throws(() => assertProviderPreflight({ immutable: variant.immutable, branch: variant.branch, protection: variant.protection, environment: variant.environment, branchPolicies: variant.policies.branch_policies }));
+  }
+});
+
+test("CLI30 rejects malformed created-private release state before any upload or publish", async () => {
+  await withCandidate(async (_root, directory) => {
+    const verified = await verifyCandidateDirectory(directory, version, sourceSha), tag = verified.manifest.candidateTag;
+    for (const mutate of [
+      release => { release.id = "77"; }, release => { release.tag_name = "other"; }, release => { release.target_commitish = "f".repeat(40); },
+      release => { release.draft = false; }, release => { release.prerelease = false; }, release => { release.assets = [{ id: 1 }]; }
+    ]) {
+      const policy = providerPolicy(), events = [];
+      const fetchImpl = async (url, init) => {
+        const parsed = new URL(url), path = parsed.pathname; events.push({ path, hostname: parsed.hostname, method: init.method });
+        if (path.endsWith("/immutable-releases")) return json(policy.immutable);
+        if (path.endsWith("/branches/develop")) return json(policy.branch);
+        if (path.endsWith("/branches/develop/protection")) return json(policy.protection);
+        if (path.endsWith("/environments/development-candidate")) return json(policy.environment);
+        if (path.endsWith("/deployment-branch-policies")) return json(policy.policies);
+        if (path.includes("/releases/tags/") || path.includes("/git/ref/tags/")) return json({}, 404);
+        if (path.endsWith("/git/tags")) return json({ sha: "a".repeat(40) }, 201);
+        if (path.endsWith("/git/refs")) return json({}, 201);
+        if (path.endsWith("/releases") && init.method === "POST") { const release = emptyPrivateRelease(77, tag); mutate(release); return json(release, 201); }
+        throw new Error(`unexpected ${path}`);
+      };
+      await assert.rejects(() => publishProtectedCandidate({ directory, version, sourceSha, token: "secret-sentinel", fetchImpl }), /exact empty private release/);
+      assert.equal(events.filter((event) => event.hostname === "uploads.github.com").length, 0);
+      assert.equal(events.filter((event) => event.method === "PATCH").length, 0);
+    }
+  });
 });
 
 test("CLI30 actual publisher verifies private asset IDs before its one publish transition and keeps bearer off public reads", async () => {
@@ -149,7 +195,7 @@ test("CLI30 actual publisher verifies private asset IDs before its one publish t
     let draft = true;
     const fetchImpl = async (url, init) => {
       const parsed = new URL(url); events.push({ path: parsed.pathname, method: init.method, authorization: init.headers?.authorization });
-      const policy = { immutable: { enabled: true }, branch: { name: "develop", protected: true }, protection: { required_status_checks: { strict: true, contexts: ["ci"] }, required_pull_request_reviews: { required_approving_review_count: 1 }, enforce_admins: { enabled: true }, allow_force_pushes: { enabled: false } }, environment: { name: "development-candidate", protection_rules: [{ type: "required_reviewers", reviewers: [{ type: "User", reviewer: { id: 1 } }] }], deployment_branch_policy: { custom_branch_policies: true, protected_branches: false } }, policies: { branch_policies: [{ name: "develop" }] } };
+      const policy = providerPolicy();
       if (parsed.hostname === "uploads.github.com") return json({ id: 99 }, 201);
       if (parsed.pathname.endsWith("/immutable-releases")) return json(policy.immutable);
       if (parsed.pathname.endsWith("/branches/develop")) return json(policy.branch);
@@ -160,7 +206,7 @@ test("CLI30 actual publisher verifies private asset IDs before its one publish t
       if (parsed.pathname.includes("/git/ref/tags/")) return json({}, 404);
       if (parsed.pathname.endsWith("/git/tags")) return json({ sha: "a".repeat(40) }, 201);
       if (parsed.pathname.endsWith("/git/refs")) return json({}, 201);
-      if (parsed.pathname.endsWith("/releases") && init.method === "POST") return json({ id: 77 }, 201);
+      if (parsed.pathname.endsWith("/releases") && init.method === "POST") return json(emptyPrivateRelease(77, tag), 201);
       if (parsed.pathname.endsWith("/releases/77") && init.method === "GET") return json({ id: 77, tag_name: tag, draft, prerelease: true, target_commitish: sourceSha, assets });
       if (parsed.pathname.endsWith("/releases/77") && init.method === "PATCH") { draft = false; return json({ id: 77, immutable: true, tag_name: tag, draft, prerelease: true, target_commitish: sourceSha, assets }); }
       const privateMatch = /\/releases\/assets\/(\d+)$/.exec(parsed.pathname); if (privateMatch) return new Response(null, { status: 302, headers: { location: `https://objects.githubusercontent.com/private/${privateMatch[1]}` } });
@@ -182,7 +228,7 @@ test("CLI30 actual adapter rejects every unavailable or unsafe provider prefligh
   await withCandidate(async (_root, directory) => {
     const variants = [
       ["immutable unavailable", "immutable", 404], ["branch unavailable", "branch", 404], ["protection unavailable", "protection", 404], ["environment unavailable", "environment", 404], ["policy unavailable", "policies", 404],
-      ["reviews absent", "reviews", null], ["reviews empty", "reviews", { required_approving_review_count: 0 }], ["admin disabled", "admin", false], ["checks non-strict", "strict", false], ["checks empty", "contexts", []], ["force allowed", "force", true], ["branch unprotected", "protected", false], ["immutable disabled", "enabled", false], ["environment malformed", "environment", {}], ["branch policy wrong", "policies", { branch_policies: [{ name: "other" }] }]
+      ["reviews absent", "reviews", null], ["reviews empty", "reviews", { required_approving_review_count: 0 }], ["admin disabled", "admin", false], ["checks non-strict", "strict", false], ["checks empty", "contexts", []], ["force allowed", "force", true], ["branch unprotected", "protected", false], ["immutable disabled", "enabled", false], ["environment malformed", "environment", {}], ["self review allowed", "self-review", false], ["reviewer identity malformed", "reviewers", [{ type: "User", reviewer: {} }]], ["branch policy wrong", "policies", { branch_policies: [{ name: "other" }] }]
     ];
     for (const [name, field, value] of variants) {
       const events = [], policy = providerPolicy();
@@ -196,7 +242,7 @@ test("CLI30 actual adapter rejects every unavailable or unsafe provider prefligh
         if (path.endsWith("/immutable-releases")) { if (field === "enabled") policy.immutable.enabled = value; return json(policy.immutable); }
         if (path.endsWith("/branches/develop")) { if (field === "protected") policy.branch.protected = value; return json(policy.branch); }
         if (path.endsWith("/branches/develop/protection")) { if (field === "reviews") policy.protection.required_pull_request_reviews = value; if (field === "admin") policy.protection.enforce_admins.enabled = value; if (field === "strict") policy.protection.required_status_checks.strict = value; if (field === "contexts") policy.protection.required_status_checks.contexts = value; if (field === "force") policy.protection.allow_force_pushes.enabled = value; return json(policy.protection); }
-        if (path.endsWith("/environments/development-candidate")) return json(policy.environment);
+        if (path.endsWith("/environments/development-candidate")) { if (field === "self-review") policy.environment.protection_rules[0].prevent_self_review = value; if (field === "reviewers") policy.environment.protection_rules[0].reviewers = value; return json(policy.environment); }
         if (path.endsWith("/deployment-branch-policies")) return json(policy.policies);
         throw new Error(`unexpected ${name}`);
       };
@@ -226,6 +272,32 @@ test("CLI30 actual adapter accepts only complete immutable annotated collisions 
   });
 });
 
+test("CLI30 collision rejections retain event evidence and never repair provider state", async () => {
+  await withCandidate(async (_root, directory) => {
+    const verified = await verifyCandidateDirectory(directory, version, sourceSha), tag = verified.manifest.candidateTag;
+    const validAssets = [...verified.held.entries()].map(([name, bytes], index) => ({ id: index + 1, name, browser_download_url: `https://github.com/service-lasso/service-lasso-cli/releases/download/${tag}/${encodeURIComponent(name)}`, bytes }));
+    const cases = [
+      ["tag-only", 404, 200, release => release], ["release-only", 200, 404, release => release], ["incomplete", 200, 200, release => { release.assets = []; }],
+      ["mismatched-source", 200, 200, release => { release.target_commitish = "f".repeat(40); }], ["draft", 200, 200, release => { release.draft = true; }],
+      ["nonimmutable", 200, 200, release => { release.immutable = false; }], ["lightweight", 200, 200, release => { release.ref = { type: "commit", sha: sourceSha }; }],
+      ["bad-recursive-sha", 200, 200, release => { release.ref = { type: "tag", sha: "invalid" }; }], ["invalid-asset-id", 200, 200, release => { release.assets = release.assets.map((asset, index) => ({ ...asset, id: index === 0 ? 0 : asset.id })); }]
+    ];
+    for (const [name, releaseStatus, refStatus, mutate] of cases) {
+      const policy = providerPolicy(), events = [], release = { id: 9, immutable: true, tag_name: tag, draft: false, prerelease: true, target_commitish: sourceSha, assets: validAssets, ref: { type: "tag", sha: "a".repeat(40) } };
+      mutate(release);
+      const fetchImpl = async (url, init) => {
+        const path = new URL(url).pathname; events.push({ path, method: init.method });
+        if (path.endsWith("/immutable-releases")) return json(policy.immutable); if (path.endsWith("/branches/develop")) return json(policy.branch); if (path.endsWith("/branches/develop/protection")) return json(policy.protection); if (path.endsWith("/environments/development-candidate")) return json(policy.environment); if (path.endsWith("/deployment-branch-policies")) return json(policy.policies);
+        if (path.includes("/releases/tags/")) return json(release, releaseStatus); if (path.includes("/git/ref/tags/")) return json({ object: release.ref }, refStatus);
+        if (path.includes("/git/tags/")) return json({ object: { type: "commit", sha: sourceSha } });
+        throw new Error(`unexpected ${name} ${path}`);
+      };
+      await assert.rejects(() => publishProtectedCandidate({ directory, version, sourceSha, token: "secret-sentinel", fetchImpl }), /collision|candidate tag|inventory|identity/);
+      assert.equal(events.some((event) => ["POST", "PATCH", "DELETE"].includes(event.method)), false, name);
+    }
+  });
+});
+
 test("CLI30 actual adapter holds upload bytes, verifies every private asset, then publishes once", async () => {
   await withCandidate(async (_root, directory) => {
     const verified = await verifyCandidateDirectory(directory, version, sourceSha), tag = verified.manifest.candidateTag;
@@ -234,7 +306,7 @@ test("CLI30 actual adapter holds upload bytes, verifies every private asset, the
     const fetchImpl = async (url, init) => {
       const parsed = new URL(url), path = parsed.pathname; events.push({ url: parsed.href, method: init.method, authorization: init.headers?.authorization, body: init.body });
       if (path.endsWith("/immutable-releases")) return json(policy.immutable); if (path.endsWith("/branches/develop")) return json(policy.branch); if (path.endsWith("/branches/develop/protection")) return json(policy.protection); if (path.endsWith("/environments/development-candidate")) return json(policy.environment); if (path.endsWith("/deployment-branch-policies")) return json(policy.policies);
-      if (path.includes("/releases/tags/") || path.includes("/git/ref/tags/")) return json({}, 404); if (path.endsWith("/git/tags")) return json({ sha: "a".repeat(40) }, 201); if (path.endsWith("/git/refs")) return json({}, 201); if (path.endsWith("/releases") && init.method === "POST") return json({ id: 77 }, 201);
+      if (path.includes("/releases/tags/") || path.includes("/git/ref/tags/")) return json({}, 404); if (path.endsWith("/git/tags")) return json({ sha: "a".repeat(40) }, 201); if (path.endsWith("/git/refs")) return json({}, 201); if (path.endsWith("/releases") && init.method === "POST") return json(emptyPrivateRelease(77, tag), 201);
       if (parsed.hostname === "uploads.github.com") { const name = parsed.searchParams.get("name"); assert.deepEqual(init.body, verified.held.get(name)); uploads += 1; if (uploads === 1) await writeFile(join(directory, name), "replaced after verification"); return json({}, 201); }
       if (path.endsWith("/releases/77") && init.method === "GET") return json({ id: 77, tag_name: tag, draft, prerelease: true, target_commitish: sourceSha, assets });
       if (path.endsWith("/releases/77") && init.method === "PATCH") { published += 1; draft = false; return json({ id: 77, immutable: true, tag_name: tag, draft, prerelease: true, target_commitish: sourceSha, assets }); }
@@ -252,7 +324,7 @@ test("CLI30 actual adapter fails draft inventory and byte defects before publica
       const assets = [...verified.held.entries()].map(([name, bytes], index) => ({ id: defect === "duplicate-id" ? 1 : defect === "invalid-id" ? 0 : index + 1, name, bytes: defect === "wrong-bytes" && index === 0 ? Buffer.from("wrong") : bytes, browser_download_url: `https://github.com/service-lasso/service-lasso-cli/releases/download/${tag}/${encodeURIComponent(name)}` })); if (defect === "missing") assets.pop();
       const policy = providerPolicy(); let patch = 0;
       const fetchImpl = async (url, init) => { const parsed = new URL(url), path = parsed.pathname;
-        if (path.endsWith("/immutable-releases")) return json(policy.immutable); if (path.endsWith("/branches/develop")) return json(policy.branch); if (path.endsWith("/branches/develop/protection")) return json(policy.protection); if (path.endsWith("/environments/development-candidate")) return json(policy.environment); if (path.endsWith("/deployment-branch-policies")) return json(policy.policies); if (path.includes("/releases/tags/") || path.includes("/git/ref/tags/")) return json({}, 404); if (path.endsWith("/git/tags")) return json({ sha: "a".repeat(40) }, 201); if (path.endsWith("/git/refs")) return json({}, 201); if (path.endsWith("/releases") && init.method === "POST") return json({ id: 77 }, 201); if (parsed.hostname === "uploads.github.com") return json({}, 201); if (path.endsWith("/releases/77") && init.method === "GET") return json({ id: 77, tag_name: tag, draft: true, prerelease: true, target_commitish: sourceSha, assets }); if (path.endsWith("/releases/77") && init.method === "PATCH") { patch += 1; return json({}, 200); } const match = /\/releases\/assets\/(\d+)$/.exec(path); if (match) return responseBytes(assets[Number(match[1]) - 1]?.bytes ?? Buffer.from("")); throw new Error(`unexpected ${path}`); };
+        if (path.endsWith("/immutable-releases")) return json(policy.immutable); if (path.endsWith("/branches/develop")) return json(policy.branch); if (path.endsWith("/branches/develop/protection")) return json(policy.protection); if (path.endsWith("/environments/development-candidate")) return json(policy.environment); if (path.endsWith("/deployment-branch-policies")) return json(policy.policies); if (path.includes("/releases/tags/") || path.includes("/git/ref/tags/")) return json({}, 404); if (path.endsWith("/git/tags")) return json({ sha: "a".repeat(40) }, 201); if (path.endsWith("/git/refs")) return json({}, 201); if (path.endsWith("/releases") && init.method === "POST") return json(emptyPrivateRelease(77, tag), 201); if (parsed.hostname === "uploads.github.com") return json({}, 201); if (path.endsWith("/releases/77") && init.method === "GET") return json({ id: 77, tag_name: tag, draft: true, prerelease: true, target_commitish: sourceSha, assets }); if (path.endsWith("/releases/77") && init.method === "PATCH") { patch += 1; return json({}, 200); } const match = /\/releases\/assets\/(\d+)$/.exec(path); if (match) return responseBytes(assets[Number(match[1]) - 1]?.bytes ?? Buffer.from("")); throw new Error(`unexpected ${path}`); };
       await assert.rejects(() => publishProtectedCandidate({ directory, version, sourceSha, token: "secret-sentinel", fetchImpl })); assert.equal(patch, 0, defect);
     }
   });
@@ -283,11 +355,128 @@ test("CLI30 actual adapter bounds raw metadata streams and aborts stalled fetche
   });
 });
 
+test("CLI30 rejects invalid and single oversized reader chunks before Buffer copying", async () => {
+  await withCandidate(async (_root, directory) => {
+    for (const [name, value, read] of [
+      ["invalid type", "not-a-byte-chunk", async (chunk) => ({ done: false, value: chunk })],
+      ["single oversized", new Uint8Array(1024 * 1024 + 1), async (chunk) => ({ done: false, value: chunk })],
+      ["malformed result", new Uint8Array(1), async (chunk) => ({ value: chunk })]
+    ]) {
+      const policy = providerPolicy(), events = [];
+      const fetchImpl = async (url, init) => {
+        const path = new URL(url).pathname; events.push(init.method);
+        if (path.endsWith("/immutable-releases")) return { status: 200, headers: new Headers(), body: { getReader() { return { read: () => read(value), cancel() {}, releaseLock() {} }; } } };
+        if (path.endsWith("/branches/develop")) return json(policy.branch);
+        if (path.endsWith("/branches/develop/protection")) return json(policy.protection);
+        if (path.endsWith("/environments/development-candidate")) return json(policy.environment);
+        if (path.endsWith("/deployment-branch-policies")) return json(policy.policies);
+        throw new Error("unreachable");
+      };
+      const original = Buffer.from; let copies = 0;
+      Buffer.from = (...args) => { if (args[0] === value) copies += 1; return original(...args); };
+      try { await assert.rejects(() => publishProtectedCandidate({ directory, version, sourceSha, token: "secret-sentinel", fetchImpl })); }
+      finally { Buffer.from = original; }
+      assert.equal(copies, 0, name);
+      assert.equal(events.some((method) => method !== "GET"), false, name);
+    }
+  });
+});
+
+test("CLI30 masks provider metadata, upload, private-read and public-read error bodies", async () => {
+  await withCandidate(async (_root, directory) => {
+    const verified = await verifyCandidateDirectory(directory, version, sourceSha), tag = verified.manifest.candidateTag;
+    const assets = [...verified.held.entries()].map(([name, bytes], index) => ({ id: index + 1, name, bytes, browser_download_url: `https://github.com/service-lasso/service-lasso-cli/releases/download/${tag}/${encodeURIComponent(name)}` }));
+    const sentinel = "secret-sentinel /local/private/path";
+    for (const stage of ["metadata", "upload", "private", "public"]) for (const kind of ["fetch", "body"]) {
+      const policy = providerPolicy(); let draft = true;
+      const fetchImpl = async (url, init) => {
+        const parsed = new URL(url), path = parsed.pathname;
+        const failAt = (matches) => { if (!matches) return null; if (kind === "fetch") throw new Error(sentinel); return new Response(sentinel, { status: 500, headers: { "content-type": "text/plain" } }); };
+        const metadataFailure = failAt(stage === "metadata" && path.endsWith("/immutable-releases")); if (metadataFailure) return metadataFailure;
+        if (path.endsWith("/immutable-releases")) return json(policy.immutable); if (path.endsWith("/branches/develop")) return json(policy.branch); if (path.endsWith("/branches/develop/protection")) return json(policy.protection); if (path.endsWith("/environments/development-candidate")) return json(policy.environment); if (path.endsWith("/deployment-branch-policies")) return json(policy.policies);
+        if (path.includes("/releases/tags/") || path.includes("/git/ref/tags/")) return json({}, 404); if (path.endsWith("/git/tags")) return json({ sha: "a".repeat(40) }, 201); if (path.endsWith("/git/refs")) return json({}, 201); if (path.endsWith("/releases") && init.method === "POST") return json(emptyPrivateRelease(77, tag), 201);
+        if (parsed.hostname === "uploads.github.com") { const failure = failAt(stage === "upload"); if (failure) return failure; return json({}, 201); }
+        if (path.endsWith("/releases/77") && init.method === "GET") return json({ id: 77, tag_name: tag, draft, prerelease: true, target_commitish: sourceSha, assets });
+        if (/\/releases\/assets\/\d+$/.test(path)) { const failure = failAt(stage === "private"); if (failure) return failure; return responseBytes(assets[Number(path.split("/").at(-1)) - 1].bytes); }
+        if (path.endsWith("/releases/77") && init.method === "PATCH") { draft = false; return json({ id: 77, immutable: true, tag_name: tag, draft, prerelease: true, target_commitish: sourceSha, assets }); }
+        if (assets.some((asset) => asset.browser_download_url === parsed.href)) { const failure = failAt(stage === "public"); if (failure) return failure; return responseBytes(assets.find((asset) => asset.browser_download_url === parsed.href).bytes); }
+        throw new Error(`unexpected ${path}`);
+      };
+      let error; try { await publishProtectedCandidate({ directory, version, sourceSha, token: "secret-sentinel", fetchImpl }); } catch (caught) { error = caught; }
+      assert.ok(error instanceof Error, stage);
+      assert.equal(error.message.includes("secret-sentinel"), false, `${stage} ${kind}`); assert.equal(error.message.includes("/local/private/path"), false, `${stage} ${kind}`);
+    }
+  });
+});
+
 test("CLI30 actual adapter strips bearer on constrained redirects and rejects malicious locations without leaking sentinels", async () => {
   await withCandidate(async (_root, directory) => {
     const verified = await verifyCandidateDirectory(directory, version, sourceSha), tag = verified.manifest.candidateTag, assets = [...verified.held.entries()].map(([name, bytes], index) => ({ id: index + 1, name, bytes, browser_download_url: `https://github.com/service-lasso/service-lasso-cli/releases/download/${tag}/${encodeURIComponent(name)}` }));
     const run = async (location) => { const policy = providerPolicy(), events = []; const fetchImpl = async (url, init) => { const parsed = new URL(url), path = parsed.pathname; events.push({ url: parsed.href, authorization: init.headers?.authorization, method: init.method }); if (path.endsWith("/immutable-releases")) return json(policy.immutable); if (path.endsWith("/branches/develop")) return json(policy.branch); if (path.endsWith("/branches/develop/protection")) return json(policy.protection); if (path.endsWith("/environments/development-candidate")) return json(policy.environment); if (path.endsWith("/deployment-branch-policies")) return json(policy.policies); if (path.includes("/releases/tags/")) return json({ id: 9, immutable: true, tag_name: tag, draft: false, prerelease: true, target_commitish: sourceSha, assets }); if (path.includes("/git/ref/tags/")) return json({ object: { type: "tag", sha: "a".repeat(40) } }); if (path.endsWith(`/git/tags/${"a".repeat(40)}`)) return json({ object: { type: "commit", sha: sourceSha } }); const match = /\/releases\/download\/.+\/(.+)$/.exec(path); if (match) return new Response(null, { status: 302, headers: { location: location.replace("{name}", match[1]) } }); if (parsed.hostname === "objects.githubusercontent.com") return responseBytes(assets.find((asset) => path.endsWith(encodeURIComponent(asset.name))).bytes); throw new Error("unreachable"); }; return { events, value: publishProtectedCandidate({ directory, version, sourceSha, token: "secret-sentinel", fetchImpl }) }; };
     const allowed = await run("https://objects.githubusercontent.com/private-object/{name}"); await allowed.value; const redirected = allowed.events.find((event) => event.url.includes("objects.githubusercontent.com")); assert.equal(redirected.authorization, undefined);
     for (const bad of ["http://objects.githubusercontent.com/a", "https://attacker.invalid/a", "https://objects.githubusercontent.com:444/a", "https://objects.githubusercontent.com/a#fragment"]) { const outcome = await run(bad); await assert.rejects(() => outcome.value, /redirect|public/); }
+  });
+});
+
+test("CLI30 actual private-ID and canonical-public adapters reject every bounded-body defect at the route", async () => {
+  await withCandidate(async (_root, directory) => {
+    const verified = await verifyCandidateDirectory(directory, version, sourceSha), tag = verified.manifest.candidateTag;
+    const makeAssets = () => [...verified.held.entries()].map(([name, bytes], index) => ({ id: index + 1, name, bytes, browser_download_url: `https://github.com/service-lasso/service-lasso-cli/releases/download/${tag}/${encodeURIComponent(name)}` }));
+    const invalidBody = (read, cancelled) => ({ status: 200, headers: new Headers(), body: { getReader() { return { read, cancel() { cancelled.value = true; }, releaseLock() {} }; } } });
+    const defects = [
+      ["missing body", () => ({ status: 200, headers: new Headers(), body: null })],
+      ["malformed reader result", () => invalidBody(async () => ({ done: "no" }), { value: false })],
+      ["wrong status", asset => new Response(asset.bytes, { status: 500 })],
+      ["declared mismatch", asset => responseBytes(asset.bytes, { declared: asset.bytes.length + 1 })],
+      ["truncated body", asset => responseBytes(asset.bytes.subarray(0, asset.bytes.length - 1), { declared: asset.bytes.length })],
+      ["invalid chunk type", () => invalidBody(async () => ({ done: false, value: "not-bytes" }), { value: false })],
+      ["undeclared single chunk overflow", asset => { const bad = new Uint8Array(asset.bytes.length + 1); return invalidBody(async () => ({ done: false, value: bad }), { value: false }); }]
+    ];
+    for (const route of ["private", "public"]) for (const [name, defect] of defects) {
+      const assets = makeAssets(), policy = providerPolicy(), events = []; let draft = true, copies = 0, overflow = null;
+      const fetchImpl = async (url, init) => {
+        const parsed = new URL(url), path = parsed.pathname; events.push({ method: init.method, url: parsed.href });
+        if (path.endsWith("/immutable-releases")) return json(policy.immutable); if (path.endsWith("/branches/develop")) return json(policy.branch); if (path.endsWith("/branches/develop/protection")) return json(policy.protection); if (path.endsWith("/environments/development-candidate")) return json(policy.environment); if (path.endsWith("/deployment-branch-policies")) return json(policy.policies);
+        if (route === "public" && path.includes("/releases/tags/")) return json({ id: 9, immutable: true, tag_name: tag, draft: false, prerelease: true, target_commitish: sourceSha, assets });
+        if (route === "public" && path.includes("/git/ref/tags/")) return json({ object: { type: "tag", sha: "a".repeat(40) } });
+        if (route === "public" && path.endsWith(`/git/tags/${"a".repeat(40)}`)) return json({ object: { type: "commit", sha: sourceSha } });
+        if (route === "private" && (path.includes("/releases/tags/") || path.includes("/git/ref/tags/"))) return json({}, 404);
+        if (route === "private" && path.endsWith("/git/tags")) return json({ sha: "a".repeat(40) }, 201); if (route === "private" && path.endsWith("/git/refs")) return json({}, 201); if (route === "private" && path.endsWith("/releases") && init.method === "POST") return json(emptyPrivateRelease(77, tag), 201);
+        if (route === "private" && parsed.hostname === "uploads.github.com") return json({}, 201);
+        if (route === "private" && path.endsWith("/releases/77") && init.method === "GET") return json({ id: 77, tag_name: tag, draft, prerelease: true, target_commitish: sourceSha, assets });
+        if (route === "private" && path.endsWith("/releases/77") && init.method === "PATCH") { draft = false; return json({ id: 77, immutable: true, tag_name: tag, draft, prerelease: true, target_commitish: sourceSha, assets }); }
+        const privateAsset = /\/releases\/assets\/(\d+)$/.exec(path); const publicAsset = assets.find((asset) => asset.browser_download_url === parsed.href); const asset = privateAsset ? assets[Number(privateAsset[1]) - 1] : publicAsset;
+        if (asset && ((route === "private" && privateAsset) || (route === "public" && publicAsset))) { const response = defect(asset); if (name === "undeclared single chunk overflow") overflow = asset.bytes; return response; }
+        throw new Error(`unexpected ${route} ${path}`);
+      };
+      const original = Buffer.from; Buffer.from = (...args) => { if (name === "undeclared single chunk overflow" && args[0] instanceof Uint8Array && args[0].byteLength > (overflow?.length ?? Number.MAX_SAFE_INTEGER)) copies += 1; return original(...args); };
+      try { await assert.rejects(() => publishProtectedCandidate({ directory, version, sourceSha, token: "secret-sentinel", fetchImpl })); } finally { Buffer.from = original; }
+      assert.equal(copies, 0, `${route} ${name}`);
+      if (route === "private") assert.equal(events.some((event) => event.method === "PATCH"), false, `${route} ${name}`);
+      else assert.equal(events.some((event) => ["POST", "PATCH", "DELETE"].includes(event.method)), false, `${route} ${name}`);
+    }
+  });
+});
+
+test("CLI30 aborts stalled private-ID and canonical-public fetches and bodies, cancelling readers without later writes", async () => {
+  await withCandidate(async (_root, directory) => {
+    const verified = await verifyCandidateDirectory(directory, version, sourceSha), tag = verified.manifest.candidateTag;
+    for (const route of ["private", "public"]) for (const kind of ["fetch", "body"]) {
+      const assets = [...verified.held.entries()].map(([name, bytes], index) => ({ id: index + 1, name, bytes, browser_download_url: `https://github.com/service-lasso/service-lasso-cli/releases/download/${tag}/${encodeURIComponent(name)}` })), policy = providerPolicy(), events = [], timers = []; let cancelled = false, aborted = false;
+      const stalled = (init) => kind === "fetch" ? new Promise((_resolve, reject) => init.signal.addEventListener("abort", () => { aborted = true; reject(new Error("abort")); }, { once: true })) : ({ status: 200, headers: new Headers(), body: { getReader() { return { read: () => new Promise(() => {}), cancel() { cancelled = true; }, releaseLock() {} }; } } });
+      const fetchImpl = async (url, init) => {
+        const parsed = new URL(url), path = parsed.pathname; events.push({ method: init.method, url: parsed.href });
+        if (path.endsWith("/immutable-releases")) return json(policy.immutable); if (path.endsWith("/branches/develop")) return json(policy.branch); if (path.endsWith("/branches/develop/protection")) return json(policy.protection); if (path.endsWith("/environments/development-candidate")) return json(policy.environment); if (path.endsWith("/deployment-branch-policies")) return json(policy.policies);
+        if (route === "public" && path.includes("/releases/tags/")) return json({ id: 9, immutable: true, tag_name: tag, draft: false, prerelease: true, target_commitish: sourceSha, assets }); if (route === "public" && path.includes("/git/ref/tags/")) return json({ object: { type: "tag", sha: "a".repeat(40) } }); if (route === "public" && path.endsWith(`/git/tags/${"a".repeat(40)}`)) return json({ object: { type: "commit", sha: sourceSha } });
+        if (route === "private" && (path.includes("/releases/tags/") || path.includes("/git/ref/tags/"))) return json({}, 404); if (route === "private" && path.endsWith("/git/tags")) return json({ sha: "a".repeat(40) }, 201); if (route === "private" && path.endsWith("/git/refs")) return json({}, 201); if (route === "private" && path.endsWith("/releases") && init.method === "POST") return json(emptyPrivateRelease(77, tag), 201); if (route === "private" && parsed.hostname === "uploads.github.com") return json({}, 201); if (route === "private" && path.endsWith("/releases/77") && init.method === "GET") return json({ id: 77, tag_name: tag, draft: true, prerelease: true, target_commitish: sourceSha, assets });
+        if ((route === "private" && /\/releases\/assets\/\d+$/.test(path)) || (route === "public" && assets.some((asset) => asset.browser_download_url === parsed.href))) return stalled(init);
+        throw new Error(`unexpected ${route} ${path}`);
+      };
+      const requestOptions = { deadlineMs: 1, setTimer(callback) { timers.push(callback); queueMicrotask(callback); return callback; }, clearTimer() {} };
+      await assert.rejects(() => publishProtectedCandidate({ directory, version, sourceSha, token: "secret-sentinel", fetchImpl, requestOptions }), /request failed/);
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.equal(kind === "fetch" ? aborted : cancelled, true, `${route} ${kind}`);
+      if (route === "private") assert.equal(events.some((event) => event.method === "PATCH"), false, `${route} ${kind}`); else assert.equal(events.some((event) => ["POST", "PATCH", "DELETE"].includes(event.method)), false, `${route} ${kind}`);
+    }
   });
 });

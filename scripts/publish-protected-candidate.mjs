@@ -14,8 +14,20 @@ async function bytes(response, limit, label, signal) {
   const reader = response.body?.getReader?.();
   if (!reader) fail(`${label} has no bounded streaming body.`);
   const parts = []; let total = 0;
-  const expired = new Promise((_, reject) => signal?.addEventListener("abort", () => reject(new Error("deadline")), { once: true }));
-  try { while (true) { const next = await Promise.race([reader.read(), expired]); if (next.done) break; const part = Buffer.from(next.value); total += part.length; if (total > limit) fail(`${label} exceeds its byte limit.`); parts.push(part); } } catch (error) { void reader.cancel?.().catch?.(() => {}); throw error; } finally { reader.releaseLock?.(); }
+  const expired = signal?.aborted ? Promise.reject(new Error("deadline")) : new Promise((_, reject) => signal?.addEventListener("abort", () => reject(new Error("deadline")), { once: true }));
+  try { while (true) {
+    const next = await Promise.race([reader.read(), expired]);
+    if (!next || typeof next !== "object" || typeof next.done !== "boolean") fail(`${label} has an invalid stream result.`);
+    if (next.done) break;
+    // The Fetch body reader yields Uint8Array chunks.  Validate both the type
+    // and the prospective total before making a defensive copy with Buffer.
+    const value = next.value;
+    if (!(value instanceof Uint8Array) || !Number.isSafeInteger(value.byteLength) || value.byteLength < 0) fail(`${label} has an invalid stream chunk.`);
+    if (value.byteLength > limit - total) fail(`${label} exceeds its byte limit.`);
+    const part = Buffer.from(value);
+    total += part.length;
+    parts.push(part);
+  } } catch (error) { void reader.cancel?.().catch?.(() => {}); throw error; } finally { reader.releaseLock?.(); }
   if (declared !== null && total !== declared) fail(`${label} content length does not match its body.`);
   return Buffer.concat(parts, total);
 }
@@ -24,7 +36,7 @@ async function request(fetchImpl, url, init, label, limit, { allowRedirect = fal
   if (!Number.isSafeInteger(deadlineMs) || deadlineMs < 1 || deadlineMs > DEADLINE_MS) fail("request deadline is invalid.");
   const controller = new AbortController(), timer = setTimer(() => controller.abort(), deadlineMs);
   let response;
-  try { const expired = new Promise((_, reject) => controller.signal.addEventListener("abort", () => reject(new Error("deadline")), { once: true })); response = await Promise.race([fetchImpl(url, { ...init, signal: controller.signal }), expired]); if (allowRedirect && response.status >= 300 && response.status < 400) return response; return { response, body: await bytes(response, limit, label, controller.signal) }; } catch (error) { if (error instanceof Error && error.message.startsWith("Protected candidate rejected:")) throw error; fail(`${label} request failed.`); } finally { clearTimer(timer); }
+  try { const expired = controller.signal.aborted ? Promise.reject(new Error("deadline")) : new Promise((_, reject) => controller.signal.addEventListener("abort", () => reject(new Error("deadline")), { once: true })); response = await Promise.race([fetchImpl(url, { ...init, signal: controller.signal }), expired]); if (allowRedirect && response.status >= 300 && response.status < 400) return response; return { response, body: await bytes(response, limit, label, controller.signal) }; } catch (error) { if (error instanceof Error && error.message.startsWith("Protected candidate rejected:")) throw error; fail(`${label} request failed.`); } finally { clearTimer(timer); }
 }
 
 export async function publishProtectedCandidate({ directory, version, sourceSha, repository = REPOSITORY, token, fetchImpl = fetch, requestOptions = {} }) {
@@ -68,7 +80,7 @@ export async function publishProtectedCandidate({ directory, version, sourceSha,
   if (annotated.status !== 201 || !FULL_SHA.test(annotated.value?.sha)) fail("annotated candidate tag creation failed.");
   const tagRef = await api(`/repos/${repository}/git/refs`, "POST", { ref: `refs/tags/${tag}`, sha: annotated.value.sha }); if (tagRef.status !== 201) fail("annotated candidate tag reference creation failed.");
   const created = await api(`/repos/${repository}/releases`, "POST", { tag_name: tag, target_commitish: sourceSha, name: `Service Lasso CLI development candidate ${version}`, prerelease: true, draft: true, generate_release_notes: false, body: "Checksum-bound development candidate. Not GA, deployment, Core qualification, or package publication." });
-  if (created.status !== 201 || !Number.isSafeInteger(created.value?.id)) fail("candidate draft creation failed.");
+  if (created.status !== 201 || !Number.isSafeInteger(created.value?.id) || created.value.id < 1 || created.value?.tag_name !== tag || created.value?.target_commitish !== sourceSha || created.value?.draft !== true || created.value?.prerelease !== true || !Array.isArray(created.value?.assets) || created.value.assets.length !== 0) fail("candidate draft creation did not produce the exact empty private release.");
   for (const name of held.keys()) await upload(created.value.id, name);
   const staged = await api(`/repos/${repository}/releases/${created.value.id}`); if (staged.status !== 200 || staged.value?.id !== created.value.id || staged.value?.tag_name !== tag || staged.value?.draft !== true || staged.value?.prerelease !== true || staged.value?.target_commitish !== sourceSha) fail("private candidate verification failed."); await inventory(staged.value, true);
   const published = await api(`/repos/${repository}/releases/${created.value.id}`, "PATCH", { draft: false, prerelease: true, target_commitish: sourceSha }); if (published.status !== 200 || published.value?.id !== created.value.id || published.value?.immutable !== true || published.value?.tag_name !== tag || published.value?.draft !== false || published.value?.target_commitish !== sourceSha || published.value?.prerelease !== true) fail("immutable candidate publication failed."); await inventory(published.value, false); return { result: "published", tag, sourceSha };
