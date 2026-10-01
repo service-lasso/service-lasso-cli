@@ -60,6 +60,7 @@ func main() {
 	// Pass the held descriptor path, rather than an extracted writer path. The
 	// IPC process resolves this process's sealed descriptor on every request.
 	heldHelper = os.NewFile(uintptr(helper), "service-lasso-confined-writer")
+	heldExecutionPath = "/proc/self/fd/3"
 	go serve(listener, "@held")
 	child := exec.Command(fmt.Sprintf("/proc/self/fd/%d", sea), os.Args[1:]...)
 	child.Stdin, child.Stdout, child.Stderr = os.Stdin, os.Stdout, os.Stderr

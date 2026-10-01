@@ -23,6 +23,7 @@ type response struct {
 }
 
 var heldHelper *os.File
+var heldExecutionPath string
 
 func materialize(connection net.Conn, helper string) {
 	defer connection.Close()
@@ -40,7 +41,7 @@ func materialize(connection net.Conn, helper string) {
 	}
 	child := exec.Command(helper)
 	if heldHelper != nil {
-		child = exec.Command("/proc/self/fd/3")
+		child = exec.Command(heldExecutionPath)
 		child.ExtraFiles = []*os.File{heldHelper}
 	}
 	child.Stdin = bytesReader(input)

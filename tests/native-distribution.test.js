@@ -33,6 +33,18 @@ test("native SEA packager records a direct host executable and smoke runs withou
     assert.equal(acceptance.version, version);
     assert.equal(acceptance.sourceSha, sourceSha);
     assert.equal(acceptance.nodeAbsentFromPath, true);
+    // The published primary contains its SEA and writer. Mutable archive
+    // neighbours are evidence only; replacing either must not change normal
+    // primary execution.
+    const writerPath = join(output, provenance.confinedWriter.name);
+    const originalWriter = await readFile(writerPath);
+    await writeFile(writerPath, "replaced");
+    await writeFile(join(output, "provenance.json"), "{\"replaced\":true}\n");
+    const primary = spawnSync(join(output, provenance.executable.name), ["--help"], { encoding: "utf8", windowsHide: true });
+    assert.equal(primary.status, 0, primary.stderr);
+    assert.match(primary.stdout, /Usage: service-lassoctl/);
+    await writeFile(writerPath, originalWriter);
+    await writeFile(join(output, "provenance.json"), `${JSON.stringify(provenance, null, 2)}\n`);
     assert.throws(() => execFileSync(node, ["scripts/smoke-native.mjs", "--directory", output, "--expected-source-sha", sourceSha, "--expected-version", "0.1.0-dev.fffffff"], { stdio: "ignore" }));
     const archiveOutput = join(output, "archive");
     await mkdir(archiveOutput);
@@ -87,4 +99,17 @@ test("packaged confined helper keeps a held parent through a replacement and ret
   assert.equal(await readFile(join(failureDestination, "unowned.txt"), "utf8"), "preserve");
   await assert.rejects(readFile(join(failureDestination, "service.json")));
   if (process.platform !== "win32") assert.deepEqual(await readdir(failureDestination), ["unowned.txt"]);
+  if (process.platform === "win32") {
+    // A permissive caller-selected parent must not flow into new project
+    // objects. The writer applies its protected OWNER RIGHTS DACL at creation.
+    const hostileParent = join(root, "hostile-parent"), hostileDestination = join(hostileParent, "project");
+    await mkdir(hostileParent);
+    execFileSync("icacls", [hostileParent, "/grant", "*S-1-1-0:(OI)(CI)F"], { stdio: "ignore" });
+    await runHeldHelper(helper, hostileDestination);
+    for (const target of [hostileDestination, join(hostileDestination, "config"), join(hostileDestination, "service.json"), join(hostileDestination, "config", "example.env")]) {
+      const acl = execFileSync("icacls", [target], { encoding: "utf8" });
+      assert.match(acl, /OWNER RIGHTS:\(F\)/i);
+      assert.doesNotMatch(acl, /Everyone:\(F\)/i);
+    }
+  }
 });

@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"golang.org/x/sys/unix"
 )
 
 // Native descriptor-preserving launch implementations are deliberately split
@@ -27,14 +29,32 @@ func main() {
 	if err := os.WriteFile(helper, confinedWriterBytes, 0700); err != nil {
 		fail()
 	}
+	// Open the exact images with O_NOFOLLOW, then remove their names before any
+	// child process starts.  Darwin's /dev/fd/N execution entry resolves the
+	// inherited descriptor, not the staged pathname.  This keeps the selected
+	// Mach-O object stable even if a caller controls an ancestor of TMPDIR.
+	sea, err := unix.Open(path, unix.O_RDONLY|unix.O_NOFOLLOW, 0)
+	if err != nil || unix.Unlink(path) != nil {
+		fail()
+	}
+	defer unix.Close(sea)
+	writer, err := unix.Open(helper, unix.O_RDONLY|unix.O_NOFOLLOW, 0)
+	if err != nil || unix.Unlink(helper) != nil {
+		fail()
+	}
+	defer unix.Close(writer)
 	endpoint := filepath.Join(directory, "primary.sock")
 	listener, err := net.Listen("unix", endpoint)
 	if err != nil {
 		fail()
 	}
 	defer listener.Close()
-	go serve(listener, helper)
-	child := exec.Command(path, os.Args[1:]...)
+	heldHelper = os.NewFile(uintptr(writer), "service-lasso-confined-writer")
+	heldExecutionPath = "/dev/fd/3"
+	go serve(listener, "@held")
+	seaFile := os.NewFile(uintptr(sea), "service-lassoctl-sea")
+	child := exec.Command("/dev/fd/3", os.Args[1:]...)
+	child.ExtraFiles = []*os.File{seaFile}
 	child.Stdin, child.Stdout, child.Stderr = os.Stdin, os.Stdout, os.Stderr
 	child.Env = append(os.Environ(), "SERVICE_LASSO_PRIMARY_GATE=unix-v1", "SERVICE_LASSO_PRIMARY_GATE_PIPE="+endpoint)
 	if err := child.Run(); err != nil {
