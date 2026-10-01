@@ -1,5 +1,6 @@
-import { lstat, mkdir, rmdir, unlink, writeFile } from "node:fs/promises";
-import { dirname, relative, resolve, sep } from "node:path";
+import { spawn, spawnSync } from "node:child_process";
+import { relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import { CliError } from "./errors.js";
 import { AcceptedTemplateBundle, acceptedTemplateFiles, loadAcceptedTemplateBundle, requireAcceptedTemplateIdentity, templateContractPreview } from "./template.js";
 export interface ServiceScaffoldOptions { id: string; directory: string; name?: string; dryRun?: boolean; templateRoot?: string; }
@@ -7,32 +8,30 @@ export interface ServiceScaffoldResult { directory: string; files: string[]; dry
 export function validateServiceId(id: string): string { if (!/^[a-z][a-z0-9-]{1,63}$/.test(id)) throw new CliError("invalid_service_id", "Service id must use lowercase letters, numbers, and hyphens (2-64 characters)."); return id; }
 export function previewServiceScaffold(options: ServiceScaffoldOptions): Record<string, unknown> { return { directory: resolve(options.directory), serviceId: validateServiceId(options.id), dryRun: true, files: [], writes: false, runtimeMutation: false, template: templateContractPreview() }; }
 export function scaffoldFiles(options: ServiceScaffoldOptions): Record<string, string> { validateServiceId(options.id); return requireAcceptedTemplateIdentity(); }
-async function normalDirectory(path: string): Promise<void> {
-  const stat = await lstat(path).catch(() => { throw new CliError("unsafe_scaffold_destination", "The project destination changed while it was being created."); });
-  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new CliError("unsafe_scaffold_destination", "The project destination contains a reparse point or is not a directory.");
+const helperName = `service-lasso-confined-scaffold${process.platform === "win32" ? ".exe" : ""}`;
+function helperPath(): string {
+  if (process.env.SERVICE_LASSO_CONFINED_HELPER) return process.env.SERVICE_LASSO_CONFINED_HELPER;
+  // The SEA is shipped next to the accepted helper; source execution builds it
+  // from its checked-in source only for local developer/test use.
+  if (process.env.SERVICE_LASSO_CANDIDATE_VERSION) return resolve(process.execPath, "..", helperName);
+  const helperSource = fileURLToPath(new URL("../native/confined-scaffold", import.meta.url));
+  const helperBinary = resolve(helperSource, helperName);
+  const build = spawnSync("go", ["build", "-trimpath", "-o", helperBinary, "."], { cwd: helperSource, encoding: "utf8" });
+  if (build.status !== 0 || build.error) throw new CliError("unsafe_scaffold_destination", "The confined writer is unavailable.");
+  return helperBinary;
 }
-async function createOwnedDirectory(path: string, directories: string[]): Promise<void> {
-  try { await mkdir(path); directories.push(path); } catch (error: any) { if (error?.code === "EEXIST") await normalDirectory(path); else throw error; }
-  await normalDirectory(path);
+async function confinedMaterialize(destination: string, files: Awaited<ReturnType<typeof acceptedTemplateFiles>>): Promise<void> {
+  const input = `${Buffer.from(destination).toString("base64")}\n${files.length}\n${files.map(file => `${file.path}\t${file.mode.toString(8)}\t${file.bytes.toString("base64")}`).join("\n")}\n`;
+  const stdout = await new Promise<string>((done, fail) => { const child = spawn(helperPath(), [], { stdio: ["pipe", "pipe", "ignore"], windowsHide: true }); let out = ""; child.stdout.on("data", value => { out += value; }); child.once("error", fail); child.once("close", code => code === 0 ? done(out) : fail(new Error(out))); child.stdin.end(input); });
+  if (stdout.trim() === "ok") return;
+  throw new CliError("unsafe_scaffold_destination", "The project destination could not be created through the confined writer.");
 }
-async function rollback(files: string[], directories: string[]): Promise<void> {
-  for (const file of files.reverse()) { const stat = await lstat(file).catch(() => undefined); if (stat?.isFile() && !stat.isSymbolicLink()) await unlink(file).catch(() => undefined); }
-  for (const directory of directories.reverse()) { const stat = await lstat(directory).catch(() => undefined); if (stat?.isDirectory() && !stat.isSymbolicLink()) await rmdir(directory).catch(() => undefined); }
-}
-export async function createServiceScaffold(options: ServiceScaffoldOptions): Promise<ServiceScaffoldResult> {
-  validateServiceId(options.id); const destination = resolve(options.directory); if (!options.templateRoot) return requireAcceptedTemplateIdentity();
-  const bundle = await loadAcceptedTemplateBundle(options.templateRoot);
-  return materializeAcceptedTemplate(destination, bundle, Boolean(options.dryRun));
-}
+export async function createServiceScaffold(options: ServiceScaffoldOptions): Promise<ServiceScaffoldResult> { validateServiceId(options.id); const destination = resolve(options.directory); if (!options.templateRoot) return requireAcceptedTemplateIdentity(); const bundle = await loadAcceptedTemplateBundle(options.templateRoot); return materializeAcceptedTemplate(destination, bundle, Boolean(options.dryRun)); }
 /** Materialize only a bundle already admitted by the source-owned resolver. */
 export async function materializeAcceptedTemplate(destinationInput: string, bundle: AcceptedTemplateBundle, dryRun = false): Promise<ServiceScaffoldResult> {
-  const destination = resolve(destinationInput); const files = await acceptedTemplateFiles(bundle);
-  if (dryRun) return { directory: destination, files: files.map((file) => file.path), dryRun: true };
-  const createdFiles: string[] = []; const createdDirectories: string[] = [];
-  try {
-    await normalDirectory(dirname(destination)); await createOwnedDirectory(destination, createdDirectories);
-    for (const file of files) { const target = resolve(destination, file.path); if (!target.startsWith(destination + sep) || relative(destination, target).startsWith("..")) throw new CliError("invalid_template_bundle", "Template inventory contains an unsafe path."); let current = destination; for (const part of relative(destination, dirname(target)).split(sep).filter(Boolean)) { current = resolve(current, part); await normalDirectory(dirname(current)); await createOwnedDirectory(current, createdDirectories); } await normalDirectory(dirname(target)); await writeFile(target, file.bytes, { flag: "wx", mode: file.mode }); createdFiles.push(target); }
-    await normalDirectory(destination);
-    return { directory: destination, files: files.map((file) => file.path), dryRun: false };
-  } catch (error) { await rollback(createdFiles, createdDirectories); throw error; }
+  const destination = resolve(destinationInput), files = await acceptedTemplateFiles(bundle);
+  if (dryRun) return { directory: destination, files: files.map(file => file.path), dryRun: true };
+  if (files.some(file => !resolve(destination, file.path).startsWith(destination + sep) || relative(destination, resolve(destination, file.path)).startsWith(".."))) throw new CliError("invalid_template_bundle", "Template inventory contains an unsafe path.");
+  try { await confinedMaterialize(destination, files); } catch { throw new CliError("unsafe_scaffold_destination", "The project destination could not be created through the confined writer."); }
+  return { directory: destination, files: files.map(file => file.path), dryRun: false };
 }

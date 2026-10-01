@@ -17,6 +17,8 @@ test("native SEA packager records a direct host executable and smoke runs withou
     assert.equal(provenance.source.commit, sourceSha);
     assert.equal(provenance.executable.platform, process.platform);
     assert.equal(provenance.executable.architecture, process.arch);
+    assert.equal(provenance.confinedWriter.platform, process.platform);
+    assert.equal(provenance.confinedWriter.sha256.length, 64);
     assert.equal(provenance.candidate.version, version);
     execFileSync(node, ["scripts/write-native-ci-context.mjs", "--directory", output, "--event-name", "workflow_dispatch", "--source-sha", sourceSha, "--tested-base-sha", "", "--merge-context-sha", sourceSha], { encoding: "utf8" });
     execFileSync(node, ["scripts/smoke-native.mjs", "--directory", output, "--expected-source-sha", sourceSha, "--expected-version", version, "--write-host-acceptance"], { encoding: "utf8" });

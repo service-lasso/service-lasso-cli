@@ -24,8 +24,8 @@ function currentTarget() {
   return target;
 }
 
-function command(file, args) {
-  const result = spawnSync(file, args, { cwd: root, encoding: "utf8" });
+function command(file, args, cwd = root) {
+  const result = spawnSync(file, args, { cwd, encoding: "utf8" });
   if (result.status !== 0 || result.error) throw new Error(`${basename(file)} failed: ${result.error?.message ?? result.stderr ?? result.stdout}`);
 }
 
@@ -42,13 +42,16 @@ if (!/^[0-9a-f]{40}$/i.test(sourceSha)) throw new Error("--source-sha must be a 
 if (!/^\d+\.\d+\.\d+-dev\.[0-9a-f]{7}$/i.test(version)) throw new Error("--version must be the frozen candidate version.");
 const target = currentTarget();
 const executableName = process.platform === "win32" ? "service-lassoctl.exe" : "service-lassoctl";
+const confinedWriterName = process.platform === "win32" ? "service-lasso-confined-scaffold.exe" : "service-lasso-confined-scaffold";
 const bundle = join(output, "service-lassoctl.cjs");
 const blob = join(output, "service-lassoctl.blob");
 const executable = join(output, executableName);
+const confinedWriter = join(output, confinedWriterName);
 const seaConfig = join(output, "sea-config.json");
 
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
+command("go", ["build", "-trimpath", "-o", confinedWriter, "."], join(root, "native", "confined-scaffold"));
 await build({
   bundle: true,
   entryPoints: [join(root, "dist", "sea-entry.js")],
@@ -77,6 +80,7 @@ const provenance = {
   candidate: { version, tag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}` },
   source: { commit: sourceSha },
   executable: { name: executableName, sha256: sha256(await readFile(executable)), platform: process.platform, architecture: process.arch, version },
+  confinedWriter: { name: confinedWriterName, sha256: sha256(await readFile(confinedWriter)), sourceSha256: sha256(await readFile(join(root, "native", "confined-scaffold", "main.go"))), platform: process.platform, architecture: process.arch },
   tools: { node: nodeVersion, esbuild: esbuildVersion, postject: postjectVersion },
   sea: { mainFormat: "commonjs", useCodeCache: false, execArgvExtension: "none" },
 };
