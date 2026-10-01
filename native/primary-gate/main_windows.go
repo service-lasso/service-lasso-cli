@@ -36,6 +36,7 @@ const (
 	gateObjCaseInsensitive        = 0x40
 	gateObjDontReparse            = 0x1000
 	gateFileListDirectory         = 0x0001
+	gateFileReadData              = 0x0001
 	gateFileWriteData             = 0x0002
 	gateDeleteAccess              = 0x10000
 	gateReadControl               = 0x20000
@@ -138,17 +139,16 @@ func stageDirectory() (string, windows.Handle, error) {
 	return path, handle, nil
 }
 
-func stageImage(directory string, name string, value []byte) (windows.Handle, error) {
+func stageImage(directory windows.Handle, name string, value []byte) (windows.Handle, error) {
 	attributes, err := privateAttributes()
 	if err != nil {
 		return 0, err
 	}
-	// CREATE_NEW returns the newly created leaf handle as part of the same
-	// kernel operation.  The stage directory is already held with no DELETE
-	// sharing, so this absolute spelling cannot be redirected after creation.
+	// FILE_CREATE returns the new leaf handle relative to the held directory;
+	// it never re-resolves a stage-directory pathname after that handle exists.
 	// The retained read handle then rejects any pre-existing writable/delete
 	// client during the intentional writer-close/reopen transition.
-	handle, err := windows.CreateFile(windows.StringToUTF16Ptr(filepath.Join(directory, name)), windows.GENERIC_READ|windows.GENERIC_WRITE, windows.FILE_SHARE_READ, attributes, windows.CREATE_NEW, windows.FILE_ATTRIBUTE_NORMAL|windows.FILE_FLAG_OPEN_REPARSE_POINT, 0)
+	handle, err := gateOpen(name, directory, gateFileWriteData|gateReadControl|gateSynchronize, gateFileCreate, gateFileSynchronousIoNonalert, attributes.SecurityDescriptor)
 	if err != nil {
 		return 0, err
 	}
@@ -172,7 +172,7 @@ func stageImage(directory string, name string, value []byte) (windows.Handle, er
 	if err = windows.CloseHandle(handle); err != nil {
 		return 0, err
 	}
-	handle, err = windows.CreateFile(windows.StringToUTF16Ptr(filepath.Join(directory, name)), windows.GENERIC_READ, windows.FILE_SHARE_READ, nil, windows.OPEN_EXISTING, windows.FILE_ATTRIBUTE_NORMAL|windows.FILE_FLAG_OPEN_REPARSE_POINT, 0)
+	handle, err = gateOpen(name, directory, gateFileReadData|gateReadControl|gateSynchronize, gateFileOpen, gateFileSynchronousIoNonalert, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -205,12 +205,12 @@ func main() {
 	defer os.RemoveAll(directory)
 	seaName := "service-lassoctl.sea.exe"
 	helperName := "service-lasso-confined-scaffold.exe"
-	seaHandle, err := stageImage(directory, seaName, seaBytes)
+	seaHandle, err := stageImage(directoryHandle, seaName, seaBytes)
 	if err != nil {
 		failAt("SEA image")
 	}
 	defer windows.CloseHandle(seaHandle)
-	helperHandle, err := stageImage(directory, helperName, confinedWriterBytes)
+	helperHandle, err := stageImage(directoryHandle, helperName, confinedWriterBytes)
 	if err != nil {
 		failAt("writer image")
 	}
@@ -225,7 +225,6 @@ func main() {
 		failAt("private pipe")
 	}
 	defer listener.Close()
-	go serveWindows(listener, helperName)
 	// CreateProcess still consumes a name.  The file itself was created and
 	// reopened relative to the held directory; its retained no-write/no-delete
 	// handle prevents an incompatible client handle from surviving the writer
@@ -233,7 +232,11 @@ func main() {
 	child := exec.Command(filepath.Join(directory, seaName), os.Args[1:]...)
 	child.Stdin, child.Stdout, child.Stderr = os.Stdin, os.Stdout, os.Stderr
 	child.Env = append(os.Environ(), "SERVICE_LASSO_PRIMARY_GATE=windows-v1", "SERVICE_LASSO_PRIMARY_GATE_PIPE="+pipe)
-	if err := child.Run(); err != nil {
+	if err := child.Start(); err != nil {
+		fail()
+	}
+	go serveWindows(listener, helperName, child.Process.Pid, child)
+	if err := child.Wait(); err != nil {
 		if exit, ok := err.(*exec.ExitError); ok {
 			os.Exit(exit.ExitCode())
 		}
@@ -244,12 +247,29 @@ func main() {
 func fail()           { fmt.Fprintln(os.Stderr, "The native primary gate could not start."); os.Exit(1) }
 func failAt(_ string) { fail() }
 
-func serveWindows(listener net.Listener, helper string) {
+var getNamedPipeClientProcessID = windows.NewLazySystemDLL("kernel32.dll").NewProc("GetNamedPipeClientProcessId")
+
+func windowsPeerIs(connection net.Conn, expectedPID int) bool {
+	fdConnection, ok := connection.(interface{ Fd() uintptr })
+	if !ok {
+		return false
+	}
+	var actual uint32
+	result, _, callErr := getNamedPipeClientProcessID.Call(fdConnection.Fd(), uintptr(unsafe.Pointer(&actual)))
+	return result != 0 && callErr == syscall.Errno(0) && actual == uint32(expectedPID)
+}
+
+func serveWindows(listener net.Listener, helper string, pid int, child *exec.Cmd) {
 	for {
 		connection, err := listener.Accept()
 		if err != nil {
 			return
 		}
-		go materialize(connection, helper)
+		if child.ProcessState != nil || !windowsPeerIs(connection, pid) {
+			_ = connection.Close()
+			continue
+		}
+		materialize(connection, helper)
+		return
 	}
 }

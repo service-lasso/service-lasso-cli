@@ -23,8 +23,11 @@
   `OBJ_DONT_REPARSE`, `FILE_OPEN_REPARSE_POINT`, and a verified protected
   owner-only DACL for every new project object. The SEA never trusts mutable
   provenance for helper execution: it verifies the baked helper digest and
-  launches a private copy from the verified bytes. It never treats pathname
-  checks as race protection. A POSIX write failure leaves the named destination
+  launches a private copy from the verified bytes. Darwin is fail-closed until
+  non-interactive privilege activates and reads back `SF_IMMUTABLE` on the leaf
+  and held parent while denying a pre-open writer; Windows pipe requests are
+  admitted only from the live SEA PID. It never treats pathname checks as race
+  protection. A POSIX write failure leaves the named destination
   absent; a temporary candidate that cannot be proved owned for deletion is
   retained as unknown state rather than being mistaken for a completed project.
   Windows deletes only via held owned handles. Packaged-helper integration tests coordinate parent

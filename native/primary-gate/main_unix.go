@@ -3,6 +3,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"net"
 	"os"
@@ -12,52 +13,130 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// Native descriptor-preserving launch implementations are deliberately split
-// by target.  This source refuses an unsupported target instead of degrading
-// to a verified-then-re-resolved staging pathname.
+// Darwin does not offer Linux's sealed memfd execution. A read descriptor or
+// unlink is insufficient because another same-identity process can retain a
+// writable descriptor. The system immutable flag is required; unavailable
+// non-interactive privilege is a closed launch failure, never a downgrade.
+func immutable(fd int, path string) error {
+	command := exec.Command("/usr/bin/sudo", "-n", "/usr/bin/chflags", "schg", path)
+	if err := command.Run(); err != nil {
+		return err
+	}
+	var stat unix.Stat_t
+	if err := unix.Fstat(fd, &stat); err != nil || stat.Flags&unix.SF_IMMUTABLE == 0 {
+		return fmt.Errorf("system immutable readback failed")
+	}
+	return nil
+}
+
+func releaseImmutable(path string) error {
+	return exec.Command("/usr/bin/sudo", "-n", "/usr/bin/chflags", "noschg", path).Run()
+}
+
+func writeImage(path string, value []byte) (int, int, error) {
+	writer, err := unix.Open(path, unix.O_WRONLY|unix.O_CREAT|unix.O_EXCL|unix.O_NOFOLLOW, 0700)
+	if err != nil {
+		return 0, 0, err
+	}
+	for written := 0; written < len(value); {
+		count, writeErr := unix.Write(writer, value[written:])
+		if writeErr != nil || count == 0 {
+			_ = unix.Close(writer)
+			return 0, 0, fmt.Errorf("image write failed")
+		}
+		written += count
+	}
+	if err = unix.Fsync(writer); err != nil {
+		_ = unix.Close(writer)
+		return 0, 0, err
+	}
+	reader, err := unix.Open(path, unix.O_RDONLY|unix.O_NOFOLLOW, 0)
+	if err != nil {
+		_ = unix.Close(writer)
+		return 0, 0, err
+	}
+	return writer, reader, nil
+}
+
+func verifyImmutableImage(writer, reader int, path string, expected []byte) error {
+	if err := immutable(reader, path); err != nil {
+		return err
+	}
+	// A later writable open is insufficient proof: the pre-open writer must
+	// also be rejected after activation.
+	if _, err := unix.Pwrite(writer, []byte{0}, 0); err == nil {
+		return fmt.Errorf("system immutable existing writer accepted write")
+	}
+	bytes := make([]byte, len(expected))
+	for read := 0; read < len(bytes); {
+		count, readErr := unix.Pread(reader, bytes[read:], int64(read))
+		if readErr != nil || count == 0 {
+			return fmt.Errorf("immutable image read failed")
+		}
+		read += count
+	}
+	if sha256.Sum256(bytes) != sha256.Sum256(expected) {
+		return fmt.Errorf("immutable image digest mismatch")
+	}
+	return nil
+}
+
 func main() {
 	directory, err := os.MkdirTemp("", "service-lasso-primary-")
 	if err != nil {
 		fail()
 	}
-	defer os.RemoveAll(directory)
-	path := filepath.Join(directory, "service-lassoctl.sea")
-	if err := os.WriteFile(path, seaBytes, 0700); err != nil {
+	seaPath := filepath.Join(directory, "service-lassoctl.sea")
+	helperPath := filepath.Join(directory, "service-lasso-confined-scaffold")
+	seaWriter, seaReader, err := writeImage(seaPath, seaBytes)
+	if err != nil {
 		fail()
 	}
-	helper := filepath.Join(directory, "service-lasso-confined-scaffold")
-	if err := os.WriteFile(helper, confinedWriterBytes, 0700); err != nil {
+	defer unix.Close(seaWriter)
+	defer unix.Close(seaReader)
+	helperWriter, helperReader, err := writeImage(helperPath, confinedWriterBytes)
+	if err != nil {
 		fail()
 	}
-	// Open the exact images with O_NOFOLLOW, then remove their names before any
-	// child process starts.  Darwin's /dev/fd/N execution entry resolves the
-	// inherited descriptor, not the staged pathname.  This keeps the selected
-	// Mach-O object stable even if a caller controls an ancestor of TMPDIR.
-	sea, err := unix.Open(path, unix.O_RDONLY|unix.O_NOFOLLOW, 0)
-	if err != nil || unix.Unlink(path) != nil {
+	defer unix.Close(helperWriter)
+	defer unix.Close(helperReader)
+	directoryFD, err := unix.Open(directory, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW, 0)
+	if err != nil {
 		fail()
 	}
-	defer unix.Close(sea)
-	writer, err := unix.Open(helper, unix.O_RDONLY|unix.O_NOFOLLOW, 0)
-	if err != nil || unix.Unlink(helper) != nil {
-		fail()
-	}
-	defer unix.Close(writer)
 	endpoint := filepath.Join(directory, "primary.sock")
 	listener, err := net.Listen("unix", endpoint)
 	if err != nil {
 		fail()
 	}
 	defer listener.Close()
-	heldHelper = os.NewFile(uintptr(writer), "service-lasso-confined-writer")
-	heldExecutionPath = "/dev/fd/3"
-	go serve(listener, "@held")
-	seaFile := os.NewFile(uintptr(sea), "service-lassoctl-sea")
-	child := exec.Command("/dev/fd/3", os.Args[1:]...)
-	child.ExtraFiles = []*os.File{seaFile}
+	// Bind the endpoint while the directory is mutable, then freeze its parent
+	// before publishing it to the child. No later actor can replace the socket.
+	if verifyImmutableImage(seaWriter, seaReader, seaPath, seaBytes) != nil || verifyImmutableImage(helperWriter, helperReader, helperPath, confinedWriterBytes) != nil || immutable(directoryFD, directory) != nil {
+		fail()
+	}
+	defer unix.Close(directoryFD)
+	defer func() {
+		// A failed release retains the protected object for recovery instead of
+		// recursively deleting a target whose ownership cannot be proved.
+		if releaseImmutable(seaPath) == nil && releaseImmutable(helperPath) == nil && releaseImmutable(directory) == nil {
+			_ = os.RemoveAll(directory)
+		}
+	}()
+	// Resolve only from the held immutable directory descriptor. The SEA and
+	// writer leaf names cannot be substituted after the flag readback.
+	heldHelper = os.NewFile(uintptr(directoryFD), "service-lasso-immutable-directory")
+	heldExecutionPath = "/dev/fd/3/service-lasso-confined-scaffold"
+	directoryFile := os.NewFile(uintptr(directoryFD), "service-lasso-immutable-directory")
+	child := exec.Command("/dev/fd/3/service-lassoctl.sea", os.Args[1:]...)
+	child.ExtraFiles = []*os.File{directoryFile}
 	child.Stdin, child.Stdout, child.Stderr = os.Stdin, os.Stdout, os.Stderr
-	child.Env = append(os.Environ(), "SERVICE_LASSO_PRIMARY_GATE=unix-v1", "SERVICE_LASSO_PRIMARY_GATE_PIPE="+endpoint)
-	if err := child.Run(); err != nil {
+	child.Env = append(os.Environ(), "SERVICE_LASSO_PRIMARY_GATE=darwin-v2", "SERVICE_LASSO_PRIMARY_GATE_PIPE="+endpoint)
+	if err := child.Start(); err != nil {
+		fail()
+	}
+	go serveDarwin(listener, "@held", child.Process.Pid, child)
+	if err := child.Wait(); err != nil {
 		if exit, ok := err.(*exec.ExitError); ok {
 			os.Exit(exit.ExitCode())
 		}
@@ -67,12 +146,36 @@ func main() {
 
 func fail() { fmt.Fprintln(os.Stderr, "The native primary gate could not start."); os.Exit(1) }
 
-func serve(listener net.Listener, helper string) {
+func serveDarwin(listener net.Listener, helper string, pid int, child *exec.Cmd) {
 	for {
 		connection, err := listener.Accept()
 		if err != nil {
 			return
 		}
-		go materialize(connection, helper)
+		if child.ProcessState != nil || !darwinPeerIs(connection, pid) {
+			_ = connection.Close()
+			continue
+		}
+		materialize(connection, helper)
+		return
 	}
+}
+
+func darwinPeerIs(connection net.Conn, expectedPID int) bool {
+	unixConnection, ok := connection.(*net.UnixConn)
+	if !ok {
+		return false
+	}
+	raw, err := unixConnection.SyscallConn()
+	if err != nil {
+		return false
+	}
+	matched := false
+	if raw.Control(func(fd uintptr) {
+		pid, peerErr := unix.GetsockoptInt(int(fd), unix.SOL_LOCAL, unix.LOCAL_PEERPID)
+		matched = peerErr == nil && pid == expectedPID
+	}) != nil {
+		return false
+	}
+	return matched
 }
