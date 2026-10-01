@@ -72,3 +72,17 @@ test("protected candidate workflow semantic assertions reject missing target and
   missingAcceptance.jobs.native.steps.find((step) => step.name === "Build target executable once, record dispatch context, and prove its no-Node fixture journey").run = "npm run package:native -- --output native-assets\nnpm run smoke:native -- --directory native-assets --expected-source-sha x --expected-version 0.1.0-dev.0000000";
   assert.throws(() => assertProtectedCandidateWorkflow(missingAcceptance));
 });
+
+test("ordinary native CI passes the frozen seven-character candidate version to its exact-version smoke", async () => {
+  const source = await readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+  const document = parseDocument(source, { version: "1.2" });
+  assert.equal(document.errors.length, 0, document.errors.map((error) => error.message).join("\n"));
+  const native = document.toJS().jobs["native-sea"];
+  const revision = native.steps.find((step) => step.id === "revision").run;
+  const build = native.steps.find((step) => step.name === "Build host-native executable and provenance").run;
+  const smoke = native.steps.find((step) => step.name === "Execute native binary with Node absent from PATH").run;
+  assert.match(revision, /candidate_version=0\.1\.0-dev\.\$\{source_sha::7\}/);
+  assert.match(build, /--version "\$\{\{ steps\.revision\.outputs\.candidate_version \}\}"/);
+  assert.match(smoke, /--expected-version "\$\{\{ steps\.revision\.outputs\.candidate_version \}\}"/);
+  assert.doesNotMatch(smoke, /expected-version "0\.1\.0-dev\.\$\{\{ steps\.revision\.outputs\.source_sha \}\}"/);
+});

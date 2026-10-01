@@ -47,6 +47,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$source_sha"
           echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
           echo "tested_base_sha=${PR_BASE_SHA:-}" >> "$GITHUB_OUTPUT"
+          echo "candidate_version=0.1.0-dev.${source_sha::7}" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: 22.23.2
@@ -58,7 +59,7 @@ jobs:
         run: |
           set -euo pipefail
           source_sha="${{ steps.revision.outputs.source_sha }}"
-          npm run package:native -- --output native-assets --source-sha "$source_sha" --version "0.1.0-dev.${source_sha::7}"
+          npm run package:native -- --output native-assets --source-sha "$source_sha" --version "${{ steps.revision.outputs.candidate_version }}"
       - name: Record schema-closed CI event context separately from native provenance
         shell: bash
         env:
@@ -73,7 +74,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm run smoke:native -- --directory native-assets --expected-source-sha "${{ steps.revision.outputs.source_sha }}" --expected-version "0.1.0-dev.${{ steps.revision.outputs.source_sha }}"
+          npm run smoke:native -- --directory native-assets --expected-source-sha "${{ steps.revision.outputs.source_sha }}" --expected-version "${{ steps.revision.outputs.candidate_version }}"
       - name: Verify exact-head provenance and CI event context
         shell: bash
         run: |
