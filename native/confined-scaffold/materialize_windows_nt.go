@@ -8,6 +8,8 @@ import (
 	"strings"
 	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/windows"
 )
 
 // NtCreateFile is used instead of CreateFileW.  RootDirectory makes every
@@ -20,6 +22,7 @@ const (
 	fileListDirectory          = 0x0001
 	fileWriteData              = 0x0002
 	deleteAccess               = 0x10000
+	readControl                = 0x20000
 	synchronize                = 0x100000
 	shareRead                  = 0x0001
 	fileOpen                   = 1
@@ -53,14 +56,32 @@ var ntdll = syscall.NewLazyDLL("ntdll.dll")
 var ntCreateFile = ntdll.NewProc("NtCreateFile")
 var ntSetInformationFile = ntdll.NewProc("NtSetInformationFile")
 
-func nativeOpen(name string, parent syscall.Handle, access uint32, disposition uint32, options uint32) (syscall.Handle, error) {
+const privateOwnerDacl = "D:P(A;;FA;;;OW)"
+
+func privateDescriptor() (*windows.SECURITY_DESCRIPTOR, error) {
+	return windows.SecurityDescriptorFromString(privateOwnerDacl)
+}
+func verifyPrivateDescriptor(handle syscall.Handle) error {
+	descriptor, err := windows.GetSecurityInfo(windows.Handle(handle), windows.SE_FILE_OBJECT, windows.DACL_SECURITY_INFORMATION)
+	if err != nil || !descriptor.IsValid() || descriptor.String() != privateOwnerDacl {
+		return fmt.Errorf("private DACL verification failed")
+	}
+	control, _, err := descriptor.Control()
+	if err != nil || control&windows.SE_DACL_PROTECTED == 0 {
+		return fmt.Errorf("private DACL is inheritable")
+	}
+	return nil
+}
+func nativeOpen(name string, parent syscall.Handle, access uint32, disposition uint32, options uint32, descriptor *windows.SECURITY_DESCRIPTOR) (syscall.Handle, error) {
 	pointer, err := syscall.UTF16PtrFromString(name)
 	if err != nil {
 		return 0, err
 	}
 	length := uint16(len(syscall.StringToUTF16(name))-1) * 2
 	u := unicodeString{length, length + 2, pointer}
-	attributes := objectAttributes{uint32(unsafe.Sizeof(objectAttributes{})), parent, &u, objCaseInsensitive | objDontReparse, 0, 0}
+	var securityDescriptor uintptr
+	if descriptor != nil { securityDescriptor = uintptr(unsafe.Pointer(descriptor)) }
+	attributes := objectAttributes{uint32(unsafe.Sizeof(objectAttributes{})), parent, &u, objCaseInsensitive | objDontReparse, securityDescriptor, 0}
 	var handle syscall.Handle
 	var iosb ioStatusBlock
 	status, _, callErr := ntCreateFile.Call(uintptr(unsafe.Pointer(&handle)), uintptr(access), uintptr(unsafe.Pointer(&attributes)), uintptr(unsafe.Pointer(&iosb)), 0, 0, shareRead, uintptr(disposition), uintptr(options|fileOpenReparsePoint), 0, 0)
@@ -77,6 +98,14 @@ func nativeOpen(name string, parent syscall.Handle, access uint32, disposition u
 	}
 	return handle, nil
 }
+func createPrivate(name string, parent syscall.Handle, access uint32, options uint32) (syscall.Handle, error) {
+	descriptor, err := privateDescriptor()
+	if err != nil { return 0, err }
+	handle, err := nativeOpen(name, parent, access|readControl, fileCreate, options, descriptor)
+	if err != nil { return 0, err }
+	if err = verifyPrivateDescriptor(handle); err != nil { _ = syscall.CloseHandle(handle); return 0, err }
+	return handle, nil
+}
 func dispose(handle syscall.Handle) {
 	value := fileDispositionInformationValue{1}
 	var iosb ioStatusBlock
@@ -90,7 +119,7 @@ func materializeNt(destination string, entries []entry) error {
 	}
 	// A volume designator is not a directory object.  Keep the trailing
 	// separator so this opens the volume root as the held directory handle.
-	root, err := nativeOpen(`\??\`+volume+`\`, 0, fileListDirectory|synchronize, fileOpen, fileDirectoryFile|fileSynchronousIoNonalert)
+	root, err := nativeOpen(`\??\`+volume+`\`, 0, fileListDirectory|synchronize, fileOpen, fileDirectoryFile|fileSynchronousIoNonalert, nil)
 	if err != nil {
 		return err
 	}
@@ -110,7 +139,7 @@ func materializeNt(destination string, entries []entry) error {
 	current := root
 	pieces := strings.FieldsFunc(rest, func(r rune) bool { return r == '\\' || r == '/' })
 	for _, piece := range pieces[:len(pieces)-1] {
-		child, e := nativeOpen(piece, current, fileListDirectory|synchronize, fileOpen, fileDirectoryFile|fileSynchronousIoNonalert)
+		child, e := nativeOpen(piece, current, fileListDirectory|synchronize, fileOpen, fileDirectoryFile|fileSynchronousIoNonalert, nil)
 		if e != nil {
 			return e
 		}
@@ -120,7 +149,7 @@ func materializeNt(destination string, entries []entry) error {
 	if err = testGate("before-project-create"); err != nil {
 		return err
 	}
-	project, e := nativeOpen(pieces[len(pieces)-1], current, fileListDirectory|deleteAccess|synchronize, fileCreate, fileDirectoryFile|fileSynchronousIoNonalert)
+	project, e := createPrivate(pieces[len(pieces)-1], current, fileListDirectory|deleteAccess|synchronize, fileDirectoryFile|fileSynchronousIoNonalert)
 	if e != nil {
 		return e
 	}
@@ -131,9 +160,9 @@ func materializeNt(destination string, entries []entry) error {
 		current = project
 		pieces = strings.Split(item.path, "/")
 		for _, piece := range pieces[:len(pieces)-1] {
-			child, e := nativeOpen(piece, current, fileListDirectory|synchronize, fileOpen, fileDirectoryFile|fileSynchronousIoNonalert)
+			child, e := nativeOpen(piece, current, fileListDirectory|synchronize, fileOpen, fileDirectoryFile|fileSynchronousIoNonalert, nil)
 			if e != nil {
-				child, e = nativeOpen(piece, current, fileListDirectory|deleteAccess|synchronize, fileCreate, fileDirectoryFile|fileSynchronousIoNonalert)
+				child, e = createPrivate(piece, current, fileListDirectory|deleteAccess|synchronize, fileDirectoryFile|fileSynchronousIoNonalert)
 				if e != nil {
 					rollback()
 					return e
@@ -143,7 +172,7 @@ func materializeNt(destination string, entries []entry) error {
 			handles = append(handles, child)
 			current = child
 		}
-		file, e := nativeOpen(pieces[len(pieces)-1], current, fileWriteData|deleteAccess|synchronize, fileCreate, fileSynchronousIoNonalert)
+		file, e := createPrivate(pieces[len(pieces)-1], current, fileWriteData|deleteAccess|synchronize, fileSynchronousIoNonalert)
 		if e != nil {
 			rollback()
 			return e

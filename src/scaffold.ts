@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
@@ -14,26 +14,37 @@ export function scaffoldFiles(options: ServiceScaffoldOptions): Record<string, s
 const helperName = `service-lasso-confined-scaffold${process.platform === "win32" ? ".exe" : ""}`;
 let sourceHelper: string | undefined;
 function sha256(value: Buffer | string): string { return createHash("sha256").update(value).digest("hex"); }
-function candidateIdentity(): { version: string; sourceSha: string } | undefined {
-  const version = process.env.SERVICE_LASSO_CANDIDATE_VERSION;
-  const sourceSha = process.env.SERVICE_LASSO_CANDIDATE_SOURCE_SHA;
-  return /^\d+\.\d+\.\d+-dev\.[0-9a-f]{7}$/i.test(version ?? "") && /^[0-9a-f]{40}$/i.test(sourceSha ?? "") ? { version: version!, sourceSha: sourceSha! } : undefined;
+declare const __SERVICE_LASSO_CANDIDATE_VERSION__: string | undefined;
+declare const __SERVICE_LASSO_CANDIDATE_SOURCE_SHA__: string | undefined;
+declare const __SERVICE_LASSO_CONFINED_HELPER_SHA256__: string | undefined;
+function candidateIdentity(): { version: string; sourceSha: string; helperSha256: string } | undefined {
+  // These globals are replaced while the SEA is built.  `typeof` keeps normal
+  // source execution independent of ambient packaging-looking environment.
+  const version = typeof __SERVICE_LASSO_CANDIDATE_VERSION__ === "string" ? __SERVICE_LASSO_CANDIDATE_VERSION__ : undefined;
+  const sourceSha = typeof __SERVICE_LASSO_CANDIDATE_SOURCE_SHA__ === "string" ? __SERVICE_LASSO_CANDIDATE_SOURCE_SHA__ : undefined;
+  const helperSha256 = typeof __SERVICE_LASSO_CONFINED_HELPER_SHA256__ === "string" ? __SERVICE_LASSO_CONFINED_HELPER_SHA256__ : undefined;
+  return /^\d+\.\d+\.\d+-dev\.[0-9a-f]{7}$/i.test(version ?? "") && /^[0-9a-f]{40}$/i.test(sourceSha ?? "") && /^[0-9a-f]{64}$/i.test(helperSha256 ?? "") ? { version: version!, sourceSha: sourceSha!, helperSha256: helperSha256! } : undefined;
 }
 function packagedHelper(): string | undefined {
-  // package-native replaces these expressions with immutable candidate values
-  // while bundling the SEA.  Ordinary source execution never treats ambient
-  // environment variables as a packaging claim.
+  // package-native bakes the complete helper digest into the SEA.  The mutable
+  // provenance sidecar remains archive evidence only; it is never an execution
+  // authority.  Read the installed helper once, verify those held bytes, then
+  // execute a private copy made from that buffer.  A replacement beside the SEA
+  // before or after this read therefore cannot change the launched bytes.
   const identity = candidateIdentity();
   if (!identity) return undefined;
-  const { version, sourceSha } = identity;
   const directory = resolve(process.execPath, "..");
   const candidate = resolve(directory, helperName);
-  const provenancePath = resolve(directory, "provenance.json");
   try {
-    const provenance = JSON.parse(readFileSync(provenancePath, "utf8")) as { schemaVersion?: unknown; candidate?: { version?: unknown }; source?: { commit?: unknown }; confinedWriter?: { name?: unknown; sha256?: unknown; platform?: unknown; architecture?: unknown } };
-    const writer = provenance.confinedWriter;
-    if (provenance.schemaVersion !== 1 || provenance.candidate?.version !== version || provenance.source?.commit !== sourceSha || writer?.name !== helperName || writer.platform !== process.platform || writer.architecture !== process.arch || typeof writer.sha256 !== "string" || !/^[0-9a-f]{64}$/i.test(writer.sha256) || sha256(readFileSync(candidate)) !== writer.sha256) return undefined;
-    return candidate;
+    const helperBytes = readFileSync(candidate);
+    if (sha256(helperBytes) !== identity.helperSha256) return undefined;
+    const heldDirectory = mkdtempSync(join(tmpdir(), "service-lasso-confined-sea-"));
+    chmodSync(heldDirectory, 0o700);
+    const heldHelper = join(heldDirectory, helperName);
+    writeFileSync(heldHelper, helperBytes, { flag: "wx", mode: 0o700 });
+    chmodSync(heldHelper, 0o700);
+    if (sha256(readFileSync(heldHelper)) !== identity.helperSha256) return undefined;
+    return heldHelper;
   } catch { return undefined; }
 }
 function helperPath(): string {
@@ -47,8 +58,9 @@ function helperPath(): string {
   const helperSource = fileURLToPath(new URL("../native/confined-scaffold", import.meta.url));
   if (sourceHelper) return sourceHelper;
   // Never compile into the repository: an inherited helper binary can be a
-  // retained audit artifact.  This output directory is unique to this process
-  // and removed only by its owner on exit.
+  // retained audit artifact.  This output directory is intentionally retained:
+  // a pathname-based recursive cleanup cannot prove that a replaced target is
+  // still ours.
   const helperDirectory = mkdtempSync(join(tmpdir(), "service-lasso-confined-helper-"));
   const helperBinary = join(helperDirectory, helperName);
   const build = spawnSync("go", ["build", "-trimpath", "-o", helperBinary, "."], { cwd: helperSource, encoding: "utf8" });

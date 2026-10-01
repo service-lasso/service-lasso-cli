@@ -25,6 +25,8 @@ test("native SEA packager records a direct host executable and smoke runs withou
     assert.equal(provenance.confinedWriter.platform, process.platform);
     assert.equal(provenance.confinedWriter.sha256.length, 64);
     assert.equal(provenance.candidate.version, version);
+    const seaBundle = await readFile(join(output, "service-lassoctl.cjs"), "utf8");
+    assert.match(seaBundle, new RegExp(provenance.confinedWriter.sha256));
     execFileSync(node, ["scripts/write-native-ci-context.mjs", "--directory", output, "--event-name", "workflow_dispatch", "--source-sha", sourceSha, "--tested-base-sha", "", "--merge-context-sha", sourceSha], { encoding: "utf8" });
     execFileSync(node, ["scripts/smoke-native.mjs", "--directory", output, "--expected-source-sha", sourceSha, "--expected-version", version, "--write-host-acceptance"], { encoding: "utf8" });
     const acceptance = JSON.parse(await readFile(join(output, "host-acceptance.json"), "utf8"));

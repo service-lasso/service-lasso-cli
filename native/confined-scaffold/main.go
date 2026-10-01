@@ -107,7 +107,7 @@ func readPlan() (string, []entry, string) {
 		}
 		seen[fields[0]] = true
 		mode, e := strconv.ParseUint(fields[1], 8, 32)
-		if e != nil || mode > 0777 {
+		if e != nil || (mode != 0644 && mode != 0755) {
 			fail("invalid mode")
 		}
 		out = append(out, entry{fields[0], os.FileMode(mode), decode(fields[2])})

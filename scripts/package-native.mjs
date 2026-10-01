@@ -60,6 +60,7 @@ const seaConfig = join(output, "sea-config.json");
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 command("go", ["build", "-trimpath", "-o", confinedWriter, "."], join(root, "native", "confined-scaffold"));
+const confinedWriterSha256 = sha256(await readFile(confinedWriter));
 await build({
   bundle: true,
   entryPoints: [join(root, "dist", "sea-entry.js")],
@@ -69,7 +70,13 @@ await build({
   target: "node22",
   nodePaths: [join(root, "node_modules")],
   alias: { commander: join(root, "node_modules", "commander", "index.js") },
-  define: { "process.env.SERVICE_LASSO_CANDIDATE_VERSION": JSON.stringify(version), "process.env.SERVICE_LASSO_CANDIDATE_SOURCE_SHA": JSON.stringify(sourceSha) },
+  define: {
+    "process.env.SERVICE_LASSO_CANDIDATE_VERSION": JSON.stringify(version),
+    "process.env.SERVICE_LASSO_CANDIDATE_SOURCE_SHA": JSON.stringify(sourceSha),
+    __SERVICE_LASSO_CANDIDATE_VERSION__: JSON.stringify(version),
+    __SERVICE_LASSO_CANDIDATE_SOURCE_SHA__: JSON.stringify(sourceSha),
+    __SERVICE_LASSO_CONFINED_HELPER_SHA256__: JSON.stringify(confinedWriterSha256),
+  },
   legalComments: "none",
 });
 await writeFile(seaConfig, `${JSON.stringify({ main: bundle, output: blob, disableExperimentalSEAWarning: true, useCodeCache: false, execArgvExtension: "none" }, null, 2)}\n`);
@@ -88,7 +95,7 @@ const provenance = {
   candidate: { version, tag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}` },
   source: { commit: sourceSha },
   executable: { name: executableName, sha256: sha256(await readFile(executable)), platform: process.platform, architecture: process.arch, version },
-  confinedWriter: { name: confinedWriterName, sha256: sha256(await readFile(confinedWriter)), sourceSha256: await confinedWriterSourceSha256(), platform: process.platform, architecture: process.arch },
+  confinedWriter: { name: confinedWriterName, sha256: confinedWriterSha256, sourceSha256: await confinedWriterSourceSha256(), platform: process.platform, architecture: process.arch },
   tools: { node: nodeVersion, esbuild: esbuildVersion, postject: postjectVersion },
   sea: { mainFormat: "commonjs", useCodeCache: false, execArgvExtension: "none" },
 };
