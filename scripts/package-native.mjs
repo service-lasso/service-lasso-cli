@@ -51,10 +51,12 @@ if (!/^\d+\.\d+\.\d+-dev\.[0-9a-f]{7}$/i.test(version)) throw new Error("--versi
 const target = currentTarget();
 const executableName = process.platform === "win32" ? "service-lassoctl.exe" : "service-lassoctl";
 const confinedWriterName = process.platform === "win32" ? "service-lasso-confined-scaffold.exe" : "service-lasso-confined-scaffold";
+const embeddedSeaName = process.platform === "win32" ? "service-lassoctl.sea.exe" : "service-lassoctl.sea";
 const bundle = join(output, "service-lassoctl.cjs");
 const blob = join(output, "service-lassoctl.blob");
 const executable = join(output, executableName);
 const confinedWriter = join(output, confinedWriterName);
+const embeddedSea = join(output, embeddedSeaName);
 const seaConfig = join(output, "sea-config.json");
 
 await rm(output, { recursive: true, force: true });
@@ -88,6 +90,28 @@ const postjectArgs = [executable, "NODE_SEA_BLOB", blob, "--sentinel-fuse", fuse
 if (process.platform === "darwin") postjectArgs.push("--macho-segment-name", "NODE_SEA");
 command(process.execPath, [postject, ...postjectArgs]);
 if (process.platform === "darwin") command("codesign", ["--sign", "-", executable]);
+
+// The published command is a compiled resident primary.  It embeds both
+// target-host images, so a normal invocation never chooses a helper from a
+// mutable archive neighbour.  Keep the checked writer alongside the archive
+// as an auditable member; it is not executable authority for the primary.
+await copyFile(executable, embeddedSea);
+const gateSource = join(root, "native", "primary-gate");
+const gateBuild = join(output, ".primary-gate-build");
+await mkdir(join(gateBuild, "assets"), { recursive: true });
+await Promise.all([
+  copyFile(join(gateSource, "go.mod"), join(gateBuild, "go.mod")),
+  copyFile(join(gateSource, "go.sum"), join(gateBuild, "go.sum")),
+  copyFile(join(gateSource, "main.go"), join(gateBuild, "main.go")),
+  copyFile(join(gateSource, "ipc.go"), join(gateBuild, "ipc.go")),
+  copyFile(join(gateSource, "main_windows.go"), join(gateBuild, "main_windows.go")),
+  copyFile(join(gateSource, "main_unix.go"), join(gateBuild, "main_unix.go")),
+  copyFile(embeddedSea, join(gateBuild, "assets", "service-lassoctl.sea")),
+  copyFile(confinedWriter, join(gateBuild, "assets", "service-lasso-confined-scaffold")),
+]);
+command("go", ["build", "-trimpath", "-o", executable, "."], gateBuild);
+await rm(gateBuild, { recursive: true, force: true });
+await rm(embeddedSea, { force: true });
 
 const provenance = {
   schemaVersion: 1,
