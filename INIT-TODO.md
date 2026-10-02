@@ -79,3 +79,5 @@
   work.
 - [ ] Issue #28: enforce the event-specific native provenance contract with real verifier-subprocess proof. `github.sha` is an explicit expected merge context; pull requests require distinct full source, tested-base and merge-context SHAs, while pushes require an intentionally empty expected base, null/absent recorded base and source-equal merge context. Source, event, digest and host checks remain strict.
 - [ ] Complete the remaining Issue #1 workflow and automation-contract acceptance recorded in `.governance/project/BACKLOG.md` and `docs/capability-matrix.md`.
+
+- [ ] Issue #30 coherent Darwin six-member archive and literal every-write provider reread bundle: entire independent source review then new complete-input admission before any execution; Windows ZIP/full native/Core delivery remains open.

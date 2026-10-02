@@ -17,3 +17,5 @@ Issue #30 prepares the source-only protected immutable development-candidate
 publisher for the portable Node archive plus Windows x64, Linux x64 and macOS
 arm64 native archives. Provider settings, dispatch, publication, deployment,
 Core packaging and GA remain separately authorised and evidenced.
+
+Issue #30 continuation coherently binds the Darwin archived immutable helper bytes and rereads approved provider protection immediately before every mutation. Whole programme Windows ZIP and actual Core/operator acceptance remain open.

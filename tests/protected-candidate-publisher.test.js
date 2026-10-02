@@ -20,12 +20,14 @@ async function nativeDirectory(root, target) {
   const writerBytes = Buffer.from(`confined-writer-${target.id}`);
   await writeFile(join(directory, executable), bytes);
   await writeFile(join(directory, confinedWriter), writerBytes);
+  const immutableBytes = Buffer.from(`immutable-helper-${target.id}`);
+  if (target.id === "darwin-arm64") await writeFile(join(directory, "service-lasso-darwin-immutable-helper"), immutableBytes);
   const digest = sha256(bytes);
-  await writeFile(join(directory, "provenance.json"), `${JSON.stringify({ schemaVersion: 1, command: "service-lassoctl", candidate: { version, tag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}` }, source: { commit: sourceSha }, executable: { name: executable, sha256: digest, platform: target.platform, architecture: target.architecture, version }, confinedWriter: { name: confinedWriter, sha256: sha256(writerBytes), sourceSha256: "b".repeat(64), platform: target.platform, architecture: target.architecture }, ...(target.id === "darwin-arm64" ? { darwinImmutableHelper: { name: "service-lasso-darwin-immutable-helper", sha256: "c".repeat(64), sourceSha256: "d".repeat(64), platform: "darwin", architecture: "arm64" } } : {}), tools: {}, sea: {} })}\n`);
+  await writeFile(join(directory, "provenance.json"), `${JSON.stringify({ schemaVersion: 1, command: "service-lassoctl", candidate: { version, tag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}` }, source: { commit: sourceSha }, executable: { name: executable, sha256: digest, platform: target.platform, architecture: target.architecture, version }, confinedWriter: { name: confinedWriter, sha256: sha256(writerBytes), sourceSha256: "b".repeat(64), platform: target.platform, architecture: target.architecture }, ...(target.id === "darwin-arm64" ? { darwinImmutableHelper: { name: "service-lasso-darwin-immutable-helper", sha256: sha256(immutableBytes), sourceSha256: "d".repeat(64), platform: "darwin", architecture: "arm64" } } : {}), tools: {}, sea: {} })}\n`);
   await writeFile(join(directory, "ci-context.json"), `${JSON.stringify({ schemaVersion: 1, eventName: "workflow_dispatch", sourceSha, testedBaseSha: null, mergeContextSha: sourceSha })}\n`);
   const evidenceDigest = sha256(Buffer.from(`service-lasso-native-acceptance-v1\n${sourceSha}\n${version}\n${target.platform}\n${target.architecture}\n${digest}\nnode-absent\npassed\n`, "utf8"));
   await writeFile(join(directory, "host-acceptance.json"), `${JSON.stringify({ schemaVersion: 1, sourceSha, version, platform: target.platform, architecture: target.architecture, executableSha256: digest, nodeAbsentFromPath: true, status: "passed", evidenceDigest })}\n`);
-  execFileSync("tar", ["-czf", `service-lassoctl-${version}-${target.id}.tar.gz`, executable, confinedWriter, "provenance.json", "ci-context.json", "host-acceptance.json"], { cwd: directory });
+  execFileSync(node, ["scripts/archive-native-candidate.mjs", "--directory", directory, "--output", directory, "--version", version, "--source-sha", sourceSha], { encoding: "utf8" });
   await rm(join(directory, executable));
   await rm(join(directory, confinedWriter));
   return directory;
@@ -526,5 +528,66 @@ test("CLI30 treats nonempty private and public 3xx bodies as disposable redirect
       if (route === "private") assert.equal(events.some((event) => event.method === "PATCH"), name === "allowed", `${route} ${name} ${cancelMode}`);
       else assert.equal(events.some((event) => ["POST", "PATCH", "DELETE"].includes(event.method)), false, `${route} ${name} ${cancelMode}`);
     }
+  });
+});
+
+test("CLI30 rereads all five policies immediately before every actual mutation and stops midphase", async () => {
+  await withCandidate(async (_root, directory) => {
+    const verified = await verifyCandidateDirectory(directory, version, sourceSha), tag = verified.manifest.candidateTag;
+    const assets = [...verified.held.entries()].map(([name, bytes], index) => ({ id: index + 1, name, bytes, browser_download_url: `https://github.com/service-lasso/service-lasso-cli/releases/download/${tag}/${encodeURIComponent(name)}` }));
+    const policySuffixes = ["/immutable-releases", "/branches/develop", "/branches/develop/protection", "/environments/development-candidate", "/deployment-branch-policies"];
+    // Three initial writes, all ten held public assets, then the single publish.
+    const totalWrites = 3 + assets.length + 1;
+    for (const [failBefore, deniedEndpoint] of [[null, null], ...Array.from({ length: totalWrites }, (_, index) => [[index, null], ...policySuffixes.map((_, endpoint) => [index, endpoint])]).flat()]) {
+      const events = [], policy = providerPolicy(); let writes = 0;
+      const fetchImpl = async (url, init) => {
+        const parsed = new URL(url), path = parsed.pathname; events.push({ path, method: init.method });
+        const policyIndex = policySuffixes.findIndex(suffix => path.endsWith(suffix));
+        if (policyIndex >= 0) {
+          if (writes === failBefore && deniedEndpoint === policyIndex) return json({}, 403);
+          if (writes === failBefore && deniedEndpoint === null && policyIndex === 0) return json({ enabled: false });
+          return json([policy.immutable, policy.branch, policy.protection, policy.environment, policy.policies][policyIndex]);
+        }
+        if (init.method !== "GET") {
+          const preceding = events.slice(-6, -1);
+          assert.equal(preceding.length, 5);
+          assert.deepEqual(preceding.map(event => policySuffixes.findIndex(suffix => event.path.endsWith(suffix))).sort(), [0, 1, 2, 3, 4]);
+          assert.ok(preceding.every(event => event.method === "GET")); writes += 1;
+        }
+        if (path.includes("/releases/tags/") || path.includes("/git/ref/tags/")) return json({}, 404);
+        if (path.endsWith("/git/tags")) return json({ sha: "a".repeat(40) }, 201);
+        if (path.endsWith("/git/refs")) return json({}, 201);
+        if (path.endsWith("/releases") && init.method === "POST") return json(emptyPrivateRelease(77, tag), 201);
+        if (parsed.hostname === "uploads.github.com") return json({}, 201);
+        if (path.endsWith("/releases/77")) return json({ id: 77, tag_name: tag, target_commitish: sourceSha, prerelease: true, draft: init.method !== "PATCH", immutable: init.method === "PATCH", assets });
+        const privateId = /\/releases\/assets\/(\d+)$/.exec(path);
+        if (privateId) return responseBytes(assets[Number(privateId[1]) - 1].bytes);
+        const asset = assets.find(value => value.browser_download_url === parsed.href);
+        if (asset) { assert.equal(init.headers.authorization, undefined); return responseBytes(asset.bytes); }
+        throw new Error("Unexpected endpoint");
+      };
+      if (failBefore === null) { assert.equal((await publishProtectedCandidate({ directory, version, sourceSha, token: "secret-sentinel", fetchImpl })).result, "published"); assert.equal(writes, totalWrites); }
+      else { await assert.rejects(() => publishProtectedCandidate({ directory, version, sourceSha, token: "secret-sentinel", fetchImpl }), /immutable releases|provider protection/); assert.equal(writes, failBefore); assert.ok(events.slice(events.findLastIndex(event => event.method !== "GET") + 1).every(event => event.method === "GET")); }
+    }
+  });
+});
+
+test("CLI30 actual Darwin producer ships helper bytes and verifier rejects omitted or replaced helper despite outer checksum rebinding", async () => {
+  await withCandidate(async (root, directory) => {
+    const archiveName = `service-lassoctl-${version}-darwin-arm64.tar.gz`, archive = join(directory, archiveName);
+    const unpacked = join(root, "darwin-unpacked"); await mkdir(unpacked);
+    execFileSync("tar", ["-xzf", archive, "-C", unpacked]);
+    const helper = "service-lasso-darwin-immutable-helper";
+    const provenance = JSON.parse(await readFile(join(unpacked, "provenance.json"), "utf8"));
+    assert.equal(sha256(await readFile(join(unpacked, helper))), provenance.darwinImmutableHelper.sha256);
+    const members = ["service-lassoctl", "service-lasso-confined-scaffold", helper, "provenance.json", "ci-context.json", "host-acceptance.json"];
+    assert.deepEqual(execFileSync("tar", ["-tzf", archive], { encoding: "utf8" }).trim().split(/\r?\n/).sort(), [...members].sort());
+    for (const defect of ["omit", "replace"]) {
+      if (defect === "replace") await writeFile(join(unpacked, helper), "hostile replacement");
+      execFileSync("tar", ["-czf", archive, "-C", unpacked, "--", ...members.filter(name => defect !== "omit" || name !== helper)]);
+      await rebindCandidate(directory);
+      await assert.rejects(() => verifyCandidateDirectory(directory, version, sourceSha), /closed inventory|forged identity/);
+    }
+    assert.throws(() => execFileSync(node, ["scripts/archive-native-candidate.mjs", "--directory", unpacked, "--output", unpacked, "--version", version, "--source-sha", sourceSha], { stdio: "ignore" }));
   });
 });

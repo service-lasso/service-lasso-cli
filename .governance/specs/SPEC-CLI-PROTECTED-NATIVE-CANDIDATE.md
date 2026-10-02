@@ -34,10 +34,10 @@ or publication claim.
 
 ### Native archive context contract
 
-The archive verifier accepts a native `.tar.gz` only when its exact five-member
+The archive verifier accepts a native `.tar.gz` only when its exact five-member (Windows/Linux) or six-member (Darwin)
 inventory is the target executable, the matching target-host compiled
 `service-lasso-confined-scaffold` helper, `provenance.json`, `ci-context.json`,
-and `host-acceptance.json`. The provenance record binds both executable bytes,
+and `host-acceptance.json`, plus Darwin-only `service-lasso-darwin-immutable-helper`. The verifier recomputes its digest from actual archived bytes. The provenance record binds both executable bytes,
 helper bytes, helper source digest, platform, and architecture. `ci-context.json` has schema version 1 and contains
 only event name, source SHA, nullable tested-base SHA, and merge-context SHA.
 It permits only `push`, `pull_request`, or `workflow_dispatch`; a push or
@@ -72,3 +72,7 @@ acceptance evidence.
   `tests/native-distribution.test.js` and
   `tests/protected-candidate-publisher.test.js`; it is source test evidence,
   not hosted CI acceptance or candidate publication evidence.
+
+## Issue30 coherent repair continuation
+
+Immediately before each tag-object, tag-reference, draft-create, asset-upload and publish mutation, reread all five approved provider policy endpoints and validate the complete contract. A changed or denied policy stops all remaining mutations and retains existing private state. Actual producer archives and every mutation boundary require regressions. Windows ZIP remains full programme scope. All new regressions are UNEXECUTED until entire independent final-head SOURCE GO and new ROOT complete-input admission.
