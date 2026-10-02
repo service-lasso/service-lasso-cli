@@ -41,13 +41,29 @@ func darwinHelper() (string, error) {
 	return path, nil
 }
 
+// Borrowed raw descriptors retain their caller's ownership. Only independent
+// duplicates are given finalizable os.File owners, and every duplicate closes
+// after the child is reaped, including failed starts.
+func runDarwinHelperCommand(command *exec.Cmd, fd, capabilityFD int) error {
+	imageFD, err := unix.Dup(fd)
+	if err != nil { return err }
+	unix.CloseOnExec(imageFD)
+	image := os.NewFile(uintptr(imageFD), "service-lasso-owned-image-copy")
+	defer image.Close()
+	copyFD, err := unix.Dup(capabilityFD)
+	if err != nil { return err }
+	unix.CloseOnExec(copyFD)
+	capability := os.NewFile(uintptr(copyFD), "service-lasso-capability-copy")
+	defer capability.Close()
+	command.ExtraFiles = []*os.File{image, capability}
+	return command.Run()
+}
+
 func setImmutable(fd int, mode string) error {
 	helper, err := darwinHelper()
 	if err != nil { return err }
 	capabilityFD, err := strconv.Atoi(os.Getenv("SERVICE_LASSO_DARWIN_IMMUTABILITY_CAPABILITY_FD"))
 	if err != nil || capabilityFD < 3 { return fmt.Errorf("Darwin immutable capability is not inherited") }
-	capability := os.NewFile(uintptr(capabilityFD), "service-lasso-darwin-immutability-capability")
-	if capability == nil { return fmt.Errorf("Darwin immutable capability is unavailable") }
 	var stat unix.Stat_t
 	if err = unix.Fstat(fd, &stat); err != nil || stat.Uid != uint32(os.Getuid()) { return fmt.Errorf("Darwin image is not job-owned") }
 	if qualificationOwner == nil { return fmt.Errorf("Darwin owner coordination is unavailable") }
@@ -58,8 +74,7 @@ func setImmutable(fd int, mode string) error {
 	// The policy-bound capability and image descriptor are the only preserved
 	// descriptors. A runner without externally provisioned authority fails.
 	command := exec.Command("/usr/bin/sudo", "-n", "-C", "5", "--", helper, "--fd", "3", "--capability-fd", "4", "--device", strconv.FormatUint(uint64(stat.Dev), 10), "--inode", strconv.FormatUint(stat.Ino, 10), "--mode", mode)
-	command.ExtraFiles = []*os.File{os.NewFile(uintptr(fd), "service-lasso-owned-image"), capability}
-	if err = command.Run(); err != nil { return err }
+	if err = runDarwinHelperCommand(command, fd, capabilityFD); err != nil { return err }
 	if err = unix.Fstat(fd, &stat); err != nil { return err }
 	if mode == "set" && stat.Flags&unix.SF_IMMUTABLE == 0 { return fmt.Errorf("system immutable readback failed") }
 	if mode == "clear" && stat.Flags&unix.SF_IMMUTABLE != 0 { return fmt.Errorf("system immutable clear readback failed") }
@@ -159,6 +174,10 @@ func main() {
 	if err != nil {
 		fail()
 	}
+	// One owner spans child use and deferred immutable recovery. Share this
+	// retained file with both launch paths; never wrap or raw-close it twice.
+	directoryFile := os.NewFile(uintptr(directoryFD), "service-lasso-immutable-directory")
+	defer directoryFile.Close()
 	pair, err := unix.Socketpair(unix.AF_UNIX, unix.SOCK_STREAM, 0)
 	if err != nil {
 		fail()
@@ -179,7 +198,6 @@ func main() {
 	if verifyImmutableImage(seaWriter, seaReader, seaBytes) != nil { fail("sea-immutability") }
 	if verifyImmutableImage(helperWriter, helperReader, confinedWriterBytes) != nil { fail("writer-immutability") }
 	if immutable(directoryFD) != nil { fail("parent-immutability") }
-	defer unix.Close(directoryFD)
 	defer func() {
 		// A failed release retains the protected object for recovery instead of
 		// recursively deleting a target whose ownership cannot be proved.
@@ -191,10 +209,8 @@ func main() {
 	// writer leaf names cannot be substituted after the flag readback.
 	// ipc.go maps its sole ExtraFiles entry to fd 3 for the writer.  Preserve
 	// the held immutable directory, never a pathname or an unmapped fd 4.
-	heldHelper = os.NewFile(uintptr(directoryFD), "service-lasso-immutable-directory")
+	heldHelper = directoryFile
 	heldExecutionPath = "/dev/fd/3/service-lasso-confined-scaffold"
-	directoryFile := os.NewFile(uintptr(directoryFD), "service-lasso-immutable-directory")
-	defer directoryFile.Close()
 	child := exec.Command("/dev/fd/4/service-lassoctl.sea", os.Args[1:]...)
 	child.ExtraFiles = []*os.File{clientFile, directoryFile}
 	child.Stdin, child.Stdout, child.Stderr = os.Stdin, os.Stdout, os.Stderr
