@@ -55,7 +55,7 @@
   `docs/capability-matrix.md`.
 - [ ] Issue #22: implement `SPEC-CLI-DURABLE-OPERATIONS` external durable
   operator slice through `SERVICE_LASSO_CORE_EXPECTED_REVISION`; the current
-  reviewed Core candidate is `cc5cd9007655296da8c921fdc494f1df404223b3`.
+  reviewed Core candidate is `9bef20259e5b43f6bcd2e9796da0f35396305425`.
   Record compiled external-CLI to source-built Core evidence with disposable
   JWT-authenticated fixtures separately from merged-Core, packaged-Core,
   release, deployment, and GA qualification.
