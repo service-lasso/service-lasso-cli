@@ -3,6 +3,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { spawn } from "node:child_process";
 import { assertClosedObject, parseStrictJson, readHeldFile } from "./protected-candidate-lib.mjs";
+import { nativeQualificationStdio } from "./native-qualification-stdio.mjs";
 
 function option(name) {
   const index = process.argv.indexOf(name);
@@ -24,6 +25,15 @@ const command = process.argv[separator + 1], args = process.argv.slice(separator
 const initial = JSON.parse(await readFile(join(receiptDirectory, "initial.json"), "utf8"));
 if (initial.schemaVersion !== 2 || initial.ownedBirth !== true || initial.actualClose !== null) throw new Error("Initial receipt is not open and owned.");
 const sha256 = async (path) => createHash("sha256").update(await readFile(path)).digest("hex");
+async function digestOutcome(path) {
+  if (!path) return { status: "not-requested", sha256: null, errorCode: null };
+  try { return { status: "present", sha256: await sha256(path), errorCode: null }; }
+  catch (error) {
+    // Retain only a bounded code, never an error message containing paths.
+    const errorCode = typeof error.code === "string" && /^[A-Z0-9_]{1,64}$/.test(error.code) ? error.code : "digest_error";
+    return { status: errorCode === "ENOENT" ? "absent" : "error", sha256: null, errorCode };
+  }
+}
 const routeResultPath = phase === "route" && qualificationStatus === "unavailable" ? resolve(option("--route-result")) : null;
 if (routeResultPath && (expectedExit !== "zero" || !executable || !process.env.SERVICE_LASSO_NATIVE_ROUTE_RESULT || resolve(process.env.SERVICE_LASSO_NATIVE_ROUTE_RESULT) !== routeResultPath)) throw new Error("Unavailable route requires a zero-exit test runner and explicit inner-result path.");
 if (routeResultPath) {
@@ -34,14 +44,21 @@ if (routeResultPath) {
 let result;
 try {
   result = await new Promise((resolveChild) => {
-    const child = spawn(command, args, { stdio: "inherit", shell: false });
-    child.once("error", (error) => resolveChild({ code: null, signal: null, spawnError: error.code ?? "spawn_error" }));
-    child.once("close", (code, signal) => resolveChild({ code, signal, spawnError: null }));
+    const child = spawn(command, args, { stdio: nativeQualificationStdio(["inherit", "inherit", "inherit"]), shell: false });
+    let spawnError = null;
+    child.once("error", (error) => { spawnError = error.code ?? "spawn_error"; });
+    child.once("close", (code, signal) => resolveChild({ code, signal, spawnError }));
   });
+} catch {
+  result = { code: null, signal: null, spawnError: "launch_adapter_error" };
 } finally {
   // The raw result below is written after the child has closed, including a
   // signal or spawn failure. A later close step can never substitute success.
 }
+// Digest failures must not discard the already observed child closure. A
+// requested missing/unreadable member keeps the phase failed even on exit0.
+const nativeExecutable = await digestOutcome(executable);
+const artifactOutcome = await digestOutcome(artifact);
 const record = {
   schemaVersion: 1,
   phase,
@@ -50,8 +67,10 @@ const record = {
   recursiveHeadTreeSha256: initial.recursiveHeadTreeSha256,
   command: basename(command),
   argumentsSha256: createHash("sha256").update(JSON.stringify(args)).digest("hex"),
-  nativeExecutableSha256: executable ? await sha256(executable) : null,
-  artifactSha256: artifact ? await sha256(artifact) : null,
+  nativeExecutableSha256: nativeExecutable.sha256,
+  nativeExecutable,
+  artifactSha256: artifactOutcome.sha256,
+  artifact: artifactOutcome,
   qualificationStatus,
   expectedExit,
   rawClose: result,
@@ -59,6 +78,7 @@ const record = {
     ? result.code === 0 && result.signal === null && result.spawnError === null
     : typeof result.code === "number" && result.code !== 0 && result.signal === null && result.spawnError === null,
 };
+if ((executable && nativeExecutable.status !== "present") || (artifact && artifactOutcome.status !== "present")) record.passed = false;
 record.innerRoute = null;
 if (routeResultPath && record.passed) {
   try {

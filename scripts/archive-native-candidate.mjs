@@ -47,6 +47,9 @@ if (acceptance.schemaVersion !== 1 || acceptance.sourceSha !== sourceSha || acce
 const archive = `service-lassoctl-${version}-${target}.tar.gz`;
 const archivePath = join(output, archive);
 await rm(archivePath, { force: true });
-const result = spawnSync("tar", ["-czf", archivePath, "-C", directory, "--", executable, confinedWriter, ...(target === "darwin-arm64" ? ["service-lasso-darwin-immutable-helper"] : []), "provenance.json", "ci-context.json", "host-acceptance.json"], { encoding: "utf8" });
+// GNU tar interprets a drive-colon archive name as a remote host. Keep the
+// fixed local basename relative to the caller's job-owned output directory;
+// the absolute input directory is a separate literal -C argument, never -f.
+const result = spawnSync("tar", ["-czf", `./${archive}`, "-C", directory, "--", executable, confinedWriter, ...(target === "darwin-arm64" ? ["service-lasso-darwin-immutable-helper"] : []), "provenance.json", "ci-context.json", "host-acceptance.json"], { cwd: output, encoding: "utf8", shell: false });
 if (result.status !== 0 || result.error) throw new Error(`Native archive failed: ${result.error?.message ?? result.stderr ?? result.stdout}`);
 process.stdout.write(`${JSON.stringify({ archive, sha256: sha256(await readFile(archivePath)), executable: basename(executable), target })}\n`);

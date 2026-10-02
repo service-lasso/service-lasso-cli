@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rename, rm, writeFile, truncate } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import test from "node:test";
 import { assertProviderPreflight, canonicalPublicAssetUrl, expectedAssets, parseStrictJson, readHeldFile, sha256, validateManifest, verifyCandidateDirectory } from "../scripts/protected-candidate-lib.mjs";
 import { publishProtectedCandidate } from "../scripts/publish-protected-candidate.mjs";
@@ -11,7 +11,7 @@ const node = process.execPath;
 const sourceSha = "0123456789abcdef0123456789abcdef01234567";
 const version = "0.1.0-dev.0123456";
 
-async function nativeDirectory(root, target) {
+async function nativeDirectory(root, target, environment = process.env) {
   const directory = join(root, target.id);
   await mkdir(directory, { recursive: true });
   const executable = target.id === "win32-x64" ? "service-lassoctl.exe" : "service-lassoctl";
@@ -27,7 +27,7 @@ async function nativeDirectory(root, target) {
   await writeFile(join(directory, "ci-context.json"), `${JSON.stringify({ schemaVersion: 1, eventName: "workflow_dispatch", sourceSha, testedBaseSha: null, mergeContextSha: sourceSha })}\n`);
   const evidenceDigest = sha256(Buffer.from(`service-lasso-native-acceptance-v1\n${sourceSha}\n${version}\n${target.platform}\n${target.architecture}\n${digest}\nnode-absent\npassed\n`, "utf8"));
   await writeFile(join(directory, "host-acceptance.json"), `${JSON.stringify({ schemaVersion: 1, sourceSha, version, platform: target.platform, architecture: target.architecture, executableSha256: digest, nodeAbsentFromPath: true, status: "passed", evidenceDigest })}\n`);
-  execFileSync(node, ["scripts/archive-native-candidate.mjs", "--expected-event", "workflow_dispatch", "--expected-base-sha", "", "--expected-merge-context-sha", sourceSha, "--directory", directory, "--output", directory, "--version", version, "--source-sha", sourceSha], { encoding: "utf8" });
+  execFileSync(node, ["scripts/archive-native-candidate.mjs", "--expected-event", "workflow_dispatch", "--expected-base-sha", "", "--expected-merge-context-sha", sourceSha, "--directory", directory, "--output", directory, "--version", version, "--source-sha", sourceSha], { encoding: "utf8", env: environment });
   await rm(join(directory, executable));
   await rm(join(directory, confinedWriter));
   return directory;
@@ -624,6 +624,29 @@ test("CLI30 held local reads reject growth and replacement inside the actual rea
       await rm(path, { recursive: true });
       await rename(`${path}.saved`, path);
     }
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("CLI30 actual producer uses local archive names under drive and spaced output with Windows GNU tar", async () => {
+  const root = await mkdtemp(join(tmpdir(), "service-lasso archive spaces "));
+  try {
+    const environment = { ...process.env };
+    if (process.platform === "win32") {
+      assert.match(root, /^[A-Za-z]:\\/);
+      // Match the dedicated Git Bash job's GNU tar implementation explicitly,
+      // so a different ambient BSD tar cannot mask drive-colon regression.
+      const gitExec = execFileSync("git", ["--exec-path"], { encoding: "utf8" }).trim();
+      const gnuDirectory = resolve(gitExec, "..", "..", "..", "usr", "bin");
+      delete environment.Path;
+      environment.PATH = `${gnuDirectory};${process.env.PATH ?? process.env.Path ?? ""}`;
+      assert.match(execFileSync(join(gnuDirectory, "tar.exe"), ["--version"], { encoding: "utf8" }), /GNU tar/);
+    }
+    const directory = await nativeDirectory(root, { id: "win32-x64", platform: "win32", architecture: "x64" }, environment);
+    const name = `service-lassoctl-${version}-win32-x64.tar.gz`;
+    const bytes = await readFile(join(directory, name));
+    assert.ok(bytes.length > 0);
+    const members = execFileSync("tar", ["-tzf", `./${name}`], { cwd: directory, env: environment, encoding: "utf8", shell: false }).trim().split(/\r?\n/).sort();
+    assert.deepEqual(members, ["service-lassoctl.exe", "service-lasso-confined-scaffold.exe", "provenance.json", "ci-context.json", "host-acceptance.json"].sort());
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 

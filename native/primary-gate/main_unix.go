@@ -50,6 +50,11 @@ func setImmutable(fd int, mode string) error {
 	if capability == nil { return fmt.Errorf("Darwin immutable capability is unavailable") }
 	var stat unix.Stat_t
 	if err = unix.Fstat(fd, &stat); err != nil || stat.Uid != uint32(os.Getuid()) { return fmt.Errorf("Darwin image is not job-owned") }
+	if qualificationOwner == nil { return fmt.Errorf("Darwin owner coordination is unavailable") }
+	request, err := qualificationOwner.begin(fd, mode)
+	if err != nil { return err }
+	succeeded := false
+	defer func() { if !succeeded { _ = qualificationOwner.complete(request, false) } }()
 	// The policy-bound capability and image descriptor are the only preserved
 	// descriptors. A runner without externally provisioned authority fails.
 	command := exec.Command("/usr/bin/sudo", "-n", "-C", "5", "--", helper, "--fd", "3", "--capability-fd", "4", "--device", strconv.FormatUint(uint64(stat.Dev), 10), "--inode", strconv.FormatUint(stat.Ino, 10), "--mode", mode)
@@ -58,7 +63,8 @@ func setImmutable(fd int, mode string) error {
 	if err = unix.Fstat(fd, &stat); err != nil { return err }
 	if mode == "set" && stat.Flags&unix.SF_IMMUTABLE == 0 { return fmt.Errorf("system immutable readback failed") }
 	if mode == "clear" && stat.Flags&unix.SF_IMMUTABLE != 0 { return fmt.Errorf("system immutable clear readback failed") }
-	return nil
+	succeeded = true
+	return qualificationOwner.complete(request, true)
 }
 
 func immutable(fd int) error {
@@ -128,6 +134,9 @@ func main() {
 	capabilityFD, err := strconv.Atoi(os.Getenv("SERVICE_LASSO_DARWIN_IMMUTABILITY_CAPABILITY_FD"))
 	var capabilityStat unix.Stat_t
 	if err != nil || capabilityFD < 3 || unix.Fstat(capabilityFD, &capabilityStat) != nil { fail("external-capability") }
+	qualificationOwner, err = connectDarwinOwner()
+	if err != nil { fail("external-owner") }
+	defer qualificationOwner.connection.Close()
 	directory, err := os.MkdirTemp("", "service-lasso-primary-")
 	if err != nil {
 		fail()
