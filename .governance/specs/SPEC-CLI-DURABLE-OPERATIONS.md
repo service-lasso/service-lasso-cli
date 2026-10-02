@@ -2,11 +2,11 @@
 
 ## Scope
 
-Issue #22 implements the external `service-lassoctl` adapter for the reviewed
-Core durable lifecycle HTTP contract at frozen merged Core `develop` commit
-`d6dc5558307f13c654194ddc944e3be40c940675`. This is Development work. The
-contract is a dependency, not evidence that it is packaged, released, deployed,
-or qualified in a real Core runtime.
+Issue #32 extends the external `service-lassoctl` adapter to consume the
+Core-owned `SPEC-009` durable job transaction from a fresh `develop`-based
+Core candidate. This is Development work. The contract is a dependency, not
+evidence that it is packaged, released, deployed, or qualified in a real Core
+runtime.
 
 ## Requirements
 
@@ -22,7 +22,11 @@ or qualified in a real Core runtime.
 - `CLI-DURABLE-009`: The client never retries or resubmits a mutation. A transport loss is `uncertain` and is reconciled by operation ID or the same server idempotency key.
 - `CLI-DURABLE-010`: JSON result records go to stdout and diagnostics go to stderr without credentials or response-body echoes. The server-issued confirmation phrase is the sole deliberate display exception and appears only in the validated preview record because execution requires operator re-entry of that phrase.
 - `CLI-DURABLE-011`: Noninteractive missing values fail deterministically; `--confirm` does not bypass server authentication or confirmation.
-- `CLI-DURABLE-012`: The compiled binary is tested against the actual source-built merged Core dependency on an owned disposable loopback fixture with a scoped signed JWT, actor/client identity, required profile and scopes. Evidence includes preview, one mutation, idempotent same-key replay, changed-context rejection, error redaction, operation inspection, unavailable cancellation, and unrelated-service preservation.
+- `CLI-DURABLE-012`: The compiled binary is tested against the actual source-built Core candidate on an owned disposable loopback fixture with a scoped signed JWT, actor/client identity, required profile and scopes. Evidence includes preview, one mutation, idempotent same-key replay, changed-context rejection, error redaction, operation inspection, unavailable cancellation, and unrelated-service preservation.
+- `CLI-DURABLE-013`: Native CI resolves the executable name from the actual
+  host platform (`.exe` only on Windows); every host retains a failed primary
+  gate as failure evidence and no wrapper may replace it with an assertion-only
+  result.
 
 ## Dependencies and non-goals
 
