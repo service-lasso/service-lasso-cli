@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -33,8 +33,29 @@ function assertProtectedCandidateWorkflow(workflow) {
   assert.equal((nativeBuild.match(/npm run package:native/g) ?? []).length, 1, "each target must build its executable once");
   assert.match(nativeBuild, /write-native-ci-context\.mjs --directory native-assets --event-name workflow_dispatch/);
   assert.match(nativeBuild, /--tested-base-sha "" --merge-context-sha "\$\{\{ needs\.identity\.outputs\.source_sha \}\}"/);
-  assert.match(nativeBuild, /npm run smoke:native .*--expected-version "\$\{\{ needs\.identity\.outputs\.candidate_version \}\}" --write-host-acceptance/);
   assert.match(nativeBuild, /verify-native-ci-provenance\.mjs .*--expected-event workflow_dispatch/);
+  const nativeSteps = workflow.jobs?.native?.steps ?? [];
+  const nativeSmoke = nativeSteps.find((step) => step.name === "Record actual native smoke close result")?.run ?? "";
+  assert.match(nativeSmoke, /run-native-qualification-phase\.mjs .*--phase smoke/);
+  assert.match(nativeSmoke, /npm run smoke:native .*--expected-version "\$\{\{ needs\.identity\.outputs\.candidate_version \}\}" --write-host-acceptance/);
+  const custody = nativeSteps.find((step) => step.name === "Establish isolated native qualification custody before dependencies")?.run ?? "";
+  assert.match(custody, /SERVICE_LASSO_WORKSPACE_ROOT=/);
+  assert.match(custody, /SERVICE_LASSO_INSTANCE_REGISTRY_PATH=/);
+  assert.match(custody, /SERVICE_LASSO_HOST_PORT_REGISTRY_PATH=/);
+  assert.match(custody, /prepare-native-qualification-receipt\.mjs/);
+  assert.ok(nativeSteps.findIndex((step) => step.name === "Establish isolated native qualification custody before dependencies") < nativeSteps.findIndex((step) => step.run === "npm ci"));
+  const darwinRoute = nativeSteps.find((step) => step.name === "Compile and exercise Darwin process-exit rejection source checks")?.run ?? "";
+  assert.match(darwinRoute, /go test \.\/\.\.\./);
+  const primaryRoute = nativeSteps.find((step) => step.name === "Record expected unavailable controlled primary-route result")?.run ?? "";
+  assert.match(primaryRoute, /run-native-qualification-phase\.mjs .*--phase route/);
+  assert.match(primaryRoute, /controlled source admission/);
+  assert.equal(nativeSteps.some((step) => /Provision the bounded Darwin descriptor helper/.test(step.name ?? "")), false);
+  assert.match(primaryRoute, /SERVICE_LASSO_CONTROLLED_NATIVE_EXE=/);
+  assert.match(primaryRoute, /--qualification-status unavailable/);
+  assert.match(primaryRoute, /--expected-exit nonzero/);
+  const openReceipt = nativeSteps.find((step) => step.name === "Retain the explicitly open native qualification receipt")?.run ?? "";
+  assert.match(openReceipt, /verify-native-qualification-open\.mjs/);
+  assert.doesNotMatch(openReceipt, /close-native-qualification-receipt\.mjs|--exit/);
   const archive = workflow.jobs?.native?.steps?.find((step) => step.name === "Archive the accepted native bytes without rebuilding")?.run ?? "";
   assert.match(archive, /npm run archive:native/);
   assert.doesNotMatch(archive, /package:native|smoke:native|write-native-ci-context/);
@@ -85,4 +106,64 @@ test("ordinary native CI passes the frozen seven-character candidate version to 
   assert.match(build, /--version "\$\{\{ steps\.revision\.outputs\.candidate_version \}\}"/);
   assert.match(smoke, /--expected-version "\$\{\{ steps\.revision\.outputs\.candidate_version \}\}"/);
   assert.doesNotMatch(smoke, /expected-version "0\.1\.0-dev\.\$\{\{ steps\.revision\.outputs\.source_sha \}\}"/);
+  const steps = native.steps;
+  const custody = steps.find((step) => step.name === "Establish isolated native qualification custody before dependencies")?.run ?? "";
+  assert.match(custody, /SERVICE_LASSO_WORKSPACE_ROOT=/);
+  assert.match(custody, /SERVICE_LASSO_INSTANCE_REGISTRY_PATH=/);
+  assert.match(custody, /SERVICE_LASSO_HOST_PORT_REGISTRY_PATH=/);
+  assert.match(custody, /prepare-native-qualification-receipt\.mjs/);
+  assert.ok(steps.findIndex((step) => step.name === "Establish isolated native qualification custody before dependencies") < steps.findIndex((step) => step.run === "npm ci"));
+  const route = steps.find((step) => step.name === "Record expected unavailable controlled primary-route result")?.run ?? "";
+  assert.match(route, /run-native-qualification-phase\.mjs .*--phase route/);
+  assert.match(route, /controlled source admission/);
+  assert.equal(steps.some((step) => /Provision the bounded Darwin descriptor helper/.test(step.name ?? "")), false);
+  assert.match(route, /SERVICE_LASSO_CONTROLLED_NATIVE_EXE=/);
+  assert.match(route, /--qualification-status unavailable/);
+  assert.match(route, /--expected-exit nonzero/);
+  const ciOpen = steps.find((step) => step.name === "Retain the explicitly open native qualification receipt")?.run ?? "";
+  assert.match(ciOpen, /verify-native-qualification-open\.mjs/);
+  assert.doesNotMatch(ciOpen, /close-native-qualification-receipt\.mjs|--exit/);
+});
+
+test("native qualification closes only durable, successful child waits bound to the accepted executable", async () => {
+  const root = await mkdtemp(join(tmpdir(), "service-lassoctl-receipt-"));
+  const receipt = join(root, "receipts"), executable = join(root, "service-lassoctl"), archive = join(root, "accepted.tar.gz");
+  const environment = { ...process.env, SERVICE_LASSO_WORKSPACE_ROOT: join(root, "workspace"), SERVICE_LASSO_INSTANCE_REGISTRY_PATH: join(root, "instance", "registry.json"), SERVICE_LASSO_HOST_PORT_REGISTRY_PATH: join(root, "ports", "registry.json") };
+  try {
+    await writeFile(executable, "accepted-executable");
+    await writeFile(archive, "accepted-archive");
+    execFileSync(node, ["scripts/prepare-native-qualification-receipt.mjs", "--receipt-directory", receipt], { env: environment, encoding: "utf8" });
+    for (const phase of ["smoke", "route", "archive"]) {
+      const args = ["scripts/run-native-qualification-phase.mjs", "--receipt-directory", receipt, "--phase", phase, "--executable", executable];
+      if (phase === "archive") args.push("--artifact", archive);
+      args.push("--", node, "-e", "process.exit(0)");
+      execFileSync(node, args, { encoding: "utf8" });
+    }
+    assert.throws(() => execFileSync(node, ["scripts/close-native-qualification-receipt.mjs", "--receipt-directory", receipt, "--executable", executable, "--exit", "0"], { stdio: "ignore" }));
+    execFileSync(node, ["scripts/close-native-qualification-receipt.mjs", "--receipt-directory", receipt, "--executable", executable], { encoding: "utf8" });
+    const closed = JSON.parse(await readFile(join(receipt, "closed.json"), "utf8"));
+    assert.equal(closed.actualClose.outcome, "passed");
+    assert.deepEqual(closed.actualClose.rawPhaseResults.smoke, { code: 0, signal: null, spawnError: null });
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("an unavailable controlled route remains an open receipt and cannot close native qualification", async () => {
+  const root = await mkdtemp(join(tmpdir(), "service-lassoctl-open-receipt-"));
+  const receipt = join(root, "receipts"), executable = join(root, "service-lassoctl"), archive = join(root, "candidate.tar.gz");
+  const environment = { ...process.env, SERVICE_LASSO_WORKSPACE_ROOT: join(root, "workspace"), SERVICE_LASSO_INSTANCE_REGISTRY_PATH: join(root, "instance", "registry.json"), SERVICE_LASSO_HOST_PORT_REGISTRY_PATH: join(root, "ports", "registry.json") };
+  try {
+    await writeFile(executable, "unqualified-executable");
+    await writeFile(archive, "unqualified-archive");
+    execFileSync(node, ["scripts/prepare-native-qualification-receipt.mjs", "--receipt-directory", receipt], { env: environment, encoding: "utf8" });
+    execFileSync(node, ["scripts/run-native-qualification-phase.mjs", "--receipt-directory", receipt, "--phase", "smoke", "--executable", executable, "--", node, "-e", "process.exit(0)"], { encoding: "utf8" });
+    execFileSync(node, ["scripts/run-native-qualification-phase.mjs", "--receipt-directory", receipt, "--phase", "route", "--qualification-status", "unavailable", "--expected-exit", "nonzero", "--executable", executable, "--", node, "-e", "process.exit(7)"], { encoding: "utf8" });
+    execFileSync(node, ["scripts/run-native-qualification-phase.mjs", "--receipt-directory", receipt, "--phase", "archive", "--executable", executable, "--artifact", archive, "--", node, "-e", "process.exit(0)"], { encoding: "utf8" });
+    execFileSync(node, ["scripts/verify-native-qualification-open.mjs", "--receipt-directory", receipt, "--executable", executable], { encoding: "utf8" });
+    await assert.rejects(readFile(join(receipt, "closed.json")));
+    assert.throws(() => execFileSync(node, ["scripts/close-native-qualification-receipt.mjs", "--receipt-directory", receipt, "--executable", executable], { stdio: "ignore" }));
+    const route = JSON.parse(await readFile(join(receipt, "phase-route.json"), "utf8"));
+    assert.equal(route.qualificationStatus, "unavailable");
+    assert.equal(route.expectedExit, "nonzero");
+    assert.equal(route.rawClose.code, 7);
+  } finally { await rm(root, { recursive: true, force: true }); }
 });

@@ -15,15 +15,19 @@ async function nativeDirectory(root, target) {
   const directory = join(root, target.id);
   await mkdir(directory, { recursive: true });
   const executable = target.id === "win32-x64" ? "service-lassoctl.exe" : "service-lassoctl";
+  const confinedWriter = target.confinedWriter ?? (target.id === "win32-x64" ? "service-lasso-confined-scaffold.exe" : "service-lasso-confined-scaffold");
   const bytes = Buffer.from(`native-${target.id}`);
+  const writerBytes = Buffer.from(`confined-writer-${target.id}`);
   await writeFile(join(directory, executable), bytes);
+  await writeFile(join(directory, confinedWriter), writerBytes);
   const digest = sha256(bytes);
-  await writeFile(join(directory, "provenance.json"), `${JSON.stringify({ schemaVersion: 1, command: "service-lassoctl", candidate: { version, tag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}` }, source: { commit: sourceSha }, executable: { name: executable, sha256: digest, platform: target.platform, architecture: target.architecture, version }, tools: {}, sea: {} })}\n`);
+  await writeFile(join(directory, "provenance.json"), `${JSON.stringify({ schemaVersion: 1, command: "service-lassoctl", candidate: { version, tag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}` }, source: { commit: sourceSha }, executable: { name: executable, sha256: digest, platform: target.platform, architecture: target.architecture, version }, confinedWriter: { name: confinedWriter, sha256: sha256(writerBytes), sourceSha256: "b".repeat(64), platform: target.platform, architecture: target.architecture }, ...(target.id === "darwin-arm64" ? { darwinImmutableHelper: { name: "service-lasso-darwin-immutable-helper", sha256: "c".repeat(64), sourceSha256: "d".repeat(64), platform: "darwin", architecture: "arm64" } } : {}), tools: {}, sea: {} })}\n`);
   await writeFile(join(directory, "ci-context.json"), `${JSON.stringify({ schemaVersion: 1, eventName: "workflow_dispatch", sourceSha, testedBaseSha: null, mergeContextSha: sourceSha })}\n`);
   const evidenceDigest = sha256(Buffer.from(`service-lasso-native-acceptance-v1\n${sourceSha}\n${version}\n${target.platform}\n${target.architecture}\n${digest}\nnode-absent\npassed\n`, "utf8"));
   await writeFile(join(directory, "host-acceptance.json"), `${JSON.stringify({ schemaVersion: 1, sourceSha, version, platform: target.platform, architecture: target.architecture, executableSha256: digest, nodeAbsentFromPath: true, status: "passed", evidenceDigest })}\n`);
-  execFileSync("tar", ["-czf", `service-lassoctl-${version}-${target.id}.tar.gz`, executable, "provenance.json", "ci-context.json", "host-acceptance.json"], { cwd: directory });
+  execFileSync("tar", ["-czf", `service-lassoctl-${version}-${target.id}.tar.gz`, executable, confinedWriter, "provenance.json", "ci-context.json", "host-acceptance.json"], { cwd: directory });
   await rm(join(directory, executable));
+  await rm(join(directory, confinedWriter));
   return directory;
 }
 
@@ -41,7 +45,7 @@ async function candidateDirectory(root) {
   const portable = join(root, "portable");
   execFileSync(node, ["scripts/package-candidate.mjs", "--output", portable, "--version", version, "--source-sha", sourceSha], { encoding: "utf8" });
   const args = ["scripts/assemble-protected-candidate.mjs", "--output", join(root, "candidate"), "--portable", portable, "--version", version, "--source-sha", sourceSha];
-  for (const target of [{ id: "win32-x64", platform: "win32", architecture: "x64" }, { id: "linux-x64", platform: "linux", architecture: "x64" }, { id: "darwin-arm64", platform: "darwin", architecture: "arm64" }]) args.push("--native", `${target.id}=${await nativeDirectory(root, target)}`);
+  for (const target of [{ id: "win32-x64", platform: "win32", architecture: "x64", confinedWriter: "service-lasso-confined-scaffold.exe" }, { id: "linux-x64", platform: "linux", architecture: "x64", confinedWriter: "service-lasso-confined-scaffold" }, { id: "darwin-arm64", platform: "darwin", architecture: "arm64", confinedWriter: "service-lasso-confined-scaffold" }]) args.push("--native", `${target.id}=${await nativeDirectory(root, target)}`);
   execFileSync(node, args, { encoding: "utf8" });
   return join(root, "candidate");
 }

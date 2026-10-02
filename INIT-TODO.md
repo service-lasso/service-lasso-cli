@@ -10,6 +10,37 @@
   flag/environment/profile precedence, credentials kept environment-only, and
   the reviewed service-template tag, commit and manifest checksum recorded in
   each non-destructive local scaffold.
+- [ ] Issue #8 accepted-template activation: the full-contract materializer is
+  ready for an immutable candidate tag, archive/contract checksum tuple,
+  provenance and catalog admission. Current `service-template` `develop`
+  `bdeb24b84f97e702372ccbcba0794ce30888ad53` is `1.0.0-dev` source-only, so
+  default scaffold output and direct generated-project/Core validation stay
+  blocked until the owning template release supplies that tuple.
+  Its materializer uses a target-host compiled primary launch gate which embeds and verifies both the SEA and a confined writer, retains their execution identity through a private IPC materialization request, and never lets the SEA spawn a verified-then-re-resolved helper pathname. Linux uses descriptor execution; Windows stages with no write/delete sharing and a verified protected DACL held through `CreateProcess`; macOS remains unqualified until target-host native execution proof. The writer itself
+  shipped in each native archive. POSIX uses held directory descriptors with
+  `openat`/`mkdirat`, an owned temporary candidate, and an exclusive native
+  rename into the absent destination; Windows uses `NtCreateFile` relative to held handles with
+  `OBJ_DONT_REPARSE`, `FILE_OPEN_REPARSE_POINT`, and a verified protected
+  owner-only DACL for every new project object. The SEA never trusts mutable
+  provenance for helper execution: it verifies the baked helper digest and
+  launches a private copy from the verified bytes. Its request endpoint is an
+  inherited non-routable capability, never a mutable Unix socket pathname;
+  admission is serialized with the held child lifecycle identity and a commit
+  guard rather than a
+  PID or an unsynchronised process-state snapshot. The mutual gate proof uses
+  a fresh inherited runtime capability, never a packaged private signing key.
+  Darwin is fail-closed until
+  non-interactive privilege activates and reads back `SF_IMMUTABLE` on the leaf
+  and held parent while denying a pre-open writer; Windows pipe requests are
+  admitted only from the live SEA PID and capability proof, and starts its
+  writer from the held protected staged image rather than `PATH`. It never treats pathname checks as race
+  protection. A POSIX write failure leaves the named destination
+  absent; a temporary candidate that cannot be proved owned for deletion is
+  retained as unknown state rather than being mistaken for a completed project.
+  Windows deletes only via held owned handles. Packaged-helper integration tests coordinate parent
+  replacement and concurrent unowned failure content; the helper provenance
+  hashes its complete source set. Direct template/Core and three-host acceptance
+  remain blocked on an owner-published accepted template tuple.
 - [x] Define Issue #16 `CLI-REAL-CORE-ACCEPTANCE`: run the source-built compiled
   CLI against pinned Core `develop` `d9e2ae799244317940c862fe1261dfd22b7bdda1`
   on an ephemeral loopback port with temporary workspace and service roots,
@@ -23,7 +54,8 @@
   boundaries are maintained in `SPEC-CLI-FOUNDATION.md` and
   `docs/capability-matrix.md`.
 - [ ] Issue #22: implement `SPEC-CLI-DURABLE-OPERATIONS` external durable
-  operator slice against merged Core `develop` `d6dc5558307f13c654194ddc944e3be40c940675`.
+  operator slice through `SERVICE_LASSO_CORE_EXPECTED_REVISION`; the current
+  reviewed Core candidate is `9bef20259e5b43f6bcd2e9796da0f35396305425`.
   Record compiled external-CLI to source-built Core evidence with disposable
   JWT-authenticated fixtures separately from merged-Core, packaged-Core,
   release, deployment, and GA qualification.

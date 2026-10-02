@@ -19,8 +19,16 @@ const provenance = JSON.parse(await readFile(join(directory, "provenance.json"),
 const target = `${provenance?.executable?.platform}-${provenance?.executable?.architecture}`;
 if (!new Set(["win32-x64", "linux-x64", "darwin-arm64"]).has(target) || provenance?.source?.commit !== sourceSha || provenance?.candidate?.version !== version || provenance?.candidate?.tag !== `cli-v${version}-candidate-${sourceSha.slice(0, 7)}` || provenance?.executable?.version !== version) throw new Error("Native provenance does not match the frozen target identity.");
 const executable = provenance.executable.name;
+const confinedWriter = provenance.confinedWriter?.name;
+if (typeof confinedWriter !== "string" || !/^[A-Za-z0-9._-]+$/.test(confinedWriter)) throw new Error("Native provenance requires a named confined writer.");
 const executableBytes = await readFile(join(directory, executable));
 if (sha256(executableBytes) !== provenance.executable.sha256) throw new Error("Native executable does not match its provenance digest.");
+const confinedWriterBytes = await readFile(join(directory, confinedWriter));
+if (sha256(confinedWriterBytes) !== provenance.confinedWriter.sha256) throw new Error("Confined writer does not match its provenance digest.");
+if (target === "darwin-arm64") {
+  const helper = provenance.darwinImmutableHelper;
+  if (!helper || helper.name !== "service-lasso-darwin-immutable-helper" || helper.platform !== "darwin" || helper.architecture !== "arm64" || !/^[0-9a-f]{64}$/i.test(helper.sha256) || !/^[0-9a-f]{64}$/i.test(helper.sourceSha256) || sha256(await readFile(join(directory, helper.name))) !== helper.sha256) throw new Error("Darwin privileged helper does not retain its source-built identity.");
+}
 let contextBytes, acceptanceBytes;
 try { contextBytes = await readFile(join(directory, "ci-context.json")); } catch { throw new Error("Native archive requires ci-context.json from the target-host verification step."); }
 try { acceptanceBytes = await readFile(join(directory, "host-acceptance.json")); } catch { throw new Error("Native archive requires host-acceptance.json from the target-host verification step."); }
@@ -32,6 +40,6 @@ if (acceptance.schemaVersion !== 1 || acceptance.sourceSha !== sourceSha || acce
 const archive = `service-lassoctl-${version}-${target}.tar.gz`;
 const archivePath = join(output, archive);
 await rm(archivePath, { force: true });
-const result = spawnSync("tar", ["-czf", archivePath, "-C", directory, "--", executable, "provenance.json", "ci-context.json", "host-acceptance.json"], { encoding: "utf8" });
+const result = spawnSync("tar", ["-czf", archivePath, "-C", directory, "--", executable, confinedWriter, "provenance.json", "ci-context.json", "host-acceptance.json"], { encoding: "utf8" });
 if (result.status !== 0 || result.error) throw new Error(`Native archive failed: ${result.error?.message ?? result.stderr ?? result.stdout}`);
 process.stdout.write(`${JSON.stringify({ archive, sha256: sha256(await readFile(archivePath)), executable: basename(executable), target })}\n`);

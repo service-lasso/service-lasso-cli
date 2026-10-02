@@ -52,10 +52,23 @@ assert.equal(provenance.executable.platform, process.platform);
 assert.equal(provenance.executable.architecture, process.arch);
 assert.equal(provenance.candidate.version, expectedVersion);
 assert.equal(provenance.executable.version, expectedVersion);
+assert.equal(provenance.confinedWriter.platform, process.platform);
+assert.equal(provenance.confinedWriter.architecture, process.arch);
+if (process.platform === "darwin") {
+  assert.deepEqual(provenance.darwinImmutableHelper?.platform, "darwin");
+  assert.equal(provenance.darwinImmutableHelper?.architecture, "arm64");
+  const helper = join(directory, provenance.darwinImmutableHelper.name);
+  assert.equal(createHash("sha256").update(await readFile(helper)).digest("hex"), provenance.darwinImmutableHelper.sha256, "Darwin privileged helper must retain its accepted digest");
+}
+const confinedWriter = join(directory, provenance.confinedWriter.name);
+assert.equal(createHash("sha256").update(await readFile(confinedWriter)).digest("hex"), provenance.confinedWriter.sha256, "confined writer must retain its accepted digest");
 
 const withoutNode = nodeFreeEnvironment();
 const nodeLookup = spawnSync("node", ["--version"], { encoding: "utf8", env: withoutNode });
 assert.equal(nodeLookup.error?.code, "ENOENT", "native smoke must remove node from PATH");
+const helperSmoke = await run(confinedWriter, ["--self-test"], withoutNode);
+assert.equal(helperSmoke.status, 0, helperSmoke.stderr);
+assert.equal(helperSmoke.stdout.trim(), "ok");
 const versionResult = await run(executable, ["--version"], withoutNode);
 assert.equal(versionResult.status, 0, versionResult.stderr);
 assert.equal(versionResult.stdout.trim(), expectedVersion, "native executable must report the exact frozen candidate version");

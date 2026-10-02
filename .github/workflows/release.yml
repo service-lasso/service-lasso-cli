@@ -42,6 +42,9 @@ jobs:
         with:
           node-version: 22.23.2
           cache: npm
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: "1.22.x"
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
@@ -81,6 +84,19 @@ jobs:
         with:
           node-version: 22.23.2
           cache: npm
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: "1.22.x"
+      - name: Establish isolated native qualification custody before dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          qualification_root="$RUNNER_TEMP/service-lasso-native-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_JOB}-${RUNNER_OS}"
+          echo "SERVICE_LASSO_WORKSPACE_ROOT=$qualification_root/workspace" >> "$GITHUB_ENV"
+          echo "SERVICE_LASSO_INSTANCE_REGISTRY_PATH=$qualification_root/instance/registry.json" >> "$GITHUB_ENV"
+          echo "SERVICE_LASSO_HOST_PORT_REGISTRY_PATH=$qualification_root/host-port/registry.json" >> "$GITHUB_ENV"
+          echo "SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS=$GITHUB_WORKSPACE/native-qualification-receipts" >> "$GITHUB_ENV"
+          SERVICE_LASSO_WORKSPACE_ROOT="$qualification_root/workspace" SERVICE_LASSO_INSTANCE_REGISTRY_PATH="$qualification_root/instance/registry.json" SERVICE_LASSO_HOST_PORT_REGISTRY_PATH="$qualification_root/host-port/registry.json" node scripts/prepare-native-qualification-receipt.mjs --receipt-directory "$GITHUB_WORKSPACE/native-qualification-receipts"
       - run: npm ci
       - name: Build target executable once, record dispatch context, and prove its no-Node fixture journey
         shell: bash
@@ -89,13 +105,32 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ needs.identity.outputs.source_sha }}"
           npm run package:native -- --output native-assets --source-sha "${{ needs.identity.outputs.source_sha }}" --version "${{ needs.identity.outputs.candidate_version }}"
           node scripts/write-native-ci-context.mjs --directory native-assets --event-name workflow_dispatch --source-sha "${{ needs.identity.outputs.source_sha }}" --tested-base-sha "" --merge-context-sha "${{ needs.identity.outputs.source_sha }}"
-          npm run smoke:native -- --directory native-assets --expected-source-sha "${{ needs.identity.outputs.source_sha }}" --expected-version "${{ needs.identity.outputs.candidate_version }}" --write-host-acceptance
           node scripts/verify-native-ci-provenance.mjs --directory native-assets --expected-source-sha "${{ needs.identity.outputs.source_sha }}" --expected-event workflow_dispatch --expected-base-sha "" --expected-merge-context-sha "${{ needs.identity.outputs.source_sha }}" --expected-platform "${{ runner.os == 'Windows' && 'win32' || runner.os == 'Linux' && 'linux' || 'darwin' }}" --expected-architecture "${{ matrix.target == 'darwin-arm64' && 'arm64' || 'x64' }}"
+      - name: Record actual native smoke close result
+        shell: bash
+        run: |
+          set -euo pipefail
+          executable="native-assets/service-lassoctl"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
+          node scripts/run-native-qualification-phase.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --phase smoke --executable "$executable" -- npm run smoke:native -- --directory native-assets --expected-source-sha "${{ needs.identity.outputs.source_sha }}" --expected-version "${{ needs.identity.outputs.candidate_version }}" --write-host-acceptance
+      - name: Compile and exercise Darwin process-exit rejection source checks
+        if: matrix.target == 'darwin-arm64'
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd native/primary-gate && go test ./...)
+      - name: Record expected unavailable controlled primary-route result
+        shell: bash
+        run: |
+          set -euo pipefail
+          executable="native-assets/service-lassoctl"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
+          SERVICE_LASSO_CONTROLLED_NATIVE_EXE="$GITHUB_WORKSPACE/$executable" node scripts/run-native-qualification-phase.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --phase route --qualification-status unavailable --expected-exit nonzero --executable "$executable" -- node --test --test-name-pattern "controlled source admission" tests/native-distribution.test.js
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         if: matrix.target == 'linux-x64'
         with:
           repository: service-lasso/service-lasso
-          ref: d6dc5558307f13c654194ddc944e3be40c940675
+          ref: 9bef20259e5b43f6bcd2e9796da0f35396305425
           path: core
           persist-credentials: false
       - name: Run the separately named direct Linux native CLI to Core journey
@@ -103,6 +138,7 @@ jobs:
         shell: bash
         env:
           SERVICE_LASSO_CORE_DIR: ${{ github.workspace }}/core
+          SERVICE_LASSO_CORE_EXPECTED_REVISION: 9bef20259e5b43f6bcd2e9796da0f35396305425
         run: |
           set -euo pipefail
           (cd core && npm ci && npm run build)
@@ -112,12 +148,30 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p native-release
-          npm run archive:native -- --directory native-assets --output native-release --version "${{ needs.identity.outputs.candidate_version }}" --source-sha "${{ needs.identity.outputs.source_sha }}"
+          executable="native-assets/service-lassoctl"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
+          archive="native-release/service-lassoctl-${{ needs.identity.outputs.candidate_version }}-${{ runner.os == 'Windows' && 'win32' || runner.os == 'Linux' && 'linux' || 'darwin' }}-${{ matrix.target == 'darwin-arm64' && 'arm64' || 'x64' }}.tar.gz"
+          node scripts/run-native-qualification-phase.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --phase archive --executable "$executable" --artifact "$archive" -- npm run archive:native -- --directory native-assets --output native-release --version "${{ needs.identity.outputs.candidate_version }}" --source-sha "${{ needs.identity.outputs.source_sha }}"
           cp native-assets/provenance.json native-release/provenance.json
+      - name: Retain the explicitly open native qualification receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          executable="native-assets/service-lassoctl"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
+          node scripts/verify-native-qualification-open.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --executable "$executable"
+          cp "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS"/*.json native-release/
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: native-${{ matrix.target }}-${{ needs.identity.outputs.source_sha }}
           path: native-release/
+          if-no-files-found: error
+          retention-days: 90
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-qualification-receipts-${{ matrix.target }}-${{ needs.identity.outputs.source_sha }}
+          path: native-qualification-receipts/
           if-no-files-found: error
           retention-days: 90
 

@@ -11,7 +11,7 @@ import test from "node:test";
 
 const cliRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const coreRoot = process.env.SERVICE_LASSO_CORE_DIR;
-const coreRevision = "d6dc5558307f13c654194ddc944e3be40c940675";
+const coreRevision = process.env.SERVICE_LASSO_CORE_EXPECTED_REVISION;
 const startupTimeoutMs = 20_000;
 const shutdownTimeoutMs = 10_000;
 
@@ -71,6 +71,7 @@ async function stop(child) {
 }
 
 test("compiled CLI reads an autostart-eligible real Core service without starting it", { skip: !coreRoot }, async () => {
+  assert.match(coreRevision ?? "", /^[0-9a-f]{40}$/);
   assert.equal(execFileSync("git", ["-C", coreRoot, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(), coreRevision);
   const root = await mkdtemp(path.join(os.tmpdir(), "service-lasso-cli-real-core-"));
   const servicesRoot = path.join(root, "services");
@@ -168,8 +169,4 @@ process.once("SIGINT", () => { void shutdown(); });
   if (cleanupFailures.length > 0) {
     throw new AggregateError(cleanupFailures, "Real Core read acceptance cleanup failed.");
   }
-});
-
-test("real Core acceptance pins the merged Core source revision", () => {
-  assert.equal(coreRevision, "d6dc5558307f13c654194ddc944e3be40c940675");
 });

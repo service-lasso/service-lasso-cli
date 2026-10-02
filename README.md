@@ -26,7 +26,8 @@ service-lassoctl instance status
 service-lassoctl instance inspect --json
 service-lassoctl service list
 service-lassoctl service start <service-id> --confirm
-service-lassoctl service init <service-id> --directory ./lasso-example
+service-lassoctl service template --json
+service-lassoctl service init <service-id> --directory ./lasso-example --dry-run --json
 service-lassoctl --connection remote service register --repo service-lasso/lasso-node --tag v1.0.0 --expected-commit <40-lowercase-hex> --expected-manifest-sha256 <64-lowercase-hex> --idempotency-key <opaque-key> --confirm --json
 service-lassoctl --connection remote service operation <sro_operation_id> --json
 service-lassoctl completion powershell
@@ -68,17 +69,24 @@ contract only. It is not live Core, remote-authentication, release, or GA
 acceptance; that needs a supported authenticated Core endpoint and separately
 authorised credentials.
 
-`service init` is based on the pinned `service-template` release
-`2026.5.8-d2241fe` (commit `d2241fe9b5fc477f14e99adb1836825de2c7a767`) and
-writes the reviewed source identity and canonical manifest SHA-256 to
-`.service-lasso-template.json`. The generated manifest is a documented local
-authoring baseline informed by that released template; it is not a byte-for-byte
-copy or a Core registration assertion. It applies only identity substitution,
-`enabled: false`, and removal of the released sample's mutable artifact source.
-An exact artifact source and checksum must be supplied before
-registration. It makes an absent local directory only; it does not register,
-install, or start a service. Registration remains subject to Core's contract in
-issue #1463.
+`service init` accepts an already-acquired immutable template bundle through
+`--template-root` only when its complete tuple exactly matches a versioned,
+owner-controlled CLI admission entry. It verifies duplicate-free closed
+metadata, bounded archive members and modes, payload equality, checksums,
+provenance and catalog identity before it creates a caller-selected absent
+directory. `--dry-run` performs that verification and reports the full file
+list without writing. A locally assembled tuple cannot create its own admission.
+The command never registers, installs, starts, or contacts Core.
+
+Without `--template-root`, `service template --json` exposes the current
+template gate. The observed `service-template` `develop` source is
+`bdeb24b84f97e702372ccbcba0794ce30888ad53`, contract `1.0.0-dev`, digest
+`05162aa2966c3656d5809050398ebaeba354ee6639f51b047464bc6a383324cb` and
+contract-file SHA-256 `95e022bf381deb1096f42a0699c4f8f0cfed996670b9d6f0655792d6e41c0f0e`.
+It has no accepted immutable candidate tag, archive tuple, or catalog identity,
+so the default command fails closed without creating files. That external
+artifact gate blocks direct generated-project/Core qualification, not the
+generic accepted-bundle implementation.
 
 Service Lasso Core retains the `service-lasso` executable for its local-runtime
 operator workflows. This package intentionally installs `service-lassoctl` and

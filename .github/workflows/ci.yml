@@ -52,6 +52,19 @@ jobs:
         with:
           node-version: 22.23.2
           cache: npm
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: "1.22.x"
+      - name: Establish isolated native qualification custody before dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          qualification_root="$RUNNER_TEMP/service-lasso-native-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_JOB}-${RUNNER_OS}"
+          echo "SERVICE_LASSO_WORKSPACE_ROOT=$qualification_root/workspace" >> "$GITHUB_ENV"
+          echo "SERVICE_LASSO_INSTANCE_REGISTRY_PATH=$qualification_root/instance/registry.json" >> "$GITHUB_ENV"
+          echo "SERVICE_LASSO_HOST_PORT_REGISTRY_PATH=$qualification_root/host-port/registry.json" >> "$GITHUB_ENV"
+          echo "SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS=$GITHUB_WORKSPACE/native-qualification-receipts" >> "$GITHUB_ENV"
+          SERVICE_LASSO_WORKSPACE_ROOT="$qualification_root/workspace" SERVICE_LASSO_INSTANCE_REGISTRY_PATH="$qualification_root/instance/registry.json" SERVICE_LASSO_HOST_PORT_REGISTRY_PATH="$qualification_root/host-port/registry.json" node scripts/prepare-native-qualification-receipt.mjs --receipt-directory "$GITHUB_WORKSPACE/native-qualification-receipts"
       - run: npm ci
       - run: npm run typecheck
       - name: Build host-native executable and provenance
@@ -74,7 +87,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm run smoke:native -- --directory native-assets --expected-source-sha "${{ steps.revision.outputs.source_sha }}" --expected-version "${{ steps.revision.outputs.candidate_version }}"
+          executable="native-assets/service-lassoctl"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
+          node scripts/run-native-qualification-phase.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --phase smoke --executable "$executable" -- npm run smoke:native -- --directory native-assets --expected-source-sha "${{ steps.revision.outputs.source_sha }}" --expected-version "${{ steps.revision.outputs.candidate_version }}" --write-host-acceptance
+      - name: Record expected unavailable controlled primary-route result
+        shell: bash
+        run: |
+          set -euo pipefail
+          executable="native-assets/service-lassoctl"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
+          SERVICE_LASSO_CONTROLLED_NATIVE_EXE="$GITHUB_WORKSPACE/$executable" node scripts/run-native-qualification-phase.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --phase route --qualification-status unavailable --expected-exit nonzero --executable "$executable" -- node --test --test-name-pattern "controlled source admission" tests/native-distribution.test.js
+      - name: Verify Darwin process-exit admission rejection
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd native/primary-gate && go test ./...)
       - name: Verify exact-head provenance and CI event context
         shell: bash
         run: |
@@ -88,10 +116,35 @@ jobs:
         env:
           EXPECTED_PLATFORM: ${{ matrix.expected_platform }}
           EXPECTED_ARCHITECTURE: ${{ matrix.expected_architecture }}
+      - name: Archive accepted native bytes for the qualification receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          executable="native-assets/service-lassoctl"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
+          mkdir -p native-qualification-archive
+          archive="native-qualification-archive/service-lassoctl-${{ steps.revision.outputs.candidate_version }}-${{ matrix.expected_platform }}-${{ matrix.expected_architecture }}.tar.gz"
+          node scripts/run-native-qualification-phase.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --phase archive --executable "$executable" --artifact "$archive" -- npm run archive:native -- --directory native-assets --output native-qualification-archive --version "${{ steps.revision.outputs.candidate_version }}" --source-sha "${{ steps.revision.outputs.source_sha }}"
+      - name: Retain the explicitly open native qualification receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          executable="native-assets/service-lassoctl"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
+          node scripts/verify-native-qualification-open.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --executable "$executable"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: service-lassoctl-sea-${{ matrix.expected_platform }}-${{ matrix.expected_architecture }}-${{ steps.revision.outputs.source_sha }}
-          path: native-assets/
+          path: |
+            native-assets/
+            native-qualification-archive/
+          if-no-files-found: error
+          retention-days: 90
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-qualification-receipts-${{ matrix.expected_platform }}-${{ matrix.expected_architecture }}-${{ github.sha }}
+          path: native-qualification-receipts/
           if-no-files-found: error
           retention-days: 90
 
@@ -108,6 +161,9 @@ jobs:
         with:
           node-version: 22.23.2
           cache: npm
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: "1.22.x"
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
@@ -135,11 +191,14 @@ jobs:
         with:
           node-version: 22.23.2
           cache: npm
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: "1.22.x"
       - run: npm ci
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
           repository: service-lasso/service-lasso
-          ref: d6dc5558307f13c654194ddc944e3be40c940675
+          ref: 9bef20259e5b43f6bcd2e9796da0f35396305425
           path: core
       - name: Build pinned Core runtime
         working-directory: core
@@ -149,12 +208,14 @@ jobs:
       - name: Run direct source-built CLI acceptance
         env:
           SERVICE_LASSO_CORE_DIR: ${{ github.workspace }}/core
+          SERVICE_LASSO_CORE_EXPECTED_REVISION: 9bef20259e5b43f6bcd2e9796da0f35396305425
         run: |
           npm run build
           node --test tests/real-core-read-acceptance.test.js tests/real-core-durable-acceptance.test.js
       - name: Run direct native CLI durable acceptance with Node absent from the child PATH
         env:
           SERVICE_LASSO_CORE_DIR: ${{ github.workspace }}/core
+          SERVICE_LASSO_CORE_EXPECTED_REVISION: 9bef20259e5b43f6bcd2e9796da0f35396305425
         run: |
           set -euo pipefail
           source_sha="$(git rev-parse HEAD)"

@@ -1,44 +1,32 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { access, mkdtemp } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { gzipSync } from "node:zlib";
 import test from "node:test";
-import { createServiceScaffold, scaffoldFiles, validateServiceId } from "../dist/scaffold.js";
-import { SERVICE_TEMPLATE_IDENTITY, assertReviewedTemplateChecksum, authoringTemplateManifest, reviewedTemplateBytes } from "../dist/template.js";
+import { createServiceScaffold, materializeAcceptedTemplate, previewServiceScaffold, scaffoldFiles, validateServiceId } from "../dist/scaffold.js";
+import { TEMPLATE_CONTRACT_GATE, loadAcceptedTemplateBundle } from "../dist/template.js";
 
-test("rejects unsafe service identifiers", () => {
-  assert.throws(() => validateServiceId("Bad_ID"), { code: "invalid_service_id" });
-  assert.throws(() => validateServiceId("a"), { code: "invalid_service_id" });
-});
+const digest = (value) => createHash("sha256").update(value).digest("hex");
+function field(value, length) { const output = Buffer.alloc(length); Buffer.from(value).copy(output); return output; }
+function archive(payload) { const blocks = []; for (const [path, value] of Object.entries(payload)) { const bytes = Buffer.from(value), header = Buffer.alloc(512); field(path, 100).copy(header); field("0000644\0", 8).copy(header, 100); field(`${bytes.length.toString(8).padStart(11, "0")}\0`, 12).copy(header, 124); header[156] = 48; blocks.push(header, bytes, Buffer.alloc((512 - bytes.length % 512) % 512)); } return gzipSync(Buffer.concat([...blocks, Buffer.alloc(1024)])); }
+async function bundle(root, changes = {}) {
+  const payload = { ".gitattributes": "* text=auto\n", "service.json": "{\"id\":\"template-service\"}\n", "config/example.env": "PORT=8080\n" }; const archiveBytes = archive(payload);
+  for (const [path, value] of Object.entries(payload)) { await mkdir(dirname(join(root, path)), { recursive: true }); await writeFile(join(root, path), value); }
+  const inventory = Object.entries(payload).map(([path, value]) => ({ path, sha256: digest(value), mode: "0644", bytes: Buffer.byteLength(value) })); const contractDigest = "b".repeat(64); const contract = { schemaVersion: 1, contractDigest, inventory }; const contractBytes = Buffer.from(`${JSON.stringify(contract)}\n`); const commit = "a".repeat(40);
+  const candidate = { schemaVersion: 1, templateCommit: commit, templateVersion: "1.2.3", contractDigest, contractSha256: digest(contractBytes), archiveSha256: digest(archiveBytes), releaseTag: `template-v1.2.3-${commit}` };
+  const provenance = { schemaVersion: 1, templateRepository: "service-lasso/service-template", templateCommit: commit, templateVersion: "1.2.3", contractDigest, catalogIdentity: "service-template/stable/1.2.3", origin: { kind: "published-archive" } };
+  await writeFile(join(root, "template-contract.json"), changes.contract ?? contractBytes); await writeFile(join(root, "service-template.tar.gz"), changes.archive ?? archiveBytes); await writeFile(join(root, "template-candidate.json"), changes.candidate ?? JSON.stringify(candidate)); await writeFile(join(root, "template-provenance.json"), changes.provenance ?? JSON.stringify(provenance));
+  return { payload, inventory, admission: { repository: provenance.templateRepository, tag: candidate.releaseTag, commit, templateVersion: candidate.templateVersion, contractDigest, contractSha256: candidate.contractSha256, archiveSha256: candidate.archiveSha256, catalogIdentity: provenance.catalogIdentity } };
+}
 
-test("plans a scaffold without writes and refuses overwrite", async () => {
-  const root = await mkdtemp(join(tmpdir(), "lasso-cli-scaffold-"));
-  const destination = join(root, "lasso-example");
-  const planned = await createServiceScaffold({ id: "example-service", directory: destination, dryRun: true });
-  assert.equal(planned.dryRun, true);
-  await assert.rejects(() => access(destination));
-  const created = await createServiceScaffold({ id: "example-service", directory: destination });
-  assert.equal(created.files.includes("service.json"), true);
-  await assert.rejects(() => createServiceScaffold({ id: "example-service", directory: destination }), { code: "target_exists" });
-  assert.match(scaffoldFiles({ id: "example-service", directory: destination })["service.json"], /"enabled": false/);
-});
-
-test("pins the canonical template identity and emits required lifecycle declarations", () => {
-  assert.doesNotThrow(() => assertReviewedTemplateChecksum());
-  assert.equal(createHash("sha256").update(reviewedTemplateBytes()).digest("hex"), "535b939b39d96b3e72750c8a4c404d88f68e7f94150bc8d42ae6695baf9e1fd4");
-  const files = scaffoldFiles({ id: "example-service", directory: "unused" });
-  const manifest = JSON.parse(files["service.json"]);
-  const reviewed = authoringTemplateManifest();
-  assert.equal(JSON.parse(files[".service-lasso-template.json"]).commit, SERVICE_TEMPLATE_IDENTITY.commit);
-  assert.equal(manifest.id, "example-service");
-  assert.equal(manifest.name, "Example Service");
-  assert.equal(manifest.enabled, false);
-  assert.equal(manifest.artifact, undefined);
-  assert.equal(JSON.stringify(manifest).includes("latest"), false);
-  assert.equal(reviewed.artifact.source.channel, "latest");
-  assert.deepEqual(manifest.actions, reviewed.actions);
-  assert.equal(manifest.execconfig.healthcheck.type, "process");
-  assert.deepEqual(manifest.execconfig.depend_on, []);
-  for (const action of ["install", "config", "start", "stop"]) assert.ok(manifest.actions[action]);
-});
+test("rejects unsafe service identifiers", () => { assert.throws(() => validateServiceId("Bad_ID"), { code: "invalid_service_id" }); assert.throws(() => validateServiceId("a"), { code: "invalid_service_id" }); });
+test("current source contract previews without writes and cannot become a project", async () => { const root = await mkdtemp(join(tmpdir(), "lasso-cli-scaffold-")), destination = join(root, "lasso-example"), planned = previewServiceScaffold({ id: "example-service", directory: destination, dryRun: true }); assert.equal(planned.writes, false); assert.equal(planned.template.status, "blocked"); assert.equal(planned.template.contractDigest, TEMPLATE_CONTRACT_GATE.contractDigest); await assert.rejects(() => createServiceScaffold({ id: "example-service", directory: destination }), { code: "template_identity_unavailable" }); assert.throws(() => scaffoldFiles({ id: "example-service", directory: destination }), { code: "template_identity_unavailable" }); await assert.rejects(() => access(destination)); });
+test("a locally manufactured tuple cannot self-authorize", async () => { const root = await mkdtemp(join(tmpdir(), "lasso-cli-template-")); await bundle(root); await assert.rejects(() => createServiceScaffold({ id: "example-service", directory: join(root, "project"), templateRoot: root }), { code: "template_identity_unavailable" }); });
+test("a source admission binds held archive bytes, inventory, payload and provenance", async () => { const root = await mkdtemp(join(tmpdir(), "lasso-cli-template-")), fixture = await bundle(root), accepted = await loadAcceptedTemplateBundle(root, [fixture.admission]), destination = join(root, "generated"); assert.deepEqual(accepted.files.map((file) => file.path), fixture.inventory.map((file) => file.path)); assert.equal(accepted.files.find((file) => file.path === "config/example.env").bytes.toString(), fixture.payload["config/example.env"]); await materializeAcceptedTemplate(destination, accepted); assert.equal(await readFile(join(destination, "config", "example.env"), "utf8"), fixture.payload["config/example.env"]); });
+test("an inherited helper override cannot execute or forge a successful scaffold", async () => { const root = await mkdtemp(join(tmpdir(), "lasso-cli-hostile-helper-")), templateRoot = join(root, "template"), destination = join(root, "generated"), hostile = join(root, "hostile-helper"), marker = join(root, "executed"); await mkdir(templateRoot); const fixture = await bundle(templateRoot), accepted = await loadAcceptedTemplateBundle(templateRoot, [fixture.admission]); await writeFile(hostile, `ignored helper ${marker}`); const previous = process.env.SERVICE_LASSO_CONFINED_HELPER; process.env.SERVICE_LASSO_CONFINED_HELPER = hostile; try { await materializeAcceptedTemplate(destination, accepted); } finally { if (previous === undefined) delete process.env.SERVICE_LASSO_CONFINED_HELPER; else process.env.SERVICE_LASSO_CONFINED_HELPER = previous; } await assert.rejects(access(marker)); assert.equal(await readFile(join(destination, "service.json"), "utf8"), fixture.payload["service.json"]); });
+test("rejects archive-only, payload mismatch, unknown, duplicate and link bundle members", async () => { const root = await mkdtemp(join(tmpdir(), "lasso-cli-template-bad-")), fixture = await bundle(root); await writeFile(join(root, "service.json"), "changed"); await assert.rejects(() => loadAcceptedTemplateBundle(root, [fixture.admission]), { code: "invalid_template_bundle" }); await writeFile(join(root, "service.json"), fixture.payload["service.json"]); await writeFile(join(root, "private.txt"), "not inventoried"); await assert.rejects(() => loadAcceptedTemplateBundle(root, [fixture.admission]), { code: "invalid_template_bundle" }); });
+test("rejects raw duplicate metadata and POSIX symlink payloads before any scaffold write", async (t) => { const root = await mkdtemp(join(tmpdir(), "lasso-cli-template-duplicate-")), fixture = await bundle(root); await writeFile(join(root, "template-candidate.json"), `{"schemaVersion":1,"schemaVersion":1,"templateCommit":"${"a".repeat(40)}"}`); await assert.rejects(() => loadAcceptedTemplateBundle(root, [fixture.admission]), { code: "invalid_template_bundle" }); if (process.platform === "win32") return t.skip("POSIX symlink semantics are covered by hosted POSIX CI"); await bundle(root); await symlink(join(root, "service.json"), join(root, "config", "linked.env")); await assert.rejects(() => loadAcceptedTemplateBundle(root, [fixture.admission]), { code: "invalid_template_bundle" }); });
+test("destination reparse paths reject with a closed code and leave outside bytes unchanged", async () => { const root = await mkdtemp(join(tmpdir(), "lasso-cli-destination-")), templateRoot = join(root, "template"), outside = join(root, "outside"), destination = join(root, "destination"); await mkdir(templateRoot); const fixture = await bundle(templateRoot), accepted = await loadAcceptedTemplateBundle(templateRoot, [fixture.admission]); await mkdir(outside); await writeFile(join(outside, "retained.txt"), "retained"); if (process.platform === "win32") { await symlink(outside, destination, "junction"); } else { await symlink(outside, destination); } await assert.rejects(() => materializeAcceptedTemplate(destination, accepted), (error) => error?.code === "confined_writer_destination_exists" || error?.code === "confined_writer_write_rejected"); assert.equal(await readFile(join(outside, "retained.txt"), "utf8"), "retained"); await assert.rejects(access(join(outside, "service.json"))); });
+test("an ordinary existing destination is rejected without additions", async () => { const root = await mkdtemp(join(tmpdir(), "lasso-cli-existing-")), templateRoot = join(root, "template"), destination = join(root, "destination"); await mkdir(templateRoot); const fixture = await bundle(templateRoot), accepted = await loadAcceptedTemplateBundle(templateRoot, [fixture.admission]); await mkdir(destination); await writeFile(join(destination, "retained.txt"), "retained"); await assert.rejects(() => materializeAcceptedTemplate(destination, accepted), { code: "confined_writer_destination_exists" }); assert.equal(await readFile(join(destination, "retained.txt"), "utf8"), "retained"); await assert.rejects(() => access(join(destination, "service.json"))); });
