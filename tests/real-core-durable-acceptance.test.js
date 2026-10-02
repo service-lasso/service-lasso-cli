@@ -12,7 +12,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const cliRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const coreRoot = process.env.SERVICE_LASSO_CORE_DIR;
 const nativeExecutable = process.env.SERVICE_LASSO_CLI_NATIVE_EXE;
-const coreRevision = "d6dc5558307f13c654194ddc944e3be40c940675";
+const coreRevision = process.env.SERVICE_LASSO_CORE_EXPECTED_REVISION;
 
 function run(args, env) {
   return new Promise((resolve, reject) => {
@@ -58,6 +58,7 @@ async function startJwksServer(coreRequire) {
 }
 
 test("compiled external CLI exercises merged actual Core durable lifecycle contract safely", { skip: !coreRoot }, async () => {
+  assert.match(coreRevision ?? "", /^[a-f0-9]{40}$/, "direct Core acceptance requires the exact candidate revision");
   assert.equal(execFileSync("git", ["-C", coreRoot, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(), coreRevision);
   if (nativeExecutable) {
     assert.equal(spawnSync("node", ["--version"], { env: nodeFreeEnvironment(), encoding: "utf8" }).error?.code, "ENOENT", "native Core acceptance must not find Node on the child PATH");
@@ -153,6 +154,6 @@ test("compiled external CLI exercises merged actual Core durable lifecycle contr
   }
 });
 
-test("real durable acceptance pin remains explicit", () => {
-  assert.equal(coreRevision, "d6dc5558307f13c654194ddc944e3be40c940675");
+test("real durable acceptance requires an explicit Core candidate pin", () => {
+  assert.ok(coreRevision === undefined || /^[a-f0-9]{40}$/.test(coreRevision));
 });

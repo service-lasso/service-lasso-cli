@@ -87,7 +87,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/run-native-qualification-phase.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --phase smoke --executable "native-assets/service-lassoctl${RUNNER_OS/Windows/.exe}" -- npm run smoke:native -- --directory native-assets --expected-source-sha "${{ steps.revision.outputs.source_sha }}" --expected-version "${{ steps.revision.outputs.candidate_version }}" --write-host-acceptance
+          executable="native-assets/service-lassoctl"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
+          node scripts/run-native-qualification-phase.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --phase smoke --executable "$executable" -- npm run smoke:native -- --directory native-assets --expected-source-sha "${{ steps.revision.outputs.source_sha }}" --expected-version "${{ steps.revision.outputs.candidate_version }}" --write-host-acceptance
       - name: Record expected unavailable controlled primary-route result
         shell: bash
         run: |
