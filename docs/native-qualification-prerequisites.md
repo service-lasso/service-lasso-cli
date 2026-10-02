@@ -17,10 +17,14 @@ including help/version, a separate host-owner integration must supply all of:
   naming the exact compiled helper digest embedded in that primary. Helper and
   parent must be root-owned regular file/directory with no group/other writes;
   ownership and digest checks remain in the primary.
-- Root-owned, non-writable ancestors `/var`, `/var/db`, `/var/db/service-lasso`
-  and `/var/db/service-lasso/darwin-qualification-grant.json`, a root-owned
+- Root-owned, non-writable directory ancestors `/`, `/private`, `/private/var`,
+  `/private/var/db`, `/private/var/db/service-lasso` and the canonical
+  `/private/var/db/service-lasso/darwin-qualification-grant.json`, a root-owned
   no-follow regular mode0600 file, held identity checked by the helper.
   The current grant binds exactly one device/inode and one 32-byte capability.
+  `/var` is the normal macOS alias; it is never the helper's authority path.
+  No ancestor or grant alias is followed or accepted. Provision the canonical
+  path directly; changing the system alias is neither required nor allowed.
   A static grant for a different object cannot authorise a new primary's
   temporary SEA, writer and parent. The owner-controlled integration must
   coordinate each actual object-specific set/clear operation and retain its
@@ -47,6 +51,19 @@ helper/controlled admission tests, Darwin process-exit checks and same-byte
 Core/operator qualification remain required. No test is converted to a pass
 or skipped assertion. Ordinary macOS source tests retain their genuine failures
 until that external authority is integrated.
+
+Canonical grant regression source is in
+`native/darwin-immutable-helper/main_darwin_test.go`. After fresh entire source
+review and complete-input ROOT admission, a separately authorised owner-run
+Darwin qualification must supply the real canonical grant and root execution.
+The positive case reads that actual grant despite the normal `/var` alias;
+isolated owner-owned temporary fixtures exercise ancestor/leaf symlinks, missing
+paths, owner/type/mode rejection and actual named-versus-held inode replacement.
+Subprocesses invoke the production helper entry point with short/wrong capability
+and an ungranted held object, require exit2, and verify unchanged object flags.
+These tests do not write the live grant, provision authority, run sudo or qualify
+successful immutable set/clear. They are UNEXECUTED; owner provisioning remains
+UNPERFORMED and successful native immutable qualification remains pending.
 
 ## Core dependency gate
 
