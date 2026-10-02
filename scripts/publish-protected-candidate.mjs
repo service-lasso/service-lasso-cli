@@ -51,11 +51,12 @@ export async function publishProtectedCandidate({ directory, version, sourceSha,
   if (repository !== REPOSITORY) fail("repository endpoint is not allowed.");
   const { manifest, held } = await verifyCandidateDirectory(directory, version, sourceSha), tag = manifest.candidateTag;
   const api = async (path, method = "GET", body) => {
+    if (method !== "GET") await preflight();
     const result = await request(fetchImpl, `${API}${path}`, { method, redirect: "error", headers: headers(token, body ? { "content-type": "application/json" } : {}), body: body ? JSON.stringify(body) : undefined }, "GitHub metadata", METADATA_LIMIT, requestOptions);
     let value = null; if (result.body.length) value = parseStrictJson(result.body, "GitHub metadata");
     return { status: result.response.status, value };
   };
-  const upload = async (id, name) => { const result = await request(fetchImpl, `${UPLOADS}/repos/${repository}/releases/${id}/assets?name=${encodeURIComponent(name)}`, { method: "POST", redirect: "error", headers: headers(token, { "content-type": "application/octet-stream" }), body: held.get(name) }, "GitHub asset upload", METADATA_LIMIT, requestOptions); if (!result.response.ok) fail("GitHub asset upload failed."); };
+  const upload = async (id, name) => { await preflight(); const result = await request(fetchImpl, `${UPLOADS}/repos/${repository}/releases/${id}/assets?name=${encodeURIComponent(name)}`, { method: "POST", redirect: "error", headers: headers(token, { "content-type": "application/octet-stream" }), body: held.get(name) }, "GitHub asset upload", METADATA_LIMIT, requestOptions); if (!result.response.ok) fail("GitHub asset upload failed."); };
   const fetchedAsset = async (url, privateAsset, expectedBytes) => {
     const first = await request(fetchImpl, url, { method: "GET", redirect: "manual", headers: privateAsset ? headers(token, { accept: "application/octet-stream" }) : { accept: "application/octet-stream" } }, privateAsset ? "private asset readback" : "public readback", expectedBytes, { ...requestOptions, allowRedirect: true });
     if (first.kind === "body") return first;
@@ -73,9 +74,12 @@ export async function publishProtectedCandidate({ directory, version, sourceSha,
       if (result.response.status !== 200 || result.body.length !== held.get(asset.name).length || !result.body.equals(held.get(asset.name)) || sha256(result.body) !== sha256(held.get(asset.name))) fail(`asset readback does not match ${asset.name}.`);
     }
   };
-  const [immutable, branch, protection, environment, policies] = await Promise.all([api(`/repos/${repository}/immutable-releases`), api(`/repos/${repository}/branches/develop`), api(`/repos/${repository}/branches/develop/protection`), api(`/repos/${repository}/environments/development-candidate`), api(`/repos/${repository}/environments/development-candidate/deployment-branch-policies`)]);
-  if ([immutable, branch, protection, environment, policies].some((value) => value.status !== 200)) fail("required GitHub provider protection is unavailable.");
-  assertProviderPreflight({ immutable: immutable.value, branch: branch.value, protection: protection.value, environment: environment.value, branchPolicies: policies.value?.branch_policies });
+  const preflight = async () => {
+    const [immutable, branch, protection, environment, policies] = await Promise.all([api(`/repos/${repository}/immutable-releases`), api(`/repos/${repository}/branches/develop`), api(`/repos/${repository}/branches/develop/protection`), api(`/repos/${repository}/environments/development-candidate`), api(`/repos/${repository}/environments/development-candidate/deployment-branch-policies`)]);
+    if ([immutable, branch, protection, environment, policies].some((value) => value.status !== 200)) fail("required GitHub provider protection is unavailable.");
+    assertProviderPreflight({ immutable: immutable.value, branch: branch.value, protection: protection.value, environment: environment.value, branchPolicies: policies.value?.branch_policies });
+  };
+  await preflight();
   const [release, ref] = await Promise.all([api(`/repos/${repository}/releases/tags/${encodeURIComponent(tag)}`), api(`/repos/${repository}/git/ref/tags/${encodeURIComponent(tag)}`)]);
   if (release.status === 200) {
     if (ref.status !== 200 || release.value?.immutable !== true || release.value?.tag_name !== tag || release.value?.target_commitish !== sourceSha || release.value?.prerelease !== true || release.value?.draft !== false) fail("existing candidate collision is not exact.");

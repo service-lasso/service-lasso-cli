@@ -1,17 +1,17 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, rm, writeFile, truncate } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import test from "node:test";
-import { assertProviderPreflight, canonicalPublicAssetUrl, expectedAssets, parseStrictJson, sha256, validateManifest, verifyCandidateDirectory } from "../scripts/protected-candidate-lib.mjs";
+import { assertProviderPreflight, canonicalPublicAssetUrl, expectedAssets, parseStrictJson, readHeldFile, sha256, validateManifest, verifyCandidateDirectory } from "../scripts/protected-candidate-lib.mjs";
 import { publishProtectedCandidate } from "../scripts/publish-protected-candidate.mjs";
 
 const node = process.execPath;
 const sourceSha = "0123456789abcdef0123456789abcdef01234567";
 const version = "0.1.0-dev.0123456";
 
-async function nativeDirectory(root, target) {
+async function nativeDirectory(root, target, environment = process.env) {
   const directory = join(root, target.id);
   await mkdir(directory, { recursive: true });
   const executable = target.id === "win32-x64" ? "service-lassoctl.exe" : "service-lassoctl";
@@ -20,12 +20,14 @@ async function nativeDirectory(root, target) {
   const writerBytes = Buffer.from(`confined-writer-${target.id}`);
   await writeFile(join(directory, executable), bytes);
   await writeFile(join(directory, confinedWriter), writerBytes);
+  const immutableBytes = Buffer.from(`immutable-helper-${target.id}`);
+  if (target.id === "darwin-arm64") await writeFile(join(directory, "service-lasso-darwin-immutable-helper"), immutableBytes);
   const digest = sha256(bytes);
-  await writeFile(join(directory, "provenance.json"), `${JSON.stringify({ schemaVersion: 1, command: "service-lassoctl", candidate: { version, tag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}` }, source: { commit: sourceSha }, executable: { name: executable, sha256: digest, platform: target.platform, architecture: target.architecture, version }, confinedWriter: { name: confinedWriter, sha256: sha256(writerBytes), sourceSha256: "b".repeat(64), platform: target.platform, architecture: target.architecture }, ...(target.id === "darwin-arm64" ? { darwinImmutableHelper: { name: "service-lasso-darwin-immutable-helper", sha256: "c".repeat(64), sourceSha256: "d".repeat(64), platform: "darwin", architecture: "arm64" } } : {}), tools: {}, sea: {} })}\n`);
+  await writeFile(join(directory, "provenance.json"), `${JSON.stringify({ schemaVersion: 1, command: "service-lassoctl", candidate: { version, tag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}` }, source: { commit: sourceSha }, executable: { name: executable, sha256: digest, platform: target.platform, architecture: target.architecture, version }, confinedWriter: { name: confinedWriter, sha256: sha256(writerBytes), sourceSha256: "b".repeat(64), platform: target.platform, architecture: target.architecture }, ...(target.id === "darwin-arm64" ? { darwinImmutableHelper: { name: "service-lasso-darwin-immutable-helper", sha256: sha256(immutableBytes), sourceSha256: "d".repeat(64), platform: "darwin", architecture: "arm64" } } : {}), tools: {}, sea: {} })}\n`);
   await writeFile(join(directory, "ci-context.json"), `${JSON.stringify({ schemaVersion: 1, eventName: "workflow_dispatch", sourceSha, testedBaseSha: null, mergeContextSha: sourceSha })}\n`);
   const evidenceDigest = sha256(Buffer.from(`service-lasso-native-acceptance-v1\n${sourceSha}\n${version}\n${target.platform}\n${target.architecture}\n${digest}\nnode-absent\npassed\n`, "utf8"));
   await writeFile(join(directory, "host-acceptance.json"), `${JSON.stringify({ schemaVersion: 1, sourceSha, version, platform: target.platform, architecture: target.architecture, executableSha256: digest, nodeAbsentFromPath: true, status: "passed", evidenceDigest })}\n`);
-  execFileSync("tar", ["-czf", `service-lassoctl-${version}-${target.id}.tar.gz`, executable, confinedWriter, "provenance.json", "ci-context.json", "host-acceptance.json"], { cwd: directory });
+  execFileSync(node, ["scripts/archive-native-candidate.mjs", "--expected-event", "workflow_dispatch", "--expected-base-sha", "", "--expected-merge-context-sha", sourceSha, "--directory", directory, "--output", directory, "--version", version, "--source-sha", sourceSha], { encoding: "utf8", env: environment });
   await rm(join(directory, executable));
   await rm(join(directory, confinedWriter));
   return directory;
@@ -525,6 +527,169 @@ test("CLI30 treats nonempty private and public 3xx bodies as disposable redirect
       if (!malformed) assert.equal(redirected.cancelled, true, `${route} ${name} ${cancelMode}`);
       if (route === "private") assert.equal(events.some((event) => event.method === "PATCH"), name === "allowed", `${route} ${name} ${cancelMode}`);
       else assert.equal(events.some((event) => ["POST", "PATCH", "DELETE"].includes(event.method)), false, `${route} ${name} ${cancelMode}`);
+    }
+  });
+});
+
+test("CLI30 rereads all five policies immediately before every actual mutation and stops midphase", async () => {
+  await withCandidate(async (_root, directory) => {
+    const verified = await verifyCandidateDirectory(directory, version, sourceSha), tag = verified.manifest.candidateTag;
+    const assets = [...verified.held.entries()].map(([name, bytes], index) => ({ id: index + 1, name, bytes, browser_download_url: `https://github.com/service-lasso/service-lasso-cli/releases/download/${tag}/${encodeURIComponent(name)}` }));
+    const policySuffixes = ["/immutable-releases", "/branches/develop", "/branches/develop/protection", "/environments/development-candidate", "/deployment-branch-policies"];
+    // Three initial writes, all ten held public assets, then the single publish.
+    const totalWrites = 3 + assets.length + 1;
+    for (const [failBefore, deniedEndpoint] of [[null, null], ...Array.from({ length: totalWrites }, (_, index) => [[index, null], ...policySuffixes.map((_, endpoint) => [index, endpoint])]).flat()]) {
+      const events = [], policy = providerPolicy(); let writes = 0;
+      const fetchImpl = async (url, init) => {
+        const parsed = new URL(url), path = parsed.pathname; events.push({ path, method: init.method });
+        const policyIndex = policySuffixes.findIndex(suffix => path.endsWith(suffix));
+        if (policyIndex >= 0) {
+          if (writes === failBefore && deniedEndpoint === policyIndex) return json({}, 403);
+          if (writes === failBefore && deniedEndpoint === null && policyIndex === 0) return json({ enabled: false });
+          return json([policy.immutable, policy.branch, policy.protection, policy.environment, policy.policies][policyIndex]);
+        }
+        if (init.method !== "GET") {
+          const preceding = events.slice(-6, -1);
+          assert.equal(preceding.length, 5);
+          assert.deepEqual(preceding.map(event => policySuffixes.findIndex(suffix => event.path.endsWith(suffix))).sort(), [0, 1, 2, 3, 4]);
+          assert.ok(preceding.every(event => event.method === "GET")); writes += 1;
+        }
+        if (path.includes("/releases/tags/") || path.includes("/git/ref/tags/")) return json({}, 404);
+        if (path.endsWith("/git/tags")) return json({ sha: "a".repeat(40) }, 201);
+        if (path.endsWith("/git/refs")) return json({}, 201);
+        if (path.endsWith("/releases") && init.method === "POST") return json(emptyPrivateRelease(77, tag), 201);
+        if (parsed.hostname === "uploads.github.com") return json({}, 201);
+        if (path.endsWith("/releases/77")) return json({ id: 77, tag_name: tag, target_commitish: sourceSha, prerelease: true, draft: init.method !== "PATCH", immutable: init.method === "PATCH", assets });
+        const privateId = /\/releases\/assets\/(\d+)$/.exec(path);
+        if (privateId) return responseBytes(assets[Number(privateId[1]) - 1].bytes);
+        const asset = assets.find(value => value.browser_download_url === parsed.href);
+        if (asset) { assert.equal(init.headers.authorization, undefined); return responseBytes(asset.bytes); }
+        throw new Error("Unexpected endpoint");
+      };
+      if (failBefore === null) { assert.equal((await publishProtectedCandidate({ directory, version, sourceSha, token: "secret-sentinel", fetchImpl })).result, "published"); assert.equal(writes, totalWrites); }
+      else { await assert.rejects(() => publishProtectedCandidate({ directory, version, sourceSha, token: "secret-sentinel", fetchImpl }), /immutable releases|provider protection/); assert.equal(writes, failBefore); assert.ok(events.slice(events.findLastIndex(event => event.method !== "GET") + 1).every(event => event.method === "GET")); }
+    }
+  });
+});
+
+test("CLI30 actual Darwin producer ships helper bytes and verifier rejects omitted or replaced helper despite outer checksum rebinding", async () => {
+  await withCandidate(async (root, directory) => {
+    const archiveName = `service-lassoctl-${version}-darwin-arm64.tar.gz`, archive = join(directory, archiveName);
+    const unpacked = join(root, "darwin-unpacked"); await mkdir(unpacked);
+    execFileSync("tar", ["-xzf", archive, "-C", unpacked]);
+    const helper = "service-lasso-darwin-immutable-helper";
+    const provenance = JSON.parse(await readFile(join(unpacked, "provenance.json"), "utf8"));
+    assert.equal(sha256(await readFile(join(unpacked, helper))), provenance.darwinImmutableHelper.sha256);
+    const members = ["service-lassoctl", "service-lasso-confined-scaffold", helper, "provenance.json", "ci-context.json", "host-acceptance.json"];
+    assert.deepEqual(execFileSync("tar", ["-tzf", archive], { encoding: "utf8" }).trim().split(/\r?\n/).sort(), [...members].sort());
+    for (const defect of ["omit", "replace"]) {
+      if (defect === "replace") await writeFile(join(unpacked, helper), "hostile replacement");
+      execFileSync("tar", ["-czf", archive, "-C", unpacked, "--", ...members.filter(name => defect !== "omit" || name !== helper)]);
+      await rebindCandidate(directory);
+      await assert.rejects(() => verifyCandidateDirectory(directory, version, sourceSha), /closed inventory|forged identity/);
+    }
+    assert.throws(() => execFileSync(node, ["scripts/archive-native-candidate.mjs", "--expected-event", "workflow_dispatch", "--expected-base-sha", "", "--expected-merge-context-sha", sourceSha, "--directory", unpacked, "--output", unpacked, "--version", version, "--source-sha", sourceSha], { stdio: "ignore" }));
+  });
+});
+test("CLI30 held local reads reject growth and replacement inside the actual read boundary for assets, manifest and sums", async () => {
+  const root = await mkdtemp(join(tmpdir(), "service-lassoctl-held-boundary-"));
+  try {
+    for (const name of ["asset.tar.gz", "development-candidate.json", "SHA256SUMS.txt"]) {
+      const original = Buffer.alloc(128 * 1024, 65), path = join(root, name);
+      await writeFile(path, original);
+      let calls = 0;
+      const allocations = [], allocate = Buffer.alloc;
+      Buffer.alloc = (size, ...args) => { allocations.push(size); return allocate(size, ...args); };
+      try {
+        await assert.rejects(readHeldFile(root, name, name === "asset.tar.gz" ? original.length : undefined, { afterRead: async () => { if (calls++ === 0) await truncate(path, 256 * 1024 * 1024 + 1); } }), /changed during its held read/);
+      } finally { Buffer.alloc = allocate; }
+      assert.ok(calls > 0, "growth occurred while the held reader was active");
+      assert.ok(allocations.length > 0 && allocations.every(size => size <= original.length), "growth never controls a payload allocation");
+      await writeFile(path, original);
+      const replacement = join(root, `${name}.replacement`);
+      await writeFile(replacement, Buffer.alloc(original.length, 66));
+      let replacementBlocked = false;
+      try {
+        const result = await readHeldFile(root, name, undefined, { afterRead: async ({ offset }) => {
+          if (offset !== 64 * 1024) return;
+          try { await rename(replacement, path); } catch (error) { if (process.platform !== "win32" || !["EPERM", "EACCES", "EBUSY"].includes(error.code)) throw error; replacementBlocked = true; }
+        } });
+        assert.equal(replacementBlocked, true, "a successful pathname replacement must fail the held read");
+        assert.deepEqual(result, original);
+      } catch (error) { assert.match(error.message, /changed during its held read/); }
+      await writeFile(path, original);
+      await assert.rejects(readHeldFile(root, name, undefined, { afterOpen: () => truncate(path, 0) }), /truncated during its held read/);
+      await writeFile(path, original);
+      await assert.rejects(readHeldFile(root, name, undefined, { beforeOpen: async () => { await rename(path, `${path}.saved`); await mkdir(path); } }), /changed before its held read|EISDIR|EPERM|EACCES/);
+      await rm(path, { recursive: true });
+      await rename(`${path}.saved`, path);
+    }
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("CLI30 actual producer uses local archive names under drive and spaced output with Windows GNU tar", async () => {
+  const root = await mkdtemp(join(tmpdir(), "service-lasso archive spaces "));
+  try {
+    const environment = { ...process.env };
+    if (process.platform === "win32") {
+      assert.match(root, /^[A-Za-z]:\\/);
+      // Match the dedicated Git Bash job's GNU tar implementation explicitly,
+      // so a different ambient BSD tar cannot mask drive-colon regression.
+      const gitExec = execFileSync("git", ["--exec-path"], { encoding: "utf8" }).trim();
+      const gnuDirectory = resolve(gitExec, "..", "..", "..", "usr", "bin");
+      delete environment.Path;
+      environment.PATH = `${gnuDirectory};${process.env.PATH ?? process.env.Path ?? ""}`;
+      assert.match(execFileSync(join(gnuDirectory, "tar.exe"), ["--version"], { encoding: "utf8" }), /GNU tar/);
+    }
+    const directory = await nativeDirectory(root, { id: "win32-x64", platform: "win32", architecture: "x64" }, environment);
+    const name = `service-lassoctl-${version}-win32-x64.tar.gz`;
+    const bytes = await readFile(join(directory, name));
+    assert.ok(bytes.length > 0);
+    const members = execFileSync("tar", ["-tzf", `./${name}`], { cwd: directory, env: environment, encoding: "utf8", shell: false }).trim().split(/\r?\n/).sort();
+    assert.deepEqual(members, ["service-lassoctl.exe", "service-lasso-confined-scaffold.exe", "provenance.json", "ci-context.json", "host-acceptance.json"].sort());
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("CLI30 actual archive producer binds push, PR and dispatch caller contexts and rejects contradictions", async () => {
+  const root = await mkdtemp(join(tmpdir(), "service-lassoctl-archive-events-"));
+  const target = { id: "linux-x64", platform: "linux", architecture: "x64" };
+  try {
+    // Restore payload members removed by the fixture only after the actual
+    // dispatch archive was produced; every event below invokes that producer.
+    const directory = await nativeDirectory(root, target);
+    await writeFile(join(directory, "service-lassoctl"), "native-linux-x64");
+    await writeFile(join(directory, "service-lasso-confined-scaffold"), "confined-writer-linux-x64");
+    const base = "b".repeat(40), merge = "c".repeat(40);
+    for (const event of ["push", "pull_request", "workflow_dispatch"]) {
+      const context = { schemaVersion: 1, eventName: event, sourceSha, testedBaseSha: event === "pull_request" ? base : null, mergeContextSha: event === "pull_request" ? merge : sourceSha };
+      const args = ["scripts/archive-native-candidate.mjs", "--directory", directory, "--output", directory, "--version", version, "--source-sha", sourceSha, "--expected-event", event, "--expected-base-sha", event === "pull_request" ? base : "", "--expected-merge-context-sha", context.mergeContextSha];
+      await writeFile(join(directory, "ci-context.json"), JSON.stringify(context));
+      execFileSync(node, args, { encoding: "utf8" });
+      for (const mutation of [{ eventName: "unknown" }, { sourceSha: "d".repeat(40) }, { mergeContextSha: "d".repeat(40) }, { testedBaseSha: event === "pull_request" ? sourceSha : base }]) {
+        await writeFile(join(directory, "ci-context.json"), JSON.stringify({ ...context, ...mutation }));
+        assert.throws(() => execFileSync(node, args, { stdio: "ignore" }));
+      }
+      await writeFile(join(directory, "ci-context.json"), JSON.stringify(context));
+      const wrongEventArgs = [...args]; wrongEventArgs[wrongEventArgs.indexOf("--expected-event") + 1] = event === "push" ? "workflow_dispatch" : "push";
+      assert.throws(() => execFileSync(node, wrongEventArgs, { stdio: "ignore" }));
+    }
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("CLI30 publication rejects actual push and PR archives even after closed outer checksums are rebound", async () => {
+  await withCandidate(async (root, directory) => {
+    const archiveName = `service-lassoctl-${version}-linux-x64.tar.gz`, unpacked = join(root, "ci-native");
+    await mkdir(unpacked);
+    execFileSync("tar", ["-xzf", join(directory, archiveName), "-C", unpacked]);
+    for (const eventName of ["push", "pull_request"]) {
+      const testedBaseSha = eventName === "push" ? null : "b".repeat(40), mergeContextSha = eventName === "push" ? sourceSha : "c".repeat(40);
+      await writeFile(join(unpacked, "ci-context.json"), JSON.stringify({ schemaVersion: 1, eventName, sourceSha, testedBaseSha, mergeContextSha }));
+      execFileSync(node, ["scripts/archive-native-candidate.mjs", "--directory", unpacked, "--output", directory, "--version", version, "--source-sha", sourceSha, "--expected-event", eventName, "--expected-base-sha", testedBaseSha ?? "", "--expected-merge-context-sha", mergeContextSha]);
+      await rebindCandidate(directory);
+      await assert.rejects(verifyCandidateDirectory(directory, version, sourceSha), /dispatch publication identity/);
+      let requests = 0;
+      await assert.rejects(publishProtectedCandidate({ directory, version, sourceSha, token: "secret-sentinel", fetchImpl: async () => { requests += 1; throw new Error("unexpected request"); } }), /dispatch publication identity/);
+      assert.equal(requests, 0);
     }
   });
 });

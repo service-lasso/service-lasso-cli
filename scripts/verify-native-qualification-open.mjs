@@ -15,7 +15,7 @@ if (initial.schemaVersion !== 2 || initial.ownedBirth !== true || initial.actual
 const executableSha256 = createHash("sha256").update(await readFile(executable)).digest("hex");
 const expectations = {
   smoke: { qualificationStatus: "verified", expectedExit: "zero", code: 0 },
-  route: { qualificationStatus: "unavailable", expectedExit: "nonzero", code: "nonzero" },
+  route: { qualificationStatus: "unavailable", expectedExit: "zero", code: 0 },
   archive: { qualificationStatus: "verified", expectedExit: "zero", code: 0 },
 };
 const phases = {};
@@ -25,6 +25,7 @@ for (const [phase, expectation] of Object.entries(expectations)) {
     throw new Error(`Open qualification phase ${phase} is malformed or does not bind the retained executable.`);
   }
   if (phase === "archive" && !/^[0-9a-f]{64}$/i.test(record.artifactSha256 ?? "")) throw new Error("Archive phase does not contain a retained archive digest.");
+  if (phase === "route" && (record.innerRoute?.schemaVersion !== 1 || record.innerRoute.status !== "unavailable" || record.innerRoute.executableSha256 !== executableSha256 || !Number.isInteger(record.innerRoute.innerClose?.code) || record.innerRoute.innerClose.code <= 0 || record.innerRoute.innerClose.signal !== null || record.innerRoute.destinationAbsent !== true || record.innerRoute.hostileHelperAbsent !== true)) throw new Error("Unavailable product route is not independently recorded.");
   phases[phase] = record;
 }
 process.stdout.write(`${JSON.stringify({ executableSha256, qualification: "open", route: "unavailable", phases: Object.keys(phases) })}\n`);

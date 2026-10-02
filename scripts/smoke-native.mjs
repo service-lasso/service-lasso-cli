@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { resolve, join } from "node:path";
+import { nativeQualificationStdio } from "./native-qualification-stdio.mjs";
 
 function argument(name) {
   const index = process.argv.indexOf(name);
@@ -28,7 +29,7 @@ function nodeFreeEnvironment(extra = {}) {
 
 function run(executable, args, environment) {
   return new Promise((resolveRun, rejectRun) => {
-    const child = spawn(executable, args, { env: environment });
+    const child = spawn(executable, args, { env: environment, stdio: nativeQualificationStdio(["pipe", "pipe", "pipe"], environment) });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk) => { stdout += chunk; });

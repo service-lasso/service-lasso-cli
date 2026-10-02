@@ -21,7 +21,7 @@ import (
 // The qualification authority is provisioned outside a repository job by the
 // host owner. A passwordless sudo caller cannot create this root-owned policy,
 // and this helper intentionally has no enrolment/configuration operation.
-const grantPath = "/var/db/service-lasso/darwin-qualification-grant.json"
+const grantPath = "/private/var/db/service-lasso/darwin-qualification-grant.json"
 
 type grant struct {
 	Capability string `json:"capability"`
@@ -32,25 +32,39 @@ type grant struct {
 func readGrant() (grant, error) {
 	var value grant
 	parent := filepath.Dir(grantPath)
-	var namedStat, openedStat unix.Stat_t
-	if parent != "/var/db/service-lasso" {
+	if parent != "/private/var/db/service-lasso" {
 		return value, fmt.Errorf("missing protected grant parent")
 	}
-	for _, ancestor := range []string{"/var", "/var/db", parent} {
-		var stat unix.Stat_t
-		if unix.Lstat(ancestor, &stat) != nil || stat.Uid != 0 || stat.Mode&unix.S_IFMT != unix.S_IFDIR || stat.Mode&0022 != 0 {
+	// /var is a macOS system alias. Never follow it (or any other alias) at
+	// this authority boundary: use the canonical chain and check every parent.
+	for _, ancestor := range []string{"/", "/private", "/private/var", "/private/var/db", parent} {
+		if !protectedGrantParent(ancestor) {
 			return value, fmt.Errorf("missing protected grant parent")
 		}
 	}
-	if unix.Lstat(grantPath, &namedStat) != nil || namedStat.Uid != 0 || namedStat.Mode&unix.S_IFMT != unix.S_IFREG || namedStat.Mode&0777 != 0600 {
+	return readProtectedGrantFile(grantPath)
+}
+
+func protectedGrantParent(path string) bool {
+	var stat unix.Stat_t
+	return unix.Lstat(path, &stat) == nil && stat.Uid == 0 && stat.Mode&unix.S_IFMT == unix.S_IFDIR && stat.Mode&0022 == 0
+}
+
+// Only readGrant selects the production path, after the fixed canonical chain
+// passes. Keeping descriptor validation separate permits real filesystem
+// negative regressions without changing an owner's live grant.
+func readProtectedGrantFile(path string) (grant, error) {
+	var value grant
+	var namedStat, openedStat unix.Stat_t
+	if unix.Lstat(path, &namedStat) != nil || namedStat.Uid != 0 || namedStat.Mode&unix.S_IFMT != unix.S_IFREG || namedStat.Mode&0777 != 0600 {
 		return value, fmt.Errorf("missing protected grant")
 	}
-	fd, err := unix.Open(grantPath, unix.O_RDONLY|unix.O_NOFOLLOW, 0)
+	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_NOFOLLOW, 0)
 	if err != nil {
 		return value, fmt.Errorf("missing protected grant")
 	}
 	defer unix.Close(fd)
-	if unix.Fstat(fd, &openedStat) != nil || openedStat.Uid != 0 || openedStat.Mode&unix.S_IFMT != unix.S_IFREG || openedStat.Mode&0777 != 0600 || openedStat.Dev != namedStat.Dev || openedStat.Ino != namedStat.Ino {
+	if unix.Fstat(fd, &openedStat) != nil || !protectedGrantIdentity(namedStat, openedStat) {
 		return value, fmt.Errorf("protected grant identity changed")
 	}
 	file := os.NewFile(uintptr(fd), "service-lasso-darwin-qualification-grant")
@@ -68,6 +82,10 @@ func readGrant() (grant, error) {
 		return value, fmt.Errorf("invalid grant capability")
 	}
 	return value, nil
+}
+
+func protectedGrantIdentity(named, opened unix.Stat_t) bool {
+	return opened.Uid == 0 && opened.Mode&unix.S_IFMT == unix.S_IFREG && opened.Mode&0777 == 0600 && opened.Dev == named.Dev && opened.Ino == named.Ino
 }
 
 func main() {

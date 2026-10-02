@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 import { basename, dirname, join, resolve } from "node:path";
+import { stagePrimaryGate } from "./stage-primary-gate.mjs";
 
 const nodeVersion = "22.23.2";
 const postjectVersion = "1.0.0-alpha.6";
@@ -145,24 +146,7 @@ if (process.platform === "darwin") command("codesign", ["--sign", "-", executabl
 await copyFile(executable, embeddedSea);
 const gateSource = join(root, "native", "primary-gate");
 const gateBuild = join(output, ".primary-gate-build");
-await mkdir(join(gateBuild, "assets"), { recursive: true });
-await Promise.all([
-  copyFile(join(gateSource, "go.mod"), join(gateBuild, "go.mod")),
-  copyFile(join(gateSource, "go.sum"), join(gateBuild, "go.sum")),
-  copyFile(join(gateSource, "main.go"), join(gateBuild, "main.go")),
-  copyFile(join(gateSource, "ipc.go"), join(gateBuild, "ipc.go")),
-  copyFile(join(gateSource, "main_windows.go"), join(gateBuild, "main_windows.go")),
-  copyFile(join(gateSource, "main_unix.go"), join(gateBuild, "main_unix.go")),
-  copyFile(join(gateSource, "main_linux.go"), join(gateBuild, "main_linux.go")),
-  copyFile(embeddedSea, join(gateBuild, "assets", "service-lassoctl.sea")),
-  copyFile(confinedWriter, join(gateBuild, "assets", "service-lasso-confined-scaffold")),
-]);
-if (process.platform === "darwin") {
-  await Promise.all([
-    copyFile(join(gateSource, "main_darwin_helper.go"), join(gateBuild, "main_darwin_helper.go")),
-    writeFile(join(gateBuild, "assets", "service-lasso-darwin-immutable-helper.sha256"), `${darwinHelperSha256}\n`),
-  ]);
-}
+await stagePrimaryGate({ source: gateSource, build: gateBuild, sea: embeddedSea, writer: confinedWriter, platform: process.platform, darwinHelperSha256 });
 command("go", ["build", "-trimpath", "-o", executable, "."], gateBuild);
 await rm(gateBuild, { recursive: true, force: true });
 await rm(embeddedSea, { force: true });
