@@ -55,7 +55,7 @@ async function candidateDirectory(root) {
 function json(value, status = 200) { return new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } }); }
 
 function providerPolicy() {
-  return { immutable: { enabled: true }, branch: { name: "develop", protected: true }, protection: { required_status_checks: { strict: true, contexts: ["ci"] }, required_pull_request_reviews: { required_approving_review_count: 1, bypass_pull_request_allowances: { users: [], teams: [], apps: [] } }, enforce_admins: { enabled: true }, allow_force_pushes: { enabled: false } }, environment: { name: "development-candidate", protection_rules: [{ type: "required_reviewers", prevent_self_review: true, reviewers: [{ type: "User", reviewer: { id: 1 } }] }], deployment_branch_policy: { custom_branch_policies: true, protected_branches: false } }, policies: { branch_policies: [{ name: "develop" }] } };
+  return { immutable: { enabled: true }, branch: { name: "develop", protected: true }, protection: { required_status_checks: { strict: true, contexts: ["ci"] }, required_pull_request_reviews: { required_approving_review_count: 0, bypass_pull_request_allowances: { users: [], teams: [], apps: [] } }, enforce_admins: { enabled: true }, allow_force_pushes: { enabled: false } }, environment: { name: "development-candidate", protection_rules: [{ type: "wait_timer", wait_timer: 1 }], deployment_branch_policy: { custom_branch_policies: true, protected_branches: false } }, policies: { branch_policies: [{ name: "develop" }] } };
 }
 
 function emptyPrivateRelease(id, tag) { return { id, tag_name: tag, draft: true, prerelease: true, target_commitish: sourceSha, assets: [] }; }
@@ -148,7 +148,7 @@ test("CLI30 schema rejects duplicates, unexpected fields and forged source ident
 });
 
 test("CLI30 provider preflight and public URL fail closed", () => {
-  const preflight = { immutable: { enabled: true }, branch: { name: "develop", protected: true }, protection: { required_status_checks: { strict: true, contexts: ["CI"] }, required_pull_request_reviews: { required_approving_review_count: 1, bypass_pull_request_allowances: { users: [], teams: [], apps: [] } }, enforce_admins: { enabled: true }, allow_force_pushes: { enabled: false } }, environment: { name: "development-candidate", protection_rules: [{ type: "required_reviewers", prevent_self_review: true, reviewers: [{ type: "User", reviewer: { id: 1 } }] }], deployment_branch_policy: { custom_branch_policies: true, protected_branches: false } }, branchPolicies: [{ name: "develop" }] };
+  const preflight = { immutable: { enabled: true }, branch: { name: "develop", protected: true }, protection: { required_status_checks: { strict: true, contexts: ["CI"] }, required_pull_request_reviews: { required_approving_review_count: 0, bypass_pull_request_allowances: { users: [], teams: [], apps: [] } }, enforce_admins: { enabled: true }, allow_force_pushes: { enabled: false } }, environment: { name: "development-candidate", protection_rules: [{ type: "wait_timer", wait_timer: 1 }], deployment_branch_policy: { custom_branch_policies: true, protected_branches: false } }, branchPolicies: [{ name: "develop" }] };
   assert.doesNotThrow(() => assertProviderPreflight(preflight));
   assert.throws(() => assertProviderPreflight({ ...preflight, immutable: { enabled: false } }));
   assert.throws(() => assertProviderPreflight({ ...preflight, protection: { ...preflight.protection, required_pull_request_reviews: null } }));
@@ -159,19 +159,32 @@ test("CLI30 provider preflight and public URL fail closed", () => {
   assert.throws(() => canonicalPublicAssetUrl("https://attacker.invalid/a", "a"));
 });
 
-test("CLI30 provider preflight requires GitHub's self-review flag and identifiable reviewers", () => {
-  const policy = providerPolicy();
-  assert.doesNotThrow(() => assertProviderPreflight({ immutable: policy.immutable, branch: policy.branch, protection: policy.protection, environment: policy.environment, branchPolicies: policy.policies.branch_policies }));
-  for (const mutate of [
-    rule => { rule.prevent_self_review = false; },
-    rule => { rule.prevent_self_review = undefined; },
-    rule => { rule.reviewers = []; },
-    rule => { rule.reviewers = [{ type: "User", reviewer: {} }]; },
-    rule => { rule.reviewers = [{ type: "Organization", reviewer: { id: 1 } }]; }
-  ]) {
-    const variant = providerPolicy();
-    mutate(variant.environment.protection_rules[0]);
-    assert.throws(() => assertProviderPreflight({ immutable: variant.immutable, branch: variant.branch, protection: variant.protection, environment: variant.environment, branchPolicies: variant.policies.branch_policies }));
+test("CLI30 automated policy accepts zero human approvers but preserves bounded wait and PR policy", () => {
+  const check = policy => assertProviderPreflight({ immutable: policy.immutable, branch: policy.branch, protection: policy.protection, environment: policy.environment, branchPolicies: policy.policies.branch_policies });
+  for (const count of [0, 1, 6]) {
+    const policy = providerPolicy();
+    policy.protection.required_pull_request_reviews.required_approving_review_count = count;
+    assert.doesNotThrow(() => check(policy));
+  }
+  for (const count of [-1, 7, 0.5, "0", undefined]) {
+    const policy = providerPolicy();
+    policy.protection.required_pull_request_reviews.required_approving_review_count = count;
+    assert.throws(() => check(policy));
+  }
+  for (const wait of [1, 30]) {
+    const policy = providerPolicy();
+    policy.environment.protection_rules[0].wait_timer = wait;
+    assert.doesNotThrow(() => check(policy));
+  }
+  for (const wait of [undefined, 0, 31, -1, 1.5, "1"]) {
+    const policy = providerPolicy();
+    policy.environment.protection_rules[0].wait_timer = wait;
+    assert.throws(() => check(policy));
+  }
+  for (const rules of [[], [{ type: "required_reviewers", reviewers: [] }]]) {
+    const policy = providerPolicy();
+    policy.environment.protection_rules = rules;
+    assert.throws(() => check(policy));
   }
 });
 
@@ -245,7 +258,7 @@ test("CLI30 actual adapter rejects every unavailable or unsafe provider prefligh
     const variants = [
       ["immutable unavailable", "immutable", 404], ["branch unavailable", "branch", 404], ["protection unavailable", "protection", 404], ["environment unavailable", "environment", 404], ["policy unavailable", "policies", 404],
       ["immutable unauthenticated", "immutable", 401], ["branch forbidden", "branch", 403], ["protection unauthenticated", "protection", 401], ["environment forbidden", "environment", 403], ["policy unauthenticated", "policies", 401],
-      ["reviews absent", "reviews", null], ["reviews empty", "reviews", { required_approving_review_count: 0 }], ["bypasses missing", "bypasses", undefined], ["bypasses malformed", "bypasses", {}], ["bypasses unknown", "bypasses", { users: [], teams: [], apps: [], unexpected: [] }], ["bypass user", "bypasses", { users: ["owner"], teams: [], apps: [] }], ["bypass team", "bypasses", { users: [], teams: ["owners"], apps: [] }], ["bypass app", "bypasses", { users: [], teams: [], apps: ["publisher"] }], ["admin disabled", "admin", false], ["checks non-strict", "strict", false], ["checks empty", "contexts", []], ["force allowed", "force", true], ["branch unprotected", "protected", false], ["immutable disabled", "enabled", false], ["environment malformed", "environment", {}], ["self review allowed", "self-review", false], ["reviewer identity malformed", "reviewers", [{ type: "User", reviewer: {} }]], ["branch policy wrong", "policies", { branch_policies: [{ name: "other" }] }]
+      ["reviews absent", "reviews", null], ["review policy lacks bypass schema", "reviews", { required_approving_review_count: 0 }], ["bypasses missing", "bypasses", undefined], ["bypasses malformed", "bypasses", {}], ["bypasses unknown", "bypasses", { users: [], teams: [], apps: [], unexpected: [] }], ["bypass user", "bypasses", { users: ["owner"], teams: [], apps: [] }], ["bypass team", "bypasses", { users: [], teams: ["owners"], apps: [] }], ["bypass app", "bypasses", { users: [], teams: [], apps: ["publisher"] }], ["admin disabled", "admin", false], ["checks non-strict", "strict", false], ["checks empty", "contexts", []], ["force allowed", "force", true], ["branch unprotected", "protected", false], ["immutable disabled", "enabled", false], ["environment malformed", "environment", {}], ["wait absent", "wait", undefined], ["wait zero", "wait", 0], ["wait excessive", "wait", 31], ["wait noninteger", "wait", 1.5], ["wait string", "wait", "1"], ["branch policy wrong", "policies", { branch_policies: [{ name: "other" }] }]
     ];
     for (const [name, field, value] of variants) {
       const events = [], policy = providerPolicy();
@@ -259,7 +272,7 @@ test("CLI30 actual adapter rejects every unavailable or unsafe provider prefligh
         if (path.endsWith("/immutable-releases")) { if (field === "enabled") policy.immutable.enabled = value; return json(policy.immutable); }
         if (path.endsWith("/branches/develop")) { if (field === "protected") policy.branch.protected = value; return json(policy.branch); }
         if (path.endsWith("/branches/develop/protection")) { if (field === "reviews") policy.protection.required_pull_request_reviews = value; if (field === "bypasses") { if (value === undefined) delete policy.protection.required_pull_request_reviews.bypass_pull_request_allowances; else policy.protection.required_pull_request_reviews.bypass_pull_request_allowances = value; } if (field === "admin") policy.protection.enforce_admins.enabled = value; if (field === "strict") policy.protection.required_status_checks.strict = value; if (field === "contexts") policy.protection.required_status_checks.contexts = value; if (field === "force") policy.protection.allow_force_pushes.enabled = value; return json(policy.protection); }
-        if (path.endsWith("/environments/development-candidate")) { if (field === "self-review") policy.environment.protection_rules[0].prevent_self_review = value; if (field === "reviewers") policy.environment.protection_rules[0].reviewers = value; return json(policy.environment); }
+        if (path.endsWith("/environments/development-candidate")) { if (field === "wait") policy.environment.protection_rules[0].wait_timer = value; return json(policy.environment); }
         if (path.endsWith("/deployment-branch-policies")) return json(policy.policies);
         throw new Error(`unexpected ${name}`);
       };
