@@ -15,6 +15,8 @@ const executable = process.argv.includes("--executable") ? resolve(option("--exe
 const artifact = process.argv.includes("--artifact") ? resolve(option("--artifact")) : null;
 const qualificationStatus = process.argv.includes("--qualification-status") ? option("--qualification-status") : "verified";
 if (!new Set(["verified", "unavailable"]).has(qualificationStatus)) throw new Error("Unknown qualification status.");
+const expectedExit = process.argv.includes("--expected-exit") ? option("--expected-exit") : "zero";
+if (!new Set(["zero", "nonzero"]).has(expectedExit)) throw new Error("--expected-exit must be zero or nonzero.");
 const separator = process.argv.indexOf("--");
 if (separator < 0 || separator === process.argv.length - 1) throw new Error("A literal -- followed by the owned child command is required.");
 const command = process.argv[separator + 1], args = process.argv.slice(separator + 2);
@@ -44,9 +46,12 @@ const record = {
   nativeExecutableSha256: executable ? await sha256(executable) : null,
   artifactSha256: artifact ? await sha256(artifact) : null,
   qualificationStatus,
+  expectedExit,
   rawClose: result,
-  passed: result.code === 0 && result.signal === null && result.spawnError === null,
+  passed: expectedExit === "zero"
+    ? result.code === 0 && result.signal === null && result.spawnError === null
+    : typeof result.code === "number" && result.code !== 0 && result.signal === null && result.spawnError === null,
 };
 await writeFile(join(receiptDirectory, `phase-${phase}.json`), `${JSON.stringify(record, null, 2)}\n`, { flag: "wx" });
-process.stdout.write(`${JSON.stringify({ phase, rawClose: result, passed: record.passed })}\n`);
-if (!record.passed) process.exitCode = typeof result.code === "number" ? result.code || 1 : 1;
+process.stdout.write(`${JSON.stringify({ phase, expectedExit, rawClose: result, passed: record.passed })}\n`);
+if (!record.passed) process.exitCode = 1;
