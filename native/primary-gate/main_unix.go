@@ -124,6 +124,10 @@ func verifyImmutableImage(writer, reader int, expected []byte) error {
 
 func main() {
 	if !newGateCapability() { fail() }
+	if _, err := darwinHelper(); err != nil { fail("external-helper") }
+	capabilityFD, err := strconv.Atoi(os.Getenv("SERVICE_LASSO_DARWIN_IMMUTABILITY_CAPABILITY_FD"))
+	var capabilityStat unix.Stat_t
+	if err != nil || capabilityFD < 3 || unix.Fstat(capabilityFD, &capabilityStat) != nil { fail("external-capability") }
 	directory, err := os.MkdirTemp("", "service-lasso-primary-")
 	if err != nil {
 		fail()
@@ -163,9 +167,9 @@ func main() {
 	// Freeze both images and their parent before publishing the held directory
 	// descriptor to the child. The request endpoint is the separate inherited
 	// socketpair and never appears in this mutable filesystem namespace.
-	if verifyImmutableImage(seaWriter, seaReader, seaBytes) != nil || verifyImmutableImage(helperWriter, helperReader, confinedWriterBytes) != nil || immutable(directoryFD) != nil {
-		fail()
-	}
+	if verifyImmutableImage(seaWriter, seaReader, seaBytes) != nil { fail("sea-immutability") }
+	if verifyImmutableImage(helperWriter, helperReader, confinedWriterBytes) != nil { fail("writer-immutability") }
+	if immutable(directoryFD) != nil { fail("parent-immutability") }
 	defer unix.Close(directoryFD)
 	defer func() {
 		// A failed release retains the protected object for recovery instead of
@@ -204,7 +208,13 @@ func main() {
 	}
 }
 
-func fail() { fmt.Fprintln(os.Stderr, "The native primary gate could not start."); os.Exit(1) }
+func fail(stages ...string) {
+	// Fixed stage labels only: never print paths, capabilities or helper errors.
+	stage := "startup"
+	if len(stages) == 1 { stage = stages[0] }
+	fmt.Fprintf(os.Stderr, "The native primary gate could not start (stage=%s).\n", stage)
+	os.Exit(1)
+}
 
 type darwinLifecycle struct {
 	mu         sync.Mutex

@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
-import { basename, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { spawn } from "node:child_process";
+import { assertClosedObject, parseStrictJson, readHeldFile } from "./protected-candidate-lib.mjs";
 
 function option(name) {
   const index = process.argv.indexOf(name);
@@ -23,6 +24,12 @@ const command = process.argv[separator + 1], args = process.argv.slice(separator
 const initial = JSON.parse(await readFile(join(receiptDirectory, "initial.json"), "utf8"));
 if (initial.schemaVersion !== 2 || initial.ownedBirth !== true || initial.actualClose !== null) throw new Error("Initial receipt is not open and owned.");
 const sha256 = async (path) => createHash("sha256").update(await readFile(path)).digest("hex");
+const routeResultPath = phase === "route" && qualificationStatus === "unavailable" ? resolve(option("--route-result")) : null;
+if (routeResultPath && (expectedExit !== "zero" || !executable || !process.env.SERVICE_LASSO_NATIVE_ROUTE_RESULT || resolve(process.env.SERVICE_LASSO_NATIVE_ROUTE_RESULT) !== routeResultPath)) throw new Error("Unavailable route requires a zero-exit test runner and explicit inner-result path.");
+if (routeResultPath) {
+  try { await readFile(routeResultPath); throw new Error("Route result must be absent before invocation."); }
+  catch (error) { if (error.code !== "ENOENT") throw error; }
+}
 
 let result;
 try {
@@ -52,6 +59,16 @@ const record = {
     ? result.code === 0 && result.signal === null && result.spawnError === null
     : typeof result.code === "number" && result.code !== 0 && result.signal === null && result.spawnError === null,
 };
+record.innerRoute = null;
+if (routeResultPath && record.passed) {
+  try {
+    const inner = parseStrictJson(await readHeldFile(dirname(routeResultPath), basename(routeResultPath), undefined, { maxBytes: 16 * 1024 }), "native inner route");
+    assertClosedObject(inner, ["schemaVersion", "status", "executableSha256", "innerClose", "destinationAbsent", "hostileHelperAbsent"], "native inner route");
+    assertClosedObject(inner.innerClose, ["code", "signal"], "native inner close");
+    if (inner.schemaVersion !== 1 || inner.status !== "unavailable" || inner.executableSha256 !== record.nativeExecutableSha256 || !Number.isInteger(inner.innerClose.code) || inner.innerClose.code <= 0 || inner.innerClose.signal !== null || inner.destinationAbsent !== true || inner.hostileHelperAbsent !== true) throw new Error("Invalid inner route.");
+    record.innerRoute = inner;
+  } catch { record.passed = false; }
+}
 await writeFile(join(receiptDirectory, `phase-${phase}.json`), `${JSON.stringify(record, null, 2)}\n`, { flag: "wx" });
 process.stdout.write(`${JSON.stringify({ phase, expectedExit, rawClose: result, passed: record.passed })}\n`);
 if (!record.passed) process.exitCode = 1;

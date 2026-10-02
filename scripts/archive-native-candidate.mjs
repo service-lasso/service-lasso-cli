@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process";
 import { parseStrictJson } from "./protected-candidate-lib.mjs";
 
 function option(name) { const index = process.argv.indexOf(name); if (index < 0 || !process.argv[index + 1]) throw new Error(`Missing ${name}.`); return process.argv[index + 1]; }
+function emptyOption(name) { const index = process.argv.indexOf(name); const value = process.argv[index + 1]; if (index < 0 || value === undefined || value.startsWith("--")) throw new Error(`Missing ${name}.`); return value; }
 function sha256(bytes) { return createHash("sha256").update(bytes).digest("hex"); }
 function closedRecord(bytes, keys, name) {
   const value = parseStrictJson(bytes, name);
@@ -15,6 +16,7 @@ const directory = resolve(option("--directory"));
 const output = resolve(option("--output"));
 const version = option("--version");
 const sourceSha = option("--source-sha");
+const eventName = option("--expected-event"), baseSha = emptyOption("--expected-base-sha"), mergeContextSha = option("--expected-merge-context-sha");
 if (!/^\d+\.\d+\.\d+-dev\.[0-9a-f]{7}$/i.test(version) || !/^[0-9a-f]{40}$/i.test(sourceSha)) throw new Error("Version or source SHA is invalid.");
 const provenance = parseStrictJson(await readFile(join(directory, "provenance.json")), "Native provenance");
 const target = `${provenance?.executable?.platform}-${provenance?.executable?.architecture}`;
@@ -35,7 +37,10 @@ let contextBytes, acceptanceBytes;
 try { contextBytes = await readFile(join(directory, "ci-context.json")); } catch { throw new Error("Native archive requires ci-context.json from the target-host verification step."); }
 try { acceptanceBytes = await readFile(join(directory, "host-acceptance.json")); } catch { throw new Error("Native archive requires host-acceptance.json from the target-host verification step."); }
 const context = closedRecord(contextBytes, ["schemaVersion", "eventName", "sourceSha", "testedBaseSha", "mergeContextSha"], "Native CI context");
-if (context.schemaVersion !== 1 || context.sourceSha !== sourceSha || context.eventName !== "workflow_dispatch" || context.testedBaseSha !== null || context.mergeContextSha !== sourceSha) throw new Error("Native CI context does not bind this workflow-dispatch candidate.");
+if (context.schemaVersion !== 1 || context.sourceSha !== sourceSha || !["push", "pull_request", "workflow_dispatch"].includes(eventName) || context.eventName !== eventName || !/^[0-9a-f]{40}$/i.test(mergeContextSha) || context.mergeContextSha !== mergeContextSha) throw new Error("Native CI context does not bind the caller event and source.");
+if (eventName === "pull_request") {
+  if (!/^[0-9a-f]{40}$/i.test(baseSha) || context.testedBaseSha !== baseSha || new Set([sourceSha, baseSha, mergeContextSha]).size !== 3) throw new Error("Native CI context does not bind distinct PR source, base and merge identities.");
+} else if (baseSha !== "" || context.testedBaseSha !== null || mergeContextSha !== sourceSha) throw new Error("Native CI context does not bind this source event.");
 const acceptance = closedRecord(acceptanceBytes, ["schemaVersion", "sourceSha", "version", "platform", "architecture", "executableSha256", "nodeAbsentFromPath", "status", "evidenceDigest"], "Native host acceptance");
 const acceptanceIdentity = `service-lasso-native-acceptance-v1\n${sourceSha}\n${version}\n${provenance.executable.platform}\n${provenance.executable.architecture}\n${sha256(executableBytes)}\nnode-absent\npassed\n`;
 if (acceptance.schemaVersion !== 1 || acceptance.sourceSha !== sourceSha || acceptance.version !== version || acceptance.platform !== provenance.executable.platform || acceptance.architecture !== provenance.executable.architecture || acceptance.executableSha256 !== sha256(executableBytes) || acceptance.nodeAbsentFromPath !== true || acceptance.status !== "passed" || acceptance.evidenceDigest !== sha256(Buffer.from(acceptanceIdentity, "utf8"))) throw new Error("Native host acceptance does not bind the retained executable bytes.");

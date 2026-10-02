@@ -19,3 +19,7 @@ arm64 native archives. Provider settings, dispatch, publication, deployment,
 Core packaging and GA remain separately authorised and evidenced.
 
 Issue #30 continuation coherently binds the Darwin archived immutable helper bytes and rereads approved provider protection immediately before every mutation. Whole programme Windows ZIP and actual Core/operator acceptance remain open.
+
+Issue #30 all-three entire-review repair maps CLI30-TARGET-PROOF to zero-exit selected-test closure plus a separately digest-bound unavailable inner-route record; CLI30-IDENTITY to caller-bound push/PR/dispatch archive contracts with strict dispatch publication; and CLI30-CLOSED-INVENTORY to bounded regular held-handle local reads including manifest and sums. All regressions remain unexecuted pending new entire source review and ROOT admission.
+
+Issue #30 natural-attempt additions: Windows phase wrappers invoke literal Node scripts without shell forwarding. Darwin root-owned helper/grant/capability transport is an external qualification dependency; hosted execution is explicitly blocked and retains a prerequisite record, while secure native checks and actual tests remain mandatory. The historical exact Core pin remains unchanged and blocked by its own parse failure until independently qualified governed replacement. Original attempt 37003590854 and all logs remain retained; no new execution is authorised.
