@@ -130,7 +130,7 @@ jobs:
         if: matrix.target == 'linux-x64'
         with:
           repository: service-lasso/service-lasso
-          ref: d6dc5558307f13c654194ddc944e3be40c940675
+          ref: cc5cd9007655296da8c921fdc494f1df404223b3
           path: core
           persist-credentials: false
       - name: Run the separately named direct Linux native CLI to Core journey
@@ -138,6 +138,7 @@ jobs:
         shell: bash
         env:
           SERVICE_LASSO_CORE_DIR: ${{ github.workspace }}/core
+          SERVICE_LASSO_CORE_EXPECTED_REVISION: cc5cd9007655296da8c921fdc494f1df404223b3
         run: |
           set -euo pipefail
           (cd core && npm ci && npm run build)

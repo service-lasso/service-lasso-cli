@@ -153,7 +153,6 @@ test("compiled external CLI exercises merged actual Core durable lifecycle contr
     await rm(root, { recursive: true, force: false });
   }
 });
-
 test("real durable acceptance requires an explicit Core candidate pin", () => {
   assert.ok(coreRevision === undefined || /^[a-f0-9]{40}$/.test(coreRevision));
 });
