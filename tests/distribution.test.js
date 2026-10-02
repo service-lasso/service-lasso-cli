@@ -44,7 +44,7 @@ function assertProtectedCandidateWorkflow(workflow) {
   assert.match(custody, /SERVICE_LASSO_HOST_PORT_REGISTRY_PATH=/);
   assert.match(custody, /prepare-native-qualification-receipt\.mjs/);
   assert.ok(nativeSteps.findIndex((step) => step.name === "Establish isolated native qualification custody before dependencies") < nativeSteps.findIndex((step) => step.run === "npm ci"));
-  const darwinRoute = nativeSteps.find((step) => step.name === "Require actual Darwin primary-route materialization under system immutability")?.run ?? "";
+  const darwinRoute = nativeSteps.find((step) => step.name === "Compile and exercise Darwin process-exit rejection source checks")?.run ?? "";
   assert.match(darwinRoute, /go test \.\/\.\.\./);
   const primaryRoute = nativeSteps.find((step) => step.name === "Record expected unavailable controlled primary-route result")?.run ?? "";
   assert.match(primaryRoute, /run-native-qualification-phase\.mjs .*--phase route/);

@@ -113,7 +113,7 @@ jobs:
           executable="native-assets/service-lassoctl"
           if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
           node scripts/run-native-qualification-phase.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --phase smoke --executable "$executable" -- npm run smoke:native -- --directory native-assets --expected-source-sha "${{ needs.identity.outputs.source_sha }}" --expected-version "${{ needs.identity.outputs.candidate_version }}" --write-host-acceptance
-      - name: Require actual Darwin primary-route materialization under system immutability
+      - name: Compile and exercise Darwin process-exit rejection source checks
         if: matrix.target == 'darwin-arm64'
         shell: bash
         run: |
