@@ -157,7 +157,9 @@ No choice is inferred, and no provision/execution is authorized by this document
 Actual000b Windows smoke/route pass; archive failed GNU tar drive-colon output,
 then ENOENT hashing discarded the phase record. The producer now keeps the
 archive basename local to its owned output cwd. TAR candidate/public contract
-stays unchanged; whole-programme Windows ZIP remains separately UNMET.
+stays unchanged. Issue #35 explicitly retires the misplaced CLI inner-ZIP
+assertion; Core #1534 staged-service Windows ZIP and outer release Windows ZIP
+remain mandatory.
 The phase wrapper persists observed raw closure with present/absent/error digest
 outcomes and fails closed on requested missing/unreadable bytes. Actual failing
 producer, zero-close missing/unreadable artifact, failed-present artifact and
