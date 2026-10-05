@@ -1,4 +1,4 @@
-# CLI39 IA1 coherent whole amendment repair04
+# CLI39 IA1 coherent whole amendment repair05
 
 Prospective whole candidate, not reviewed, selected authority or implementation
 permission. Read ALL ten sections with the normative
@@ -23,7 +23,21 @@ all historical failures remain unchanged. IA1-dependent code is prohibited until
 a new different entire architecture review and the independent authority selection
 required below. PA1/N2 ordinary source implementation continues separately.
 
+Repair05 preserves the FULL independent IA104 NO_GO report at
+D:/projects/service-lasso/_audit/cli39-ia104-independent-entire-review-oct06-ria104/REPORT.md,
+REPORT SHAb8d6ced451a103b4c779b8246563abbf8bab10201a54b2fb1b410bb577c76d8c,
+ROOTb85deb0980e2359aeda1b4a4db0a2028eb499729eb80ac0fb4af9fc6c9059e3e.
+R04-01 finite terminal capture is repaired with the whole R03 mechanisms, not granted
+self GO. Layer0 producer bytes and separately held Layer1 raw native evidence have
+explicit finite original106..108 membership, custody, charge and retained lifetime.
+The appendix section2 rule supersedes prior recursive SAME-journal observations
+across ALL ten sections and every stage/certification/transport cut. All authentic
+BQ/issuer/realm/principal/key/anchor/credential/native provider/tool and T/S remain
+UNSELECTED. The historical final04 complete witness9904524493 is retained unchanged;
+new exact complete repeated-range geometry is derived by the05 freeze.
 ## 1. Scope and independent selection
+
+Repair05 applies the finite terminal protocol in appendix section2 to all authority roles: no producer chooses its own audit foundation or authentic actor.
 
 Keep full Node22.23.2/full ICU/Buffer/public API/SEA/library/Windows/Linux, original
 shared18/10/11/13/11/memory20/Q12/C13. Service aggregate1MiB, store4MiB and Core128MiB
@@ -45,6 +59,8 @@ or native/issuer implementation is authorized before distinct whole review and
 the independent authentic authority selections. No authentic selection is invented.
 
 ## 2. Acyclic original byte graph
+
+Layer0 producer journals end finitely; later E binds held Layer1 original106..108 terminal ranges. No last ACK rewrites R, a closed journal or its own archived prefix.
 
 For the signed consumer stage use three distinct objects: InputROOT R4, detached
 statement S/signature V, and a
@@ -82,6 +98,8 @@ and supplies authentic native member/range custody only after independent admiss
 
 ## 3. Exact statement
 
+The fifteen-key statement/preimage remain unchanged. Terminal capture selectors belong only to independently admitted later original evidence, never additional S keys.
+
 Exactly FIFTEEN keys, unchanged from the original actual list:
 schema, issuerFingerprint, scope, platform, rootSha256, rootByteCount,
 sourceAssociationSha256, actorSetSha256, profileSha256, grantSha256,
@@ -101,6 +119,8 @@ These statement keys apply ONLY signed consumer R4. Unsigned initial/bootstrap/
 credential qualification uses no S/V or fabricated signature placeholder.
 
 ## 4. Concrete initial qualification authority, independent of IA1 output
+
+BQ custody includes the independently source-admitted nonrecursive capture foundation and complete finite before-effect reservations. Its native control observations are original106..108 ranges, not future self-signatures.
 
 Introduce a NEW, prospectively owner-selected native qualification authority role
 BQ. It is an actual named native OS principal authorized for Development input
@@ -169,6 +189,8 @@ remain conservatively charged until genuine issuer exit. IA1 output authenticate
 consumer R only after this independent bootstrap/qualification/owner chain.
 
 ## 5. Exact Q/C/case/capacity indexes
+
+All C evidence requires both original journal membership and original106..108 finite control/terminal range custody; original C13 grammar stays unchanged.
 
 The four singular SHA fields name four ORIGINAL index members, not an arbitrarily
 chosen single Q or C. They use a new private closed index grammar, reviewed here:
@@ -253,6 +275,8 @@ overflow safety alone is never a positive product source/qualification result.
 
 ## 6. Full actor/executable/source crosswalk
 
+All fourteen roles/nine births retain source/capability/owner joins for Layer1 control captures. Same-process groupings grant no uncharged terminal recorder or actor.
+
 T retains exact three keys schema,platform,actors; schema
 service-lasso-original-input-actors.v1, raw<=16384. actors has exactly fourteen
 roles in this order: bootstrap-authority,issuer,installer,input-provider,service,
@@ -307,6 +331,8 @@ Actual same-original correlation and separately admitted entry capability remain
 mandatory before any physical reference sharing.
 
 ## 7. Concrete verifier engineering source prerequisite
+
+Verifier/crypto/native storage work includes the finite capture foundation and terminal failure overlap in actual owning budgets; no new fit or tool execution claim follows.
 
 Select Monocypher original tag4.0.3 commit ab2b16dd619ad5f6979a4fbe69cfa324a6fcc35f,
 root tree eccc366491fc98c4149401d580ce41081a7854b1 as this candidate's exact
@@ -377,6 +403,8 @@ file-size arithmetic or compressed source label establishes the1MiB fit.
 
 ## 8. Handoff, lifetime and replay
 
+Genuine journal footer/EOF/close/copy/seal/archive ACK has held original106..108 range lifetime. Terminal proof remains retained, never self-certifies its physical destruction.
+
 The original four authoring input objects and their public/private operation
 signatures remain exactly selected. New IA1 admission/index/envelope objects are
 private native source-admission graph members, never extra authoring operands,
@@ -407,6 +435,8 @@ appendix section2, never by transferring unknown backing to a foreign owner.
 
 ## 9. Complete Git/source custody correction
 
+New complete freeze retains all prior04 source/history/frames/control failures plus this whole05 proposal and current finite repeated-association geometry. No old witness substitutes for current bytes.
+
 Next current source capture includes actual commit raw body, the ROOT tree named
 in that raw commit, every recursively linked tree/blob original, and complete typed
 membership traversal from that commit. Original ls-tree text is only supplemental.
@@ -425,6 +455,8 @@ totals. Source-data arithmetic distinguishes all association bodies from distinc
 paths and native originals; no path normalization establishes physical identity.
 
 ## 10. Full fixtures, review and final boundary
+
+FT01..FT07 cover the WHOLE R0..R4/104 success chain and every terminal failure with exact128 coexistence. They are SOURCE-UNRUN; fresh DIFFERENT ENTIRE review and exact human choice precede dependent source.
 
 New whole architecture review covers ALL sections and active intent/spec/backlog/
 INIT/traceability, complete current source and cumulative originals. Positive source

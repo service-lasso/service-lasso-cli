@@ -157,7 +157,7 @@ remains unfinished, then DIFFERENT ENTIRE final SOURCE GO/NEW complete input adm
 before any build/import/parser/compiler/test/native calibration. No CI rerun/cancel,
 settings/main/cleanup/release/GA/promotion/deployment or partial delivery claim.
 
-## CLI39 IA1 whole repair04 — all three ENTIRE review03 findings
+## CLI39 IA1 whole repair04 ï¿½ all three ENTIRE review03 findings
 
 Current prospective authority is ALL ten INPUT-AUTHORITY-ISSUER-ALTERNATIVES-PRECODE
 sections plus ALL normative IA1-SP1-REPRESENTATION-AND-STAGES-PRECODE sections, including
@@ -200,3 +200,35 @@ complete repeated-range table/body witness in the final04 freeze. Preserve the f
 or free backing. This whole representation amendment changes no owning memory cap,
 service1MiB/store4MiB/Core128MiB, Q12/C13 or actual authority selection. The entire
 review must judge this corrected finite geometry with all R03-01..03 mechanisms.
+
+## CLI39 IA1 whole repair05 - finite terminal cut across entire architecture
+
+Current authority remains a PROSPECTIVE proposal: ALL ten canonical IA1 sections,
+WHOLE normative SP1 appendix and ALL five intent/spec/backlog/INIT/.github mappings.
+Full independent IA104 REPORT SHAb8d6ced451a103b4c779b8246563abbf8bab10201a54b2fb1b410bb577c76d8c
+and ROOTb85deb0980e2359aeda1b4a4db0a2028eb499729eb80ac0fb4af9fc6c9059e3e remain NO_GO.
+R04-01/IA1-01/IA1-04/HA1/HA4/HA5/N2 maps finite Layer0 producer journals plus original
+Layer1 native append/flush/readback/retirement/footer/EOF/close/copy/seal/archive proof,
+explicit source-admitted nonrecursive foundation and ORIGINAL106/107/108 held ranges.
+Before effects, complete finite whole-lineage success/error/crash capacity and exact
+SAME128 overlap are reserved; no extra pool, unlogged Boolean, future self-signature,
+self-selected actor or loss of private proof. Terminal ACK remains held original108,
+not appended to its closed journal or archived by itself. Later acyclic E admits
+exact original identity/range custody; terminal proof originals remain held/charged.
+Failures retain originals/windows and deny continuation/reuse. FT01..FT07 SOURCE-UNRUN
+cover multiwindow success at EVERY R0/R1/R3a/R3b/R4-domain0/R4-domain2/certificate104,
+genuine EOF/closure/Linux seals/archive ACK plus failed readback/close/copy/seal/ACK,
+full retained capacity and crash/quarantine. Entire source closure includes this
+foundation and terminal tail in CutA/B/C; R03 preseal/SCM_RIGHTS/nine-birth and exact
+production-control/derived-C128 corrections stay together. This supersedes earlier
+prospective recursive same-journal wording, preserving every frozen historical byte.
+Service1MiB/store4MiB/Core128MiB/full Node22.23.2/ICU/API/Q12/C13 remain; Q32 qualification
+only, B0/B2 UNKNOWN, actual BQ/issuer/principal/realm/anchor/key/credential/native source/
+provider/tool/T/S UNSELECTED. Prior16GiB FILE witness9904524493 remains historical;
+new complete finite geometry is derived without omission/deduplication/compression.
+All107 individually classified inherited dirty paths and all nonproposal source stay
+byte-identical under unfinished issue39/PR42 sole successor custody. No dependent
+SP1/BQ/issuer/native/credential source or target execution before coherent whole fresh
+DIFFERENT review AND exact human choice. Ordinary approved PA1/N2 source remains
+separate and unfinished. Final ENTIRE product SOURCE GO/new authentic input admission,
+native qualification/Core/operator/publication/release remain separate open gates.
