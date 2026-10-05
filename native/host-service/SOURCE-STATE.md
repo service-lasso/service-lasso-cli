@@ -146,6 +146,13 @@ and output byte. Fresh storage, concurrency serialization and actual retirement
 remain obligations of the unfinished owning constructor; this guard is not
 physical allocation, archive acceptance or an authenticated provider capability.
 
+Held-input control/body/capture storage can now be allocated as one actual
+zeroed native arena block inside the same already charged live extent. Checked
+size/alignment arithmetic includes every row, padding and extra EOF byte;
+requested capture capacity bounds genuine short reads and capacity failure
+retains original custody. This is actual storage allocation, not source/provider
+admission, measured fit, automatic release or the unfinished process constructor.
+
 Still required before whole delivery: complete authenticated PA1 original caller/
 provider/ROOT/P/G/C/key acquisition and positive bootstrap, actual capture file
 producer/readers/archive correlation, complete typed control/effect/observer/ledger

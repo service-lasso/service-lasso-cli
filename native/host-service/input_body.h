@@ -1,6 +1,7 @@
 #ifndef SLCLI_INPUT_BODY_H
 #define SLCLI_INPUT_BODY_H
 #include "crypto.h"
+#include "arena.h"
 #if defined(_WIN32)
 #include "file_windows.h"
 typedef HANDLE slcli_input_handle;
@@ -26,5 +27,13 @@ struct slcli_input_body {
 };
 int slcli_input_body_read(struct slcli_input_body *,slcli_input_handle,
                           uint64_t,const unsigned char[32]);
+/* Real allocation from one already charged original native extent. The caller
+ * retains this complete block, its arena/owner and handle through archive
+ * readback and actual disposition, including every failed/partial attempt.
+ * No release/reset API is supplied here. This constructs storage only, never
+ * a provider/source capability or a new quota. Capture capacity bounds genuine
+ * short reads; exhaustion retains the block and original rows. */
+struct slcli_input_body *slcli_input_body_allocate(struct slcli_arena *,
+                                                   uint64_t,size_t);
 #endif
 #endif

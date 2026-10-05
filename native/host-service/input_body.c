@@ -3,6 +3,38 @@
 #include <linux/fcntl.h>
 #endif
 #if defined(_WIN32) || defined(__linux__)
+_Static_assert(_Alignof(struct slcli_input_body)<=16,
+               "Original arena must align input control storage");
+_Static_assert(_Alignof(slcli_input_capture)<=16,
+               "Original arena must align native capture storage");
+struct slcli_input_body *slcli_input_body_allocate(struct slcli_arena *arena,
+                                                   uint64_t expected,size_t rows) {
+  size_t capacity,offset,capture_bytes,total,alignment;
+  unsigned char *block;
+  struct slcli_input_body *body;
+  if(!arena||!expected||expected>262144||
+     rows<(expected+16383)/16384+3||rows>expected+3||
+     rows>SIZE_MAX/sizeof(slcli_input_capture)) return 0;
+  capacity=(size_t)expected+1; /* Original extra byte for actual EOF observation. */
+  if(capacity>SIZE_MAX-sizeof(*body)) return 0;
+  offset=sizeof(*body)+capacity;
+  alignment=_Alignof(slcli_input_capture);
+  if(offset>SIZE_MAX-(alignment-1)) return 0;
+  offset=(offset+alignment-1)&~(alignment-1);
+  capture_bytes=rows*sizeof(slcli_input_capture);
+  if(capture_bytes>SIZE_MAX-offset) return 0;
+  total=offset+capture_bytes;
+  /* calloc walks only this actual live arena block, whose header, padding,
+   * body, control and all native output rows remain in the existing extent
+   * reservation. No native operation starts before storage is fully owned. */
+  block=slcli_arena_calloc(arena,1,total);
+  if(!block) return 0;
+  body=(struct slcli_input_body *)block;
+  body->body=block+sizeof(*body); body->capacity=capacity;
+  body->captures=(slcli_input_capture *)(block+offset);
+  body->capture_capacity=rows;
+  return body;
+}
 static int disjoint(const void *left,size_t n,const void *right,size_t m) {
   uintptr_t a=(uintptr_t)left,b=(uintptr_t)right;
   return left&&right&&a<=UINTPTR_MAX-n&&b<=UINTPTR_MAX-m&&
