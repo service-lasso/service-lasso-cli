@@ -13,7 +13,7 @@ enum slcli_extent_state { SLCLI_EXTENT_UNUSED, SLCLI_EXTENT_RESERVED,
 struct slcli_extent {
   uintptr_t base;
   uint64_t reserved, backed, acquisition, latest, retirement;
-  uint32_t category, state, backed_observed;
+  uint32_t category, state, backed_observed, arena_initialized;
 };
 struct slcli_memory_owner {
   uint64_t limit, charged, next_sequence;

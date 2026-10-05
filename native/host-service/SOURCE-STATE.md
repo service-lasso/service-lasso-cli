@@ -26,6 +26,16 @@ binary/UTF8 readers implement exact existing wire scalar operations without heap
 or source trust from parsed bytes. No shared protocol key/operation, public API,
 service1MiB/store4MiB/Core128MiB limit or Node API/ICU/flag is changed.
 
+The in-extent arena now provides native allocation/calloc/reallocation/free with
+32-byte physical headers, checked 16-byte alignment and original extent/event
+binding. Splitting/coalescing and erase-before-reuse do not retire physical charge.
+Reallocation owns both old and new blocks during the copy and preserves the old
+block on capacity failure. Initialization is one-use and rejects initial stack
+or owner/control descriptor overlap. Actual concurrent owner serialization and
+production hook callers remain required; this source is not an installed runtime
+allocator or a native fitting result. Parent-owned returned copies must use their
+separate genuine exit-retirement route, never this reusable temporary-block path.
+
 Still required before whole delivery: complete authenticated PA1 original caller/
 provider/ROOT/P/G/C/key acquisition and positive bootstrap, actual capture file
 producer/readers/archive correlation, complete typed control/effect/observer/ledger

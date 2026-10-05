@@ -28,6 +28,7 @@ int slcli_memory_prepare(struct slcli_memory_owner *o, uint32_t category,
   o->extents[i].reserved = bytes;
   o->extents[i].backed = 0;
   o->extents[i].backed_observed = 0;
+  o->extents[i].arena_initialized = 0;
   o->extents[i].acquisition = s;
   o->extents[i].latest = s;
   o->extents[i].retirement = 0;
