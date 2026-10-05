@@ -15,12 +15,19 @@ function gzip(bytes: Buffer, maximumExpanded: number): Buffer {
   for (const flag of [8, 16]) if (flags & flag) { const end = bytes.indexOf(0, offset); if (end < 0 || end >= bytes.length - 8 || end - offset > 4096) invalidTemplate(); offset = end + 1; }
   if (flags & 2) { if (offset + 2 > bytes.length - 8 || bytes.readUInt16LE(offset) !== (crc32(bytes.subarray(0, offset)) & 0xffff)) invalidTemplate(); offset += 2; }
   try {
-    const value = inflateRawSync(bytes.subarray(offset), { maxOutputLength: maximumExpanded, info: true });
-    const consumed = value.engine.bytesWritten;
+    // The installed Node declarations type sync output as Buffer even with
+    // info:true. Validate the actual original info result at runtime rather
+    // than asserting an ambient engine type or confusing ArrayBuffer.buffer
+    // with the returned inflated Buffer.
+    const value: unknown = inflateRawSync(bytes.subarray(offset), { maxOutputLength: maximumExpanded, info: true });
+    if (!value || typeof value !== "object" || !("buffer" in value) || !("engine" in value)) invalidTemplate();
+    const buffer = value.buffer, engine = value.engine;
+    if (!Buffer.isBuffer(buffer) || !engine || typeof engine !== "object" || !("bytesWritten" in engine) || typeof engine.bytesWritten !== "number") invalidTemplate();
+    const consumed = engine.bytesWritten;
     // Deflate consumption fixes the trailer of ONE member. Any concatenation/tail denies.
     const trailer = offset + consumed;
-    if (!Number.isSafeInteger(consumed) || trailer + 8 !== bytes.length || bytes.readUInt32LE(trailer) !== crc32(value.buffer) || bytes.readUInt32LE(trailer + 4) !== (value.buffer.length >>> 0)) invalidTemplate();
-    return value.buffer;
+    if (!Number.isSafeInteger(consumed) || consumed < 0 || trailer + 8 !== bytes.length || bytes.readUInt32LE(trailer) !== crc32(buffer) || bytes.readUInt32LE(trailer + 4) !== (buffer.length >>> 0)) invalidTemplate();
+    return buffer;
   } catch { return invalidTemplate(); }
 }
 function tarText(field: Buffer): string {
@@ -29,6 +36,9 @@ function tarText(field: Buffer): string {
   if (data.some(byte => byte > 127)) invalidTemplate(); return utf8(data);
 }
 function octal(field: Buffer): number {
+  // Node's ASCII conversion masks high bits. Validate original bytes before
+  // decoding so a non-ASCII header cannot masquerade as strict octal digits.
+  if (field.some(byte => byte > 127)) return invalidTemplate();
   const value = field.toString("ascii"); if (!/^[0-7]+[\x00 ]*$/.test(value)) return invalidTemplate();
   const result = Number.parseInt(value, 8); if (!Number.isSafeInteger(result) || result < 0) invalidTemplate(); return result;
 }

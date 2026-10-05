@@ -1,6 +1,6 @@
 import { TemplateAdmission, TemplateInventoryEntry, TEMPLATE_ASSET_NAMES, TEMPLATE_ASSET_LIMITS, sha256 } from "./template-admissions.js";
 import { decodeOriginalArchive, TemplateFile } from "./template-archive.js";
-import { canonicalBytes, closed, invalidTemplate, portablePath, sortedJson, strictJson, utf8 } from "./template-json.js";
+import { canonicalBytes, closed, invalidTemplate, portablePath, portablePathsCompatible, sortedJson, strictJson, utf8 } from "./template-json.js";
 import { CliError } from "./errors.js";
 
 const quotaKeys = ["maximumFiles", "maximumTotalBytes", "maximumManifestBytes", "maximumProvenanceBytes", "maximumConfigFiles", "maximumConfigBytes", "maximumArchiveBytes", "maximumArchiveExpandedBytes", "maximumArchiveEntries", "maximumArchivePathDepth"] as const;
@@ -14,6 +14,20 @@ export function validateAuthoring(id: string, name?: string): void {
   if (name !== undefined && !/^[A-Za-z0-9][A-Za-z0-9 .,'()/_-]{0,119}$/.test(name)) throw new CliError("invalid_service_name", "Service name does not satisfy the template owner rule.");
 }
 export interface VerifiedTemplate { admission: TemplateAdmission; policy: Record<string, unknown>; files: TemplateFile[]; baselineId: string; baselineName?: string; }
+function validateHeldAuthoring(template: VerifiedTemplate, id: string, name?: string): void {
+  validateAuthoring(id, name);
+  const authoring = template.policy.authoring as Record<string, unknown>;
+  const manifest = authoring.manifest as Record<string, unknown>;
+  const rules = manifest.fields as Record<string, Record<string, unknown>>;
+  for (const field of [{ pointer: "/id", value: id, baseline: template.baselineId, code: "invalid_service_id" }, { pointer: "/name", value: name, baseline: template.baselineName, code: "invalid_service_name" }]) {
+    // The owner permits unchanged baseline values. A changed typed value must
+    // also satisfy the exact original held rule, including tighter bounds.
+    if (field.value === field.baseline) continue;
+    const rule = rules[field.pointer]; let accepted = false;
+    try { accepted = typeof field.value === "string" && rule.type === "string" && rule.mode === "author-editable" && Buffer.byteLength(field.value) <= (rule.maximumBytes as number) && new RegExp(rule.pattern as string).test(field.value); } catch { invalidTemplate(); }
+    if (!accepted) throw new CliError(field.code, "The authoring value does not satisfy the original template owner rule.");
+  }
+}
 export function validateOriginalAssets(assets: readonly Buffer[], entry: TemplateAdmission): VerifiedTemplate {
   if (assets.length !== 4) return invalidTemplate();
   assets.forEach((asset, i) => { if (asset.length !== entry.assets[i].size || asset.length > TEMPLATE_ASSET_LIMITS[i] || sha256(asset) !== entry.assets[i].sha256) invalidTemplate(); });
@@ -23,7 +37,9 @@ export function validateOriginalAssets(assets: readonly Buffer[], entry: Templat
   const semantic = Object.fromEntries(Object.entries(policy).filter(([key]) => key !== "contractDigest"));
   if (sha256(sortedJson(semantic)) !== entry.contractDigest) invalidTemplate();
   const quotas = closed(policy.quotas, quotaKeys);
-  const hardCaps = [128, 768000, 6298, 479, 16, 65536, 262144, 524288, 128, 12];
+  // BLUEPRINT003 supersedes the historical 417316 bound for the selected
+  // complete 83-member tuple; admitted owner quota equality is still required.
+  const hardCaps = [128, 468462, 6298, 479, 16, 65536, 262144, 524288, 128, 12];
   quotaKeys.forEach((key, i) => { positive(quotas[key], hardCaps[i]); if (quotas[key] !== entry.quotas[key]) invalidTemplate(); });
   const inventory = policy.inventory;
   if (!Array.isArray(inventory) || inventory.length < 1 || inventory.length + 2 > (quotas.maximumFiles as number) || inventory.length !== entry.inventory.length) invalidTemplate();
@@ -31,6 +47,7 @@ export function validateOriginalAssets(assets: readonly Buffer[], entry: Templat
   for (let i = 0; i < (inventory as unknown[]).length; i++) {
     const file = closed((inventory as unknown[])[i], ["path", "sha256", "mode", "bytes"]);
     const path = portablePath(file.path, quotas.maximumArchivePathDepth as number);
+    for (let prior = 0; prior < i; prior++) if (!portablePathsCompatible((inventory as Array<Record<string, unknown>>)[prior].path as string, path)) invalidTemplate();
     if (path <= previous || !/^[a-f0-9]{64}$/.test(file.sha256 as string) || !["0644", "0755"].includes(file.mode as string) || !Number.isSafeInteger(file.bytes) || (file.bytes as number) < 0 || !same(file, entry.inventory[i])) invalidTemplate();
     previous = path; total += file.bytes as number; if (total > (quotas.maximumTotalBytes as number)) invalidTemplate();
   }
@@ -70,8 +87,8 @@ export function validateOriginalAssets(assets: readonly Buffer[], entry: Templat
 }
 export function deriveTemplate(template: VerifiedTemplate, authoring?: { id: string; name?: string }): TemplateFile[] {
   const id = authoring?.id ?? template.baselineId, name = authoring?.name ?? template.baselineName;
-  validateAuthoring(id, name);
-  const files = template.files.map(file => ({ ...file, bytes: Buffer.from(file.bytes) }));
+  validateHeldAuthoring(template, id, name);
+  const files: TemplateFile[] = template.files.map(file => ({ ...file, bytes: Buffer.from(file.bytes) }));
   const manifest = files.find(file => file.path === "service.json")!;
   const baseline = strictJson(manifest.bytes, template.admission.quotas.maximumManifestBytes) as Record<string, unknown>;
   const derived = { ...baseline, id, ...(name === undefined ? {} : { name }) };
@@ -84,11 +101,13 @@ export function deriveTemplate(template: VerifiedTemplate, authoring?: { id: str
   verifyHeldPlan(template, files, id, name); return files;
 }
 export function verifyHeldPlan(template: VerifiedTemplate, files: readonly TemplateFile[], id: string, name?: string): void {
-  validateAuthoring(id, name);
+  validateHeldAuthoring(template, id, name);
   if (files.length !== template.admission.inventory.length + 2 || files.length > template.admission.quotas.maximumFiles) invalidTemplate();
   const originals = new Map(template.files.map(file => [file.path, file])); let previous = "", total = 0, configBytes = 0, configs = 0;
-  for (const file of files) {
+  for (let index = 0; index < files.length; index++) {
+    const file = files[index];
     const path = portablePath(file.path); if (path <= previous || ![0o644, 0o755].includes(file.mode)) invalidTemplate(); previous = path; total += file.bytes.length;
+    for (let prior = 0; prior < index; prior++) if (!portablePathsCompatible(files[prior].path, path)) invalidTemplate();
     if (total > template.admission.quotas.maximumTotalBytes) invalidTemplate();
     if (path === "template-provenance.json") {
       const value = closed(strictJson(file.bytes, template.admission.quotas.maximumProvenanceBytes), ["schemaVersion", "templateRepository", "templateCommit", "templateVersion", "contractDigest", "origin"]);
@@ -106,7 +125,15 @@ export function verifyHeldPlan(template: VerifiedTemplate, files: readonly Templ
       const authoring = template.policy.authoring as Record<string, unknown>; const configuration = authoring.configuration as Record<string, unknown>;
       if (!(configuration.allowedPaths as string[]).includes(path)) invalidTemplate();
       const content = utf8(file.bytes);
-      if (new RegExp(configuration.forbiddenNamePattern as string, "i").test(path) || new RegExp(configuration.forbiddenValuePattern as string, "im").test(content)) invalidTemplate();
+      let forbidden: boolean;
+      try {
+        forbidden = new RegExp(configuration.forbiddenNamePattern as string, "i").test(path) || new RegExp(configuration.forbiddenValuePattern as string, "im").test(content);
+      } catch {
+        // Invalid original policy expressions are a closed template denial;
+        // native/public failures must not expose the expression in SyntaxError.
+        invalidTemplate();
+      }
+      if (forbidden) invalidTemplate();
       configs++; configBytes += Buffer.byteLength(content);
     }
   }

@@ -1,7 +1,7 @@
 import { CliError } from "./errors.js";
 import { TextDecoder } from "node:util";
 
-export const invalidTemplate = (): never => { throw new CliError("invalid_template_bundle", "The original template bytes do not satisfy the admitted owner contract."); };
+export function invalidTemplate(): never { throw new CliError("invalid_template_bundle", "The original template bytes do not satisfy the admitted owner contract."); }
 export const utf8 = (bytes: Uint8Array): string => { try { return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes); } catch { return invalidTemplate(); } };
 export function closed(value: unknown, keys: readonly string[]): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).length !== keys.length || Object.keys(value).some(key => !keys.includes(key))) return invalidTemplate();
@@ -62,4 +62,15 @@ export function canonicalBytes(value: unknown): Buffer { return Buffer.from(`${J
 export function portablePath(value: unknown, depth = 12): string {
   if (typeof value !== "string" || Buffer.byteLength(value) > 240 || !/^[A-Za-z0-9_.@/-]+$/.test(value) || value.includes("\\") || value.startsWith("/") || value.split("/").length > depth || value.split("/").some(part => !part || part === "." || part === ".." || part.endsWith(".") || /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part))) return invalidTemplate();
   return value;
+}
+
+/** Validated portable paths must share one exact directory spelling. */
+export function portablePathsCompatible(a: string, b: string): boolean {
+  const left = a.split("/"), right = b.split("/");
+  for (let i = 0; i < Math.min(left.length, right.length); i++) {
+    if (left[i].toLowerCase() !== right[i].toLowerCase()) return true;
+    if (left[i] !== right[i]) return false;
+  }
+  // Equality and a file used as another file's parent both reject.
+  return false;
 }
