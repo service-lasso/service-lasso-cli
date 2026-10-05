@@ -10,7 +10,10 @@
  * or a reused row. Captures start in original zeroed owned storage; a retained
  * native IO guard forbids subsequent reuse, and completed captures still must
  * reach actual persistence/readback before their owner reuses storage. No
- * function here admits a provider, peer or source lease. */
+ * function here admits a provider, peer or source lease. Every row is one-use:
+ * operation is set before native effects, and all later calls reject the row
+ * without changing it, even after observed native completion. No reset API
+ * grants evidence/body retirement or permits reuse of a pending output target. */
 struct slcli_windows_file_capture {
   HANDLE original;
   uint32_t operation, observed, completed, bytes_observed, retained_native_io;

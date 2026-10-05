@@ -9,7 +9,10 @@
 /* Raw native operations on an already retained original descriptor. These
  * structures authenticate neither its source nor the provider/caller. The
  * owning native loop must persist each actual capture and returned bytes before
- * another operation reuses this storage; no aggregate Boolean EOF substitute. */
+ * any storage can be retired; no aggregate Boolean EOF substitute. Each row is
+ * fresh zeroed owner storage and one-use: operation is set before the first
+ * native effect, and every later call rejects it without changing any bytes.
+ * There is no caller reset/erase permission, including after synchronous return. */
 struct slcli_linux_file_capture {
   uint64_t args[6], status, clock_args[2], clock_status, tick;
   struct __kernel_timespec clock_raw;

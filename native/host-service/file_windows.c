@@ -87,7 +87,7 @@ static int file_observe(HANDLE original,
                          struct slcli_windows_file_capture *c,int source_read_only) {
   uintptr_t start, sid;
   DWORD bytes, i;
-  if (!c || c->retained_native_io || !original || original == INVALID_HANDLE_VALUE) return 0;
+  if (!c || c->operation || c->retained_native_io || !original || original == INVALID_HANDLE_VALUE) return 0;
   zero(c, sizeof(*c)); c->original = original; c->operation = 1;
   c->observed = 1;
   if(source_read_only&&!source_rights_observe(c)) { clock_observe(c); return 0; }
@@ -168,7 +168,7 @@ int slcli_windows_source_observe(HANDLE original,struct slcli_windows_file_captu
 int slcli_windows_file_read(HANDLE original, unsigned char *destination,
                             DWORD bytes, uint64_t offset,
                             struct slcli_windows_file_capture *c) {
-  if (!c || c->retained_native_io || !original || original == INVALID_HANDLE_VALUE || !destination ||
+  if (!c || c->operation || c->retained_native_io || !original || original == INVALID_HANDLE_VALUE || !destination ||
       !bytes || bytes > 16384 || offset > INT64_MAX || bytes > (uint64_t)INT64_MAX - offset)
     return 0;
   if (!disjoint(c,destination,bytes)) return 0;
@@ -200,7 +200,7 @@ int slcli_windows_file_read(HANDLE original, unsigned char *destination,
 int slcli_windows_file_write(HANDLE original, const unsigned char *source,
                              DWORD bytes, uint64_t offset,
                              struct slcli_windows_file_capture *c) {
-  if (!c || c->retained_native_io || !original || original == INVALID_HANDLE_VALUE || !source ||
+  if (!c || c->operation || c->retained_native_io || !original || original == INVALID_HANDLE_VALUE || !source ||
       !bytes || bytes > 16384 || offset > INT64_MAX ||
       bytes > (uint64_t)INT64_MAX - offset) return 0;
   if (!disjoint(c,source,bytes)) return 0;
@@ -228,7 +228,7 @@ int slcli_windows_file_write(HANDLE original, const unsigned char *source,
 }
 int slcli_windows_file_flush(HANDLE original, struct slcli_windows_file_capture *c) {
   BOOL result;
-  if (!c || c->retained_native_io || !original || original == INVALID_HANDLE_VALUE) return 0;
+  if (!c || c->operation || c->retained_native_io || !original || original == INVALID_HANDLE_VALUE) return 0;
   zero(c, sizeof(*c)); c->original = original; c->operation = 4;
   c->read_args[0] = (uintptr_t)original;
   c->observed = 1;

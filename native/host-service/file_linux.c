@@ -33,7 +33,7 @@ int slcli_linux_file_observe(int original_fd,
                              struct slcli_linux_file_capture *c) {
   static const char empty[] = "";
   long result;
-  if (!c || original_fd < 0) return 0;
+  if (!c || c->operation || original_fd < 0) return 0;
   zero(c, sizeof(*c));
   c->operation = 1;
   c->stat_args[0] = (uint64_t)original_fd;
@@ -79,7 +79,7 @@ int slcli_linux_file_read(int original_fd, unsigned char *destination,
                           size_t bytes, uint64_t offset,
                           struct slcli_linux_file_capture *c) {
   long result;
-  if (!c || original_fd < 0 || !destination || !bytes || bytes > INT64_MAX ||
+  if (!c || c->operation || original_fd < 0 || !destination || !bytes || bytes > INT64_MAX ||
       offset > INT64_MAX || bytes > (uint64_t)INT64_MAX - offset) return 0;
   if (!disjoint(c,destination,bytes)) return 0;
   zero(c, sizeof(*c));
@@ -102,7 +102,7 @@ int slcli_linux_file_write(int original_fd, const unsigned char *source,
                            size_t bytes, uint64_t offset,
                            struct slcli_linux_file_capture *c) {
   long result;
-  if (!c || original_fd < 0 || !source || !bytes || bytes > 16384 ||
+  if (!c || c->operation || original_fd < 0 || !source || !bytes || bytes > 16384 ||
       offset > INT64_MAX || bytes > (uint64_t)INT64_MAX - offset) return 0;
   if (!disjoint(c,source,bytes)) return 0;
   zero(c, sizeof(*c)); c->operation = 3;
@@ -121,7 +121,7 @@ int slcli_linux_file_write(int original_fd, const unsigned char *source,
 }
 int slcli_linux_file_flush(int original_fd, struct slcli_linux_file_capture *c) {
   long result;
-  if (!c || original_fd < 0) return 0;
+  if (!c || c->operation || original_fd < 0) return 0;
   zero(c, sizeof(*c)); c->operation = 4;
   c->args[0] = (uint64_t)original_fd;
   result = slcli_kernel_call(__NR_fsync, original_fd, 0, 0, 0, 0, 0);

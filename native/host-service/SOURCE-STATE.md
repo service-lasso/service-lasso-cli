@@ -138,6 +138,14 @@ are captured as routing facts only, never selecting the installed Go runtime.
 Borrowed paths are routing only, especially keyPath; no pathname key reader or
 new issuer authority is implemented. Grant metadata/parser stack must be charged.
 
+Both platform file capture adapters now reject every already-used row before
+native effects or erase. The original operation marker survives successful,
+failed and unknown completion; completion alone never permits evidence reuse.
+Unexecuted vectors check all four entry points preserve an entire original row
+and output byte. Fresh storage, concurrency serialization and actual retirement
+remain obligations of the unfinished owning constructor; this guard is not
+physical allocation, archive acceptance or an authenticated provider capability.
+
 Still required before whole delivery: complete authenticated PA1 original caller/
 provider/ROOT/P/G/C/key acquisition and positive bootstrap, actual capture file
 producer/readers/archive correlation, complete typed control/effect/observer/ledger
