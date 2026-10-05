@@ -46,6 +46,35 @@ no EOF/flush/close/retirement, and successful MAC/grammar supplies no original
 channel/key/owner/source admission. Owning native readers and engine dispatch
 remain unfinished.
 
+The primary grammar now decodes exact RESERVE/OBSERVE/CLOSE_INTENT and snapshot
+version/phase/order/kind/state/index/charge constraints in fixed native storage.
+Its aggregate arithmetic uses the independently selected original finite owner
+limit; an application claim cannot install that limit. Parsed snapshots remain
+claims until original duplicates and raw native observations are independently
+matched. No parsed request grants a binding, native observation, durable ledger
+commit, close intent receipt or terminal retirement. Those actual owning effects
+remain required.
+
+The original private eleven-key primitive encoder now uses fixed native output,
+closed platform/kind/operation selectors, canonical decimal and SHA256, with
+nonnull empty captures distinct from unobserved null bytes/count. Mode is limited
+to actual identity fstat/security observations. Original input/output aliasing is
+rejected; source vectors cover real-empty versus unobserved encoding and invalid
+kind/operation/alias/mode combinations. These grammar vectors admit no actor or
+profile and remain unexecuted. Parsed metadata cannot become a native observation.
+
+Native held-file helpers retain full Windows FILE_ID_INFO/owner SID/native mode
+and read/write/flush results, and Linux original fstat/F_GETFL/F_GETFD plus separate
+supplemental statx/raw read/write/fsync results. Supplemental statx is not renamed
+into a closed fstat primitive; positional archive effects likewise retain their
+actual native operation rather than masquerading as a stream write. Short writes
+preserve actual counts. File modes, raw ABI structures and successful effects
+grant no source authority. Persistent capture/input/output storage, pending native
+IO, original parent and failed results must remain owned until genuine native
+completion and independently correlated capture/flush/readback; the actual owning
+constructor and persistence routes are still required. Helpers do not close an
+input lease or manufacture a primitive receipt from a successful status.
+
 Still required before whole delivery: complete authenticated PA1 original caller/
 provider/ROOT/P/G/C/key acquisition and positive bootstrap, actual capture file
 producer/readers/archive correlation, complete typed control/effect/observer/ledger

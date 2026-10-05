@@ -1,0 +1,184 @@
+#if defined(_WIN32)
+#include "file_windows.h"
+#include <stddef.h>
+static void zero(void *value, size_t bytes) {
+  unsigned char *p = value; while (bytes--) *p++ = 0;
+}
+static int clock_observe(struct slcli_windows_file_capture *c) {
+  uint64_t seconds, remainder, whole, fraction;
+  c->counter_status = QueryPerformanceCounter(&c->counter_raw);
+  c->frequency_status = QueryPerformanceFrequency(&c->frequency_raw);
+  if (!c->counter_status || !c->frequency_status || c->counter_raw.QuadPart <= 0 ||
+      c->frequency_raw.QuadPart <= 0) return 0;
+  seconds = (uint64_t)(c->counter_raw.QuadPart / c->frequency_raw.QuadPart);
+  remainder = (uint64_t)(c->counter_raw.QuadPart % c->frequency_raw.QuadPart);
+  if (seconds > UINT64_MAX / 1000000000 || remainder > UINT64_MAX / 1000000000)
+    return 0;
+  whole = seconds * 1000000000;
+  fraction = remainder * 1000000000 / (uint64_t)c->frequency_raw.QuadPart;
+  if (fraction > UINT64_MAX - whole) return 0;
+  c->tick = whole + fraction;
+  return c->tick != 0;
+}
+static int error(struct slcli_windows_file_capture *c) {
+  c->error = GetLastError(); c->error_observed = 1;
+  clock_observe(c);
+  return 0;
+}
+static int mode_observe(struct slcli_windows_file_capture *c) {
+  /* Exact FileModeInformation class16 and synchronous0x10/0x20 semantics port
+   * the retained source_lease_read_windows.go native boundary. Preserve BOTH
+   * original NT and IO returns; a pending/unobserved query is not completion. */
+  c->mode_args[0] = (uintptr_t)c->original;
+  c->mode_args[1] = (uintptr_t)&c->mode_io;
+  c->mode_args[2] = (uintptr_t)&c->mode;
+  c->mode_args[3] = sizeof(c->mode); c->mode_args[4] = 16;
+  c->mode_status = NtQueryInformationFile(c->original, &c->mode_io, &c->mode,
+                                          sizeof(c->mode), (FILE_INFORMATION_CLASS)16);
+  return c->mode_status == 0 && c->mode_io.Status == 0 &&
+           c->mode_io.Information == sizeof(c->mode) && (c->mode & 0x30) != 0;
+}
+int slcli_windows_file_observe(HANDLE original,
+                               struct slcli_windows_file_capture *c) {
+  uintptr_t start, sid;
+  DWORD bytes, i;
+  if (!c || !original || original == INVALID_HANDLE_VALUE) return 0;
+  zero(c, sizeof(*c)); c->original = original; c->operation = 1;
+  c->observed = 1;
+  if (!mode_observe(c)) { clock_observe(c); return 0; }
+  c->information_args[0][0] = (uintptr_t)original;
+  c->information_args[0][1] = FileIdInfo;
+  c->information_args[0][2] = (uintptr_t)&c->identity;
+  c->information_args[0][3] = sizeof(c->identity);
+  c->identity_status = GetFileInformationByHandleEx(original, FileIdInfo,
+                                                   &c->identity, sizeof(c->identity));
+  if (!c->identity_status) return error(c);
+  c->information_args[1][0] = (uintptr_t)original;
+  c->information_args[1][1] = FileStandardInfo;
+  c->information_args[1][2] = (uintptr_t)&c->standard;
+  c->information_args[1][3] = sizeof(c->standard);
+  c->standard_status = GetFileInformationByHandleEx(original, FileStandardInfo,
+                                                   &c->standard, sizeof(c->standard));
+  if (!c->standard_status) return error(c);
+  c->information_args[2][0] = (uintptr_t)original;
+  c->information_args[2][1] = FileAttributeTagInfo;
+  c->information_args[2][2] = (uintptr_t)&c->attributes;
+  c->information_args[2][3] = sizeof(c->attributes);
+  c->attributes_status = GetFileInformationByHandleEx(original, FileAttributeTagInfo,
+                                                      &c->attributes, sizeof(c->attributes));
+  if (!c->attributes_status) return error(c);
+  c->information_args[3][0] = (uintptr_t)original;
+  c->information_args[3][1] = FileBasicInfo;
+  c->information_args[3][2] = (uintptr_t)&c->basic;
+  c->information_args[3][3] = sizeof(c->basic);
+  c->basic_status = GetFileInformationByHandleEx(original, FileBasicInfo,
+                                                &c->basic, sizeof(c->basic));
+  if (!c->basic_status) return error(c);
+  c->security_args[0] = (uintptr_t)original;
+  c->security_args[1] = OWNER_SECURITY_INFORMATION;
+  c->security_args[2] = (uintptr_t)c->security;
+  c->security_args[3] = sizeof(c->security);
+  c->security_args[4] = (uintptr_t)&c->security_bytes;
+  c->security_status = GetKernelObjectSecurity(original, OWNER_SECURITY_INFORMATION,
+                                               c->security, sizeof(c->security),
+                                               &c->security_bytes);
+  if (!c->security_status) return error(c);
+  if (c->security_bytes > sizeof(c->security) || c->security_bytes < offsetof(SID, SubAuthority)) {
+    clock_observe(c); return 0;
+  }
+  c->owner_status = GetSecurityDescriptorOwner(c->security, &c->owner_pointer,
+                                               &c->owner_defaulted);
+  if (!c->owner_status) return error(c);
+  start = (uintptr_t)c->security; sid = (uintptr_t)c->owner_pointer;
+  if (sid < start || sid % _Alignof(SID) ||
+      sid - start > c->security_bytes - offsetof(SID, SubAuthority)) {
+    clock_observe(c); return 0;
+  }
+  bytes = offsetof(SID, SubAuthority) +
+            ((const SID *)c->owner_pointer)->SubAuthorityCount * sizeof(DWORD);
+  if (bytes > c->security_bytes - (sid - start)) { clock_observe(c); return 0; }
+  c->sid_status = IsValidSid(c->owner_pointer);
+  if (!c->sid_status) { clock_observe(c); return 0; }
+  c->owner_sid_bytes = GetLengthSid(c->owner_pointer);
+  if (c->owner_sid_bytes != bytes) { clock_observe(c); return 0; }
+  if (!bytes || bytes > sizeof(c->owner_sid) || bytes > c->security_bytes - (sid - start)) {
+    clock_observe(c); return 0;
+  }
+  for (i = 0; i < bytes; ++i) c->owner_sid[i] = ((const unsigned char *)c->owner_pointer)[i];
+  c->owner_sid_bytes = bytes;
+  if (!clock_observe(c) || c->standard.Directory || c->standard.DeletePending ||
+      c->standard.EndOfFile.QuadPart < 0 ||
+      c->attributes.FileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT))
+    return 0;
+  c->completed = 1;
+  return 1;
+}
+int slcli_windows_file_read(HANDLE original, unsigned char *destination,
+                            DWORD bytes, uint64_t offset,
+                            struct slcli_windows_file_capture *c) {
+  if (!c || !original || original == INVALID_HANDLE_VALUE || !destination ||
+      !bytes || bytes > 16384 || offset > INT64_MAX || bytes > (uint64_t)INT64_MAX - offset)
+    return 0;
+  zero(c, sizeof(*c)); c->original = original; c->operation = 2;
+  c->offset = offset; c->requested = bytes; c->observed = 1;
+  if (!mode_observe(c)) { clock_observe(c); return 0; }
+  c->position_requested.QuadPart = (LONGLONG)offset;
+  c->position_status = SetFilePointerEx(original, c->position_requested,
+                                        &c->position_returned, FILE_BEGIN);
+  if (!c->position_status) return error(c);
+  if ((uint64_t)c->position_returned.QuadPart != offset) { clock_observe(c); return 0; }
+  c->read_args[0] = (uintptr_t)original; c->read_args[1] = (uintptr_t)destination;
+  c->read_args[2] = bytes; c->read_args[3] = (uintptr_t)&c->transferred_raw;
+  c->read_args[4] = 0;
+  c->read_status = ReadFile(original, destination, bytes, &c->transferred_raw, NULL);
+  c->status = (uint64_t)(uint32_t)c->read_status;
+  if (!c->read_status) { c->error = GetLastError(); c->error_observed = 1; }
+  if (c->transferred_raw > bytes) { clock_observe(c); return 0; }
+  if (c->read_status || (c->error_observed && c->error == ERROR_HANDLE_EOF && !c->transferred_raw)) {
+    c->returned_bytes = c->transferred_raw; c->bytes_observed = 1; c->completed = 1;
+  }
+  /* Native EOF retains actual BOOL/error/count and a genuine empty capture.
+   * All other no-byte failures remain unobserved, never SHA256(empty) success. */
+  if (!clock_observe(c)) return 0;
+  return c->completed != 0;
+}
+int slcli_windows_file_write(HANDLE original, const unsigned char *source,
+                             DWORD bytes, uint64_t offset,
+                             struct slcli_windows_file_capture *c) {
+  if (!c || !original || original == INVALID_HANDLE_VALUE || !source ||
+      !bytes || bytes > 16384 || offset > INT64_MAX ||
+      bytes > (uint64_t)INT64_MAX - offset) return 0;
+  zero(c, sizeof(*c)); c->original = original; c->operation = 3;
+  c->offset = offset; c->requested = bytes; c->observed = 1;
+  if (!mode_observe(c)) { clock_observe(c); return 0; }
+  c->position_requested.QuadPart = (LONGLONG)offset;
+  c->position_status = SetFilePointerEx(original, c->position_requested,
+                                        &c->position_returned, FILE_BEGIN);
+  if (!c->position_status) return error(c);
+  if ((uint64_t)c->position_returned.QuadPart != offset) { clock_observe(c); return 0; }
+  c->read_args[0] = (uintptr_t)original; c->read_args[1] = (uintptr_t)source;
+  c->read_args[2] = bytes; c->read_args[3] = (uintptr_t)&c->transferred_raw;
+  c->read_args[4] = 0;
+  c->read_status = WriteFile(original, source, bytes, &c->transferred_raw, NULL);
+  c->status = (uint64_t)(uint32_t)c->read_status;
+  if (!c->read_status) { c->error = GetLastError(); c->error_observed = 1; }
+  if (c->read_status && c->transferred_raw <= bytes) {
+    c->returned_bytes = c->transferred_raw; c->bytes_observed = 1; c->completed = 1;
+  }
+  if (!clock_observe(c)) return 0;
+  return c->completed != 0;
+}
+int slcli_windows_file_flush(HANDLE original, struct slcli_windows_file_capture *c) {
+  BOOL result;
+  if (!c || !original || original == INVALID_HANDLE_VALUE) return 0;
+  zero(c, sizeof(*c)); c->original = original; c->operation = 4;
+  c->read_args[0] = (uintptr_t)original;
+  c->observed = 1;
+  result = FlushFileBuffers(original);
+  c->status = (uint64_t)(uint32_t)result;
+  if (!result) return error(c);
+  c->completed = 1;
+  if (!clock_observe(c)) return 0;
+  return 1;
+}
+#endif

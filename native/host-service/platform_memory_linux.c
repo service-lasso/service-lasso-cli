@@ -4,35 +4,11 @@
 #include <linux/time.h>
 #include <linux/time_types.h>
 #include "platform_memory.h"
+#include "native_syscall_linux.h"
 
 /* The original selected SDK supplies syscall numbers. These are actual kernel
  * ABI calls, with original signed returns retained before interpretation. No
  * libc/printf/malloc/process helper runs behind this freestanding adapter. */
-static long kernel_call(long n, long a, long b, long c, long d, long e, long f) {
-#if defined(__x86_64__)
-  register long r10 __asm__("r10") = d;
-  register long r8 __asm__("r8") = e;
-  register long r9 __asm__("r9") = f;
-  long result;
-  __asm__ volatile("syscall" : "=a"(result)
-    : "a"(n), "D"(a), "S"(b), "d"(c), "r"(r10), "r"(r8), "r"(r9)
-    : "rcx", "r11", "memory");
-  return result;
-#elif defined(__aarch64__)
-  register long x8 __asm__("x8") = n;
-  register long x0 __asm__("x0") = a;
-  register long x1 __asm__("x1") = b;
-  register long x2 __asm__("x2") = c;
-  register long x3 __asm__("x3") = d;
-  register long x4 __asm__("x4") = e;
-  register long x5 __asm__("x5") = f;
-  __asm__ volatile("svc 0" : "+r"(x0)
-    : "r"(x8), "r"(x1), "r"(x2), "r"(x3), "r"(x4), "r"(x5) : "memory", "cc");
-  return x0;
-#else
-#error Original native syscall ABI needs separate reviewed source support
-#endif
-}
 static void zero(void *value, size_t bytes) {
   unsigned char *p = (unsigned char *)value;
   while (bytes--) *p++ = 0;
@@ -46,7 +22,7 @@ static int tick(struct slcli_memory_capture *c) {
   struct __kernel_timespec t;
   long status;
   zero(&t, sizeof(t));
-  status = kernel_call(__NR_clock_gettime, CLOCK_MONOTONIC,
+  status = slcli_kernel_call(__NR_clock_gettime, CLOCK_MONOTONIC,
                        (long)&t, 0, 0, 0, 0);
   c->tick_raw[0] = (uint64_t)t.tv_sec;
   c->tick_raw[1] = (uint64_t)t.tv_nsec;
@@ -90,7 +66,7 @@ int slcli_platform_acquire(struct slcli_memory_owner *o, uint32_t category,
   c->request_args[4] = UINT64_MAX; /* Native signed fd=-1 carrier. */
   c->request_args[5] = 0;
   if (!slcli_memory_prepare(o, category, rounded, &c->request)) return 0;
-  result = kernel_call(__NR_mmap, 0, (long)rounded, c->protection,
+  result = slcli_kernel_call(__NR_mmap, 0, (long)rounded, c->protection,
                         c->flags, -1, 0);
   c->result = (uintptr_t)result;
   c->native_status = (uint64_t)result;
@@ -128,7 +104,7 @@ int slcli_platform_release(struct slcli_memory_owner *o, uint32_t index,
   c->operation = 11; /* exact linux.munmap producer operation */
   if (!slcli_memory_prepare_release(o, index, &c->request,
                                     &c->related_sequence)) return 0;
-  result = kernel_call(__NR_munmap, (long)e->base, (long)e->reserved, 0, 0, 0, 0);
+  result = slcli_kernel_call(__NR_munmap, (long)e->base, (long)e->reserved, 0, 0, 0, 0);
   c->result = (uintptr_t)result;
   c->native_status = (uint64_t)result;
   c->observed = 1;
