@@ -38,8 +38,9 @@ int slcli_platform_acquire(struct slcli_memory_owner *o, uint32_t category,
                            uint64_t bytes, struct slcli_memory_capture *c) {
   uint64_t page, rounded, remainder;
   long result;
-  if (!o || !c) return 0;
+  if (!slcli_memory_capture_fresh(o, c)) return 0;
   zero(c, sizeof(*c));
+  c->operation = 9; /* Retain this attempt even if page/capacity fails. */
   /* Original kernel-entry AT_PAGESZ, captured by the owning bootstrap before
    * transfer; never an environment/flag or guessed constant. */
   page = o->native_page_size;
@@ -91,7 +92,7 @@ int slcli_platform_release(struct slcli_memory_owner *o, uint32_t index,
                            struct slcli_memory_capture *c) {
   struct slcli_extent *e;
   long result;
-  if (!o || !c || index >= 256) return 0;
+  if (!slcli_memory_capture_fresh(o, c) || index >= 256) return 0;
   e = &o->extents[index];
   if (o->failed || e->state != SLCLI_EXTENT_LIVE || !e->base ||
       e->reserved > INT64_MAX) return 0;

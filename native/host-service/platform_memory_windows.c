@@ -48,8 +48,9 @@ int slcli_platform_acquire(struct slcli_memory_owner *o, uint32_t category,
   uint64_t rounded, remainder, granularity;
   SIZE_T observed;
   void *base;
-  if (!o || !c) return 0;
+  if (!slcli_memory_capture_fresh(o, c)) return 0;
   zero(c, sizeof(*c));
+  c->operation = 1; /* Retain this attempt even if page/query/capacity fails. */
   zero(&info, sizeof(info));
   GetSystemInfo(&info);
   copy(c->page_geometry, &info, sizeof(info));
@@ -117,7 +118,7 @@ int slcli_platform_release(struct slcli_memory_owner *o, uint32_t index,
                            struct slcli_memory_capture *c) {
   struct slcli_extent *e;
   BOOL result;
-  if (!o || !c || index >= 256) return 0;
+  if (!slcli_memory_capture_fresh(o, c) || index >= 256) return 0;
   e = &o->extents[index];
   if (o->failed || e->state != SLCLI_EXTENT_LIVE || !e->base) return 0;
   zero(c, sizeof(*c));

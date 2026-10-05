@@ -161,3 +161,13 @@ parent/copy lifetime and ordinary library/SEA/writer/packaging paths, and full
 meaningful TC01..12/CA01..08 positive/negative source fixtures. These foundations
 must be wired to those actual owning paths; declarations/unused components cannot
 stand in for completion. No native/compiler/parser/build/import/test was executed.
+
+Original memory capture rows now reject reused operation markers, owner/capture
+overlap and overflowing control ranges before erase or native effects on both
+platforms. Acquisition marks the attempt before original page-query/capacity
+failure can leave a reusable-looking row. Successful, failed and unresolved
+captures all retain their original marker; release completion supplies no reuse
+permission. Unexecuted vectors call actual adapter entry points with every used
+operation marker and both observed states, requiring the entire row remain
+unchanged. This preserves supporting evidence only; it is not the unfinished
+original owning constructor, native fit or whole product SOURCE GO.
