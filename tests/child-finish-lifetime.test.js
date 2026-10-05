@@ -40,6 +40,7 @@ test("finish deadline settles its operation while the original child remains liv
   } finally {
     if (!child.stdio[3].destroyed) child.stdio[3].end("release\n");
     const closed = await originalClose;
-    if (!originalError) assert.deepEqual(closed, { code: 0, signal: null });
+    assert.deepEqual(closed, { code: 0, signal: null });
+    if (originalError) throw originalError;
   }
 });
