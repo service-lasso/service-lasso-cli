@@ -106,6 +106,11 @@ owning callers must initialize their source-owned capture storage before use and
 hold it through independent persistence/readback. This guard neither admits an
 original handle nor supplies the unfinished native owning constructor.
 
+Q/C codecs reject overlapping or overflowing output/input/profile ranges before
+any erase or write. Negative source vectors cover raw and profile aliases and
+range overflow; their large scratch object must already belong to the charged
+owner. These unexecuted vectors establish no native fit or authentic admission.
+
 Still required before whole delivery: complete authenticated PA1 original caller/
 provider/ROOT/P/G/C/key acquisition and positive bootstrap, actual capture file
 producer/readers/archive correlation, complete typed control/effect/observer/ledger

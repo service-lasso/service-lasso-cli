@@ -1,5 +1,12 @@
 #include "calibration.h"
 #include "crypto.h"
+static int disjoint(const void *left,size_t left_bytes,
+                      const void *right,size_t right_bytes) {
+  uintptr_t a=(uintptr_t)left,b=(uintptr_t)right;
+  if(!left||!right||left_bytes>UINTPTR_MAX||right_bytes>UINTPTR_MAX||
+     a>UINTPTR_MAX-left_bytes||b>UINTPTR_MAX-right_bytes) return 0;
+  return !(a<b+right_bytes&&b<a+left_bytes);
+}
 static int nonzero(const unsigned char *value,size_t bytes) {
   unsigned char any=0; size_t i; for(i=0;i<bytes;++i) any|=value[i]; return any!=0;
 }
@@ -42,8 +49,12 @@ int slcli_qualification_parse(const unsigned char *raw,size_t bytes,
     "caseSetDigest","capacityPlanDigest","entrySourceDigest"};
   struct slcli_json_span root,fields[12]; struct slcli_qualification result={0};
   uint64_t domain,objects;
-  if(out) slcli_erase(out,sizeof(*out));
-  if(!out||!profile||!nonzero(profile,32)||!slcli_json_validate(raw,bytes,16384,&root)||
+  /* Reject BEFORE any output mutation, including failure zeroing. A borrowed
+   * original raw/profile view cannot be used as parser output storage. */
+  if(!out||!disjoint(out,sizeof(*out),raw,bytes)||
+     !disjoint(out,sizeof(*out),profile,32)) return 0;
+  slcli_erase(out,sizeof(*out));
+  if(!nonzero(profile,32)||!slcli_json_validate(raw,bytes,16384,&root)||
      !slcli_json_object(raw,bytes,root,keys,12,fields)||
      !text_equal(raw,bytes,fields[0],"service-lasso-native-runtime-qualification.v1")||
      !digest(raw,bytes,fields[1],result.profile)||!slcli_equal(profile,result.profile,32)||
@@ -78,9 +89,10 @@ int slcli_calibration_parse(const unsigned char *raw,size_t bytes,
   struct slcli_sha256 hash;
   uint64_t domain,objects,total;
   size_t count,i,j,name_bytes;
-  if(!out) return 0;
+  if(!out||!disjoint(out,sizeof(*out),raw,bytes)||
+     !disjoint(out,sizeof(*out),profile,32)) return 0;
   slcli_erase(out,sizeof(*out));
-  if(!profile||!nonzero(profile,32)||!slcli_json_validate(raw,bytes,16384,&root)||
+  if(!nonzero(profile,32)||!slcli_json_validate(raw,bytes,16384,&root)||
      !slcli_json_object(raw,bytes,root,keys,13,fields)||
      !text_equal(raw,bytes,fields[0],"service-lasso-native-allocation-calibration.v1")||
      !digest(raw,bytes,fields[1],out->profile)||!slcli_equal(profile,out->profile,32)||

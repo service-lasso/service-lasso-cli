@@ -1,7 +1,9 @@
 #ifndef SLCLI_CALIBRATION_H
 #define SLCLI_CALIBRATION_H
 #include "json.h"
-/* Exact original source codecs; decoded numbers/digests are claims, not an
+/* Output must be disjoint from both borrowed raw bytes and profile bytes;
+ * rejection of overlapping or overflowing ranges leaves originals untouched.
+ * Exact original source codecs; decoded numbers/digests are claims, not an
  * owner constructor, independently admitted ROOT or measurement authority. */
 struct slcli_qualification {
   unsigned char profile[32],source[32],image[32],cases[32],capacity[32],entry[32];
