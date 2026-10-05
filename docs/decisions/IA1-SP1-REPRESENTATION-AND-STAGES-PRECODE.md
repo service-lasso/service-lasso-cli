@@ -1,6 +1,6 @@
-# IA1 repair03: proposed original source representation and stage cuts
+# IA1 repair04: proposed original source representation and stage cuts
 
-PROSPECTIVE WHOLE AMENDMENT. Neither R02 finding is independently cleared.
+PROSPECTIVE WHOLE AMENDMENT. All R03-01..03 are proposed together; none is independently cleared.
 The ten-section INPUT-AUTHORITY-ISSUER-ALTERNATIVES-PRECODE decision and this
 normative appendix require a new different entire architecture review together.
 SP1 is a NEW representation, not a previously admitted container. No generator,
@@ -65,7 +65,8 @@ Linux: originally born sealed memfd with all four seals independently observed,
 read-only held capability and fstat owner/device/inode/size/EOF; construction writable
 handles/maps actually closed before admission. F_DUPFD_CLOEXEC preserves same original
 unit only. Same-process Linux provider/installer/BQ entries remain separately admitted;
-cross-process Linux handoff is unselected. Windows transfer retains full original
+cross-process Linux handoff is the NEW SCM_RIGHTS topology in section4,
+requiring whole review; F_DUPFD_CLOEXEC alone crosses no birth. Windows transfer retains full original
 sender/receiver birth/token/image/rights correlation. No neighbouring path lookup.
 Immutable-source backing, IO, cache, mapping and reader ownership are independently
 observed and fully charged where owned. An8GiB file bound creates no free memory pool.
@@ -73,7 +74,9 @@ Unknown ownership denies fit; service-owned source views/backing remain inside1M
 
 ## 2. Original capture journal and bounded access
 
-Propose immutable native SourceAuditUnit as one genuinely produced journal original.
+Propose a BQ-controlled mutable PresealJournal followed by a separately admitted
+immutable native SourceAuditUnit. These are distinct authority/lifetime states;
+no immutable final-unit claim authenticates an early retirement.
 Each journal record is an original byte range with producer/native identity and raw
 observations, never serialized claims returned as proof. Journal is born outside
 the experiment's initial R, joins later E/certification, and never rewrites R.
@@ -112,6 +115,87 @@ One genuinely held immutable unit counts once; member offsets/selector metadata 
 every simultaneous duplicate-handle storage are charged inside the existing ledger.
 Distinct native originals always occupy different slots, irrespective of digest.
 
+### Normative preseal authority, write/readback and final transition (R03-01)
+
+BQ's independently selected native retention entry is the SOLE writer of slot105.
+The experiment producer never receives that writable file/map/capability. It sends
+one bounded original source/capture window at a time over the admitted channel;
+BQ authenticates its actual birth/image/entry/owner, fixed sequence and source-unit
+range before accepting bytes. BQ retains the producer's original capture until the
+complete append and independent readback cut; a Boolean response is insufficient.
+The independently admitted BQ writer and readback entry capabilities have separate
+source bindings under birth41 and caller69, not a self-authenticating producer.
+Actual raw write/flush/readback/disposition observations enter the journal itself.
+
+States: UNBORN -> BQ_WRITABLE_PRESEAL -> APPEND_PENDING -> COMMITTED_EXTENT ->
+FOOTER_PENDING -> WRITER_CLOSED -> FINAL_IMMUTABLE_ADMITTED -> ARCHIVE_ACK -> RETIRED.
+FAILED/PARTIAL/CHANGED/UNKNOWN is absorbing for that attempt, preserving all born
+objects/captures/windows and charges; no next stage can reuse slot105. Every append
+uses checked current end/sequence, exact native offset and bounded length. BQ's
+source permits only writes beginning at committedEnd, never truncate/punch/map,
+seek overwrite or mutation of a committed prefix. It owns no writable alias outside
+the fixed admitted entry, and retains original handle/fstat/FILE_ID observations
+before and after every write. Authority is the independently admitted BQ entry and
+exclusive native writer custody, not a claim that the growing file is OS immutable.
+BQ compromise/source change denies qualification; the producer has no rewrite right.
+
+Windows preseal opens a newly created non-follow original file with read/write
+access and no write/delete sharing; BQ holds the original handle throughout. Its
+independent readback entry uses that held object through an independently admitted
+read capability, never a path-selected replacement. Linux preseal is an original
+BQ-exclusive O_NOFOLLOW/O_EXCL regular retention file, owner/rights and ancestor
+custody admitted independently; writable descriptors/maps are confined to BQ's
+append entry. Readback receives only an original read capability. Linux preseal is
+NOT a sealed memfd. No timeout, journal digest or fstat alone grants prefix custody.
+
+For each record BQ loops partial writes at the exact remaining tail, retains all
+source/capture windows, performs native durability flush, independently preads the
+committed extent through original readback98, compares EVERY raw byte and records
+native completion/identity/size observations. The independently selected retention
+entry then commits an original disposition RANGE bound to stage/birth/journal identity/
+sequence/offset/length/original capture and actual readback. That admitted operation
+removes only the corresponding producer window charge after all pending native IO
+has actually completed; its raw disposition remains journaled and independently
+read back. The bounded capture/control/readback/write/source storage and handle
+metadata remain in the SAME owning budgets. Its authentication is held original BQ
+capability/source/peer custody, not a serialized acknowledgment or future signature.
+
+When the final raw source/measurement/disposition record completes, BQ writes and
+flushes the exact footer, reads the complete journal including native zero-byte EOF,
+checks every sequence/range and closes every writer/map with original closure proof.
+Windows retains the SAME file object with an independently correlated read-only
+handle/no-write-delete sharing; final immutability begins only after writer closure.
+Linux copies the complete durable staging original105 in bounded windows into a
+new memfd reserved in the stage's final slot91..96 (or104 for BQ certificate journal),
+independently compares all original bytes/EOF, closes writable mappings, applies and
+observes F_SEAL_WRITE|F_SEAL_GROW|F_SEAL_SHRINK|F_SEAL_SEAL and read-only custody. The
+new unit is honestly a NEW original with authenticated provenance from staging,
+never the former regular-file kernel object relabeled. Staging105 stays durably held
+until independent archive99/100 readback acknowledges complete raw capture retention.
+Final native admission checks original authority/member ranges/EOF and all seals;
+only then may the final SourceAuditUnit satisfy C/ROOT membership. No later append.
+
+Positive simultaneous witness: prior final journals stay91..96/104; current durable
+preseal uses105; its newly born immutable output uses its previously reserved final
+slot; independent readback98 and archive99/100 are already separately counted. Windows
+needs no second file original; its duplicate handles still occupy charged metadata.
+Linux preseal+final overlap uses TWO different physical originals105+final slot.
+The three16KiB windows are charged ranges, never uncounted native objects. Duplicate
+references to the SAME original need separate charged handle/copy metadata, not a
+new physical-original slot; distinct objects ALWAYS need separate slots. Any extra
+native readback/output/channel/buffer owner original denies before effects. Slot105
+is reused only after genuine prior staging close and admitted archive retirement;
+failed staging keeps it occupied. A process crash that loses live originals produces
+UNKNOWN and recovery quarantine, never reconstructed native authority from paths.
+
+Required whole-source fixtures retain actual partial write, wrong offset/sequence,
+mutated committed extent, unauthorized writer/alias, missing/failed flush/readback,
+readback wrong birth/object, pending IO, partial/missing footer, trailing byte,
+writer/map still live, missing seal, final-copy mismatch, crash, archive denial and
+capacity-old/new overlap. Success must stream MORE than one window and demonstrate
+original early retirement under preseal BQ custody followed by exact final EOF/seal.
+None runs or creates a journal in this documentation proposal.
+
 ## 3. Ordered authority, input and output table
 
 All stages retain original source/image/caller/process/token/capacity lineage and
@@ -125,7 +209,7 @@ placeholders. Capacity reservations for unborn objects are not observed referenc
 | R1 issuer initial | Same independent BQ, completed R0 native/bootstrap certificates/evidence; unsigned R1,A,T,SourceUnit,issuer P/G/Q0/case/capacity,four indexes selecting PREEXISTING native/bootstrap C, full native/tool/image/caller/owner originals. Domain0 same full Node owner under Q32. No S/V/key/anchor/future issuer C/production B. | Actual nonsecret issuer initial C0/raw peak/custody/source audit/exit evidence. |
 | R2 readback | BQ independently retains and reads R1+actual outputs and R0 originals/source/native realm. No new initial R2 payload is invented. | Nonsecret qualification certificate only; no complete credential-inclusive production B claim. |
 | R3a credential calibration | Independently selected issuer principal/public32 anchor/PKCS8 custody/scope plus original BQ R2 certificate. NEW unsigned R3a,A,T,SourceUnit,own issuer P/G/Q0/case/capacity with credential cases, prior genuine C/native/source evidence, encrypted original PKCS8, original echo-disabled console/session and native owner/image/birth. STILL Q32 qualification, before production B. HA2 key is separate. | Actual credential enrollment/derive/key-match/signing-to-private-qualification-output and all simultaneous Node/OpenSSL/PKCS8/Buffer/native/IO peaks; retained original credential calibration C0 and source/evidence journals. Qualification output is not a consumer authority grant. |
-| R3b certification/production | BQ independently reads actual R3a outputs and genuine issuer exit/custody, certifies finite COMPLETE credential-inclusive issuer B0 against full cases/overlap. New unsigned R3b binds that certificate and exact own P/G/case/capacity/native/source/credential/anchor. Production admission only after this certificate exists. | Production credential operation under certified B0 and detached consumer S/V after complete R4 original admission. Unknown/new peak/changed tuple denies, retains evidence and requires new qualification, never expands B. |
+| R3b certification/production | BQ independently reads actual R3a outputs and genuine issuer exit/custody, certifies finite COMPLETE credential-inclusive issuer B0 against full cases/overlap. New unsigned R3b binds that certificate and exact own P/G/case/capacity/native/source/credential/anchor. Preliminary finite numeric/source-closure decision first; original production P/G/Q/capacity birth and native admission second; final derived exact-profile C128 third. Production effects only after final C128 exists. | Production credential operation under final exact-profile certified B0 and detached consumer S/V after complete R4 original admission. Unknown/new peak/changed tuple denies, retains evidence and requires new qualification, never expands B. |
 | R4 signed consumer | Independently selected issuer/anchor with genuine R2/R3a/R3b source/native/custody chain and separately admitted installer/provider/caller/HA2 key. Complete immutable R4,A,T,consumer P/G,four indexes,Q0/Q2 and every required measured C0/C2/native C1/C4/case/capacity/source/image/actor/evidence original. Issuer signs only after R4 EOF/hash/membership validation. Detached exact15-key S and64-byte V are consumer inputs NOW. | One-use actual native consumer references/effects and later E/archive/ACK; never edits R4 or uses later E as R. |
 
 R3a credential calibration requires separate explicit human authority for the actual
@@ -148,7 +232,7 @@ Own issuer/native/consumer P/G joins are explicit, never substituted by consumer
 
 This sourceful engineering witness deliberately retains the ENTIRE stage lineage.
 It amends reference representation; it does not assert actual selected originals.
-All14 source/image role joins are present; the explicit same-process engineering
+All14 source/image role joins are present; the explicit brokered distinct-birth engineering
 topology below shares ONLY genuinely observed same-original native objects.
 Initial stage selects only its already born inputs; subsequent stages fill reserved
 output slots after actual births. Every required extra original/old-new overlap must
@@ -171,8 +255,8 @@ requires a different reviewed fitting table or denies. It provides no second tab
 |83..90|Native C1,native C4,issuer nonsecret C0,issuer credential C0,consumer domain0 caseA C0,domain0 caseB C0,domain2 caseA C2,domain2 caseB C2.|
 |91..96|R0 native/bootstrap source+measurement journal,R1 nonsecret issuer source+measurement journal,R3a credential issuer source+measurement journal,R3b production issuer source+measurement journal,R4 consumer domain0 source+measurement journal,R4 consumer domain2 source+measurement journal. Every stage produces a DISTINCT original immutable journal, containing complete indexed raw source/measurement/disposition membership; no later append mutates a previously admitted journal.|
 |97..100|Source directory,retention directory,retention independent readback,archive independent readback originals.|
-|101..104|Original native tool authority,original SDK/CRT source authority,original loaded-image authority,original BQ certification journal.|
-|105..108|Four separately reserved pending archive/output originals for bootstrap,nonsecret issuer,credential issuer,consumer.|
+|101..104|Original native tool authority,original SDK/CRT source authority,original loaded-image authority,original BQ certification journal (preliminary decision/derivation records then immutable).|
+|105..108|105: single serial independently BQ-owned durable PresealJournal staging original; 106..108: three retained archive/output originals. Stage final journal91..96 and certificate-journal104 slots are reserved before birth, not fabricated references. No next staging reuse until authentic prior archive/retirement; failure blocks advance.|
 |109..112|Original unsigned R0,R1,R3a,R3b; R2 reads retained R1 rather than new root.|
 |113..116|Original stage-index units: R0,R1,R3a,R3b, each newly born ORIGINAL immutable index unit with qualification/calibration/case/capacity member ranges and exact stage membership.|
 |117..118|Native bootstrap own P,G.|
@@ -204,8 +288,8 @@ in its complete original plan and own original evidence. C13/P/Q layouts unchang
 Issuer initial P/G6/7, credential P/G50/51 and production P/G52/53 are distinct
 originals with own Q122/64/65 and capacity124/67/66. Only the genuinely same held
 case-set123 is shared where the independently selected cases actually match.
-No P changes after qualification; production P is born only after complete B is
-certified. All three issuer process births42..44 and original tokens56..58 are
+No P changes after qualification; production P is born only after the preliminary finite-B/source-closure decision,
+and final C128 is born only after that production tuple has been independently admitted. All three issuer process births42..44 and original tokens56..58 are
 retained separately; no exited process reference is reused for another birth.
 BQ/installer/provider same-process private entries, service/ledger-provider private
 entries, primary/SEA/embedded facade, and original Node-parent/library/loaded facade
@@ -225,13 +309,115 @@ positive fixture remain later independent authority/fit obligations. No implemen
 of ANY SP1/StageIndexUnit/journal builder proceeds before whole review and required
 actual independent authority selection. Mere overflow denial is never positive proof.
 
+### Normative original cross-birth transport (R03-02)
+
+Propose Linux AF_UNIX SOCK_SEQPACKET socketpair made by the independently admitted
+BQ supervisor BEFORE child creation: originals71 and72. BQ holds71;72 is the serial
+child endpoint retained by BQ and explicitly passed at the source-bound child birth.
+BQ's native source uses fork/execve with an exact FD allowlist, closes every other
+alias before exec, sets SO_PASSCRED on71 and receives SCM_CREDENTIALS plus SCM_RIGHTS
+with MSG_CMSG_CLOEXEC. It observes each child through original process-birth lease
+42..49 (pidfd plus independently admitted UID/image/entry correlation), not PID alone.
+No public listener/pathname, ptrace, pidfd_getfd or numeric-fd enrollment is selected.
+Existing private caller endpoints69/70 authenticate original external BQ/issuer callers;
+these are not extra sockets. External Node-parent admission must arrive by its already
+admitted loader/caller channel69/70 with the same original rights-transfer obligations;
+if it lacks that channel the positive route is unavailable, never a pathname reopen.
+
+Exactly ONE active child holds72 at a time. After its transfer transaction it closes
+all72 references under original observation; BQ retains its own72 solely for the next
+source-bound birth. Exited issuer births remain42..44 separately. Concurrent children
+may continue already admitted ordinary work but have no72 descriptor or read right.
+A child with a retained channel alias blocks every subsequent transaction. The
+socketpair never becomes a new object for each stage: both physical endpoint originals
+are71/72, every duplicate descriptor/cmsg/queue/buffer is charged. At most ONE original
+FD is sent per record, fixed stage/sequence/object selector and no unsolicited rights;
+MSG_CTRUNC/truncated records/extras/missing/changed peer/replay deny and preserve originals.
+BQ marks the exact transfer attempt one-use BEFORE send/native effects, and verifies
+receiver birth/token/image/entry, received fstat/rights/seals/member/EOF and original
+independent readback BEFORE use. Sender retains the original through receiver archive
+ACK/actual closure; copying descriptor numbers or digests grants no lease. A received
+FD is a duplicate reference to the same original, not a new object or inferred identity.
+
+Cuts: R0 provider/BQ41 -> admitted service45/observer48 native Q/case/capacity/source
+objects and back to BQ for raw C1/C4/measurement originals; R1 BQ41 -> initial issuer42
+complete original unsigned inputs, issuer42 -> BQ41 nonsecret outputs then real exit;
+R2 is BQ's independent readback, no transport or new issuer birth; R3a BQ41 ->
+credential issuer43 exact R3a/anchor/PKCS8/console/session/native originals, issuer43 ->
+BQ41 credential outputs and actual exit; R3b BQ41 admits production controls before
+production issuer44 birth, hands its complete tuple/C128/credential references to44;
+R4 provider41 routes original consumer R4 through44 for signing,44 ->41 detached S/V,
+then41 -> service45/primary46/writer47/observer48/Node-parent49 under each original
+private entry before their effects. Each receiver is admitted serially with72 or its
+already original caller channel; endpoints are actually closed before another receiver.
+Private issuer copies remain charged to their genuine birth until exit, even after FD
+transfer. Initial/nonsecret/credential/production/output/source journals retain each
+channel/cmsg/send/receive/closure original observation under the preseal contract.
+
+Windows uses DuplicateHandle with the original birth/token/loaded-image/file-ID/rights/
+noninheritance and receiver correlation already required; Linux credential/SCM proof
+never qualifies Windows and vice versa. Cross-birth native peer/rights/once-only/EOF/
+archive/failure proofs are mandatory at EVERY cut above; missing additional object
+capacity denies. This is a proposed reviewed transport choice, selecting no real
+principal, tool, peer, socket, native credential or executable action now.
+
+### Normative finite-B and exact production certificate cuts (R03-03)
+
+Cut A: after R3a issuer43 genuinely exits, independently selected BQ retains original
+P50/G51/Q64/capacity67/cases123/journal93 and all source/image/tool/credential provenance.
+It derives a PRELIMINARY numeric B decision inside journal104 from complete original
+traces PLUS reviewed finite source closure of EVERY unexercised owning path and overlap.
+The decision is NOT C128, has no production-profileDigest, admits no production effects,
+and never modifies C86. It binds exact original measurement tuple and closed derivation
+rule, measured maxima and conservative source-owned reserves. Unknown closure denies.
+
+Cut B: only after Cut A, BQ births original P52/G53/Q65/capacity66 and independently
+admits their native objects/raw EOF/source/membership in stage R3b. Exact transformation:
+retain identical selected issuer source/entry/image/tool/CRT/API/full Node/ICU, principals,
+credential original+anchor, cases123 and all owner domains, lifetime/exit/retention/channel/
+copy/stack/IO behavior; substitute ONLY qualification allocation ceilings with the
+preliminary finite B in existing budget fields and exact source-derived capacity offsets/
+counts fitting that B. New authorization/session IDs and production purpose are new
+control bytes, never changed behavior. Fixed constructor, parser/codec, issuer enrollment,
+signing and error paths are the SAME source for Q32 and production, including quota-
+rejection paths. No production-only module/entry/helper/allocator/branch/channel or
+credential-copy lifetime may enter by this transform. Q65 joins the new P52 digest,
+capacity66 and held cases123; original P50/Q64/capacity67 remain unchanged.
+
+Cut C: BQ independently compares every source/owner/control field at Cut B against
+Cut A's explicit allowlist, reads actual new native controls and signs NO IA1 grant:
+it emits a newly born original C128 bound to exact P52/Q65/capacity66 and original
+journal93+certificate-journal104 lineage under its independent native authority.
+C128 is derived certification, not a new observed production measurement. Conservative
+maximumBytes is the maximum complete simultaneous owning trace/source-closure envelope,
+INCLUDING production control constructor+P/G/Q/capacity parsing/objects, BQ certification/
+new-old journal/channel/readback/metadata overlap, quota-error+failure retention, complete
+Node/OpenSSL/credential/private copies and genuine process exit. Any reserve must have
+reviewed source geometry/native ownership evidence; no guessed margin or summed unrelated
+peaks. The source closure must establish that reducing allocator quota cannot increase
+live backing/copy/control/failure overlap beyond that envelope. Otherwise no derivation:
+retain UNKNOWN and require another independently admitted qualification tuple/cases.
+
+BQ original readback verifies C128 and journal104 before R3b consumer effects; final
+journal104 follows the same preseal105 -> immutable104 transition. R3b initial ROOT binds
+already completed C128, never predicts it; all its production tuple inputs existed before
+that ROOT. C13/P/Q grammars remain unchanged; derivation records live in existing original
+evidence, not extra profile keys. No final C128 is prerequisite for its own P52 birth.
+B0/B2 actual values remain UNKNOWN; this derivation is an unexecuted source mechanism.
+Changed source/image/tool/owner/credential/anchor/case/API/entry/overlap/lifetime/domain or
+nonallowlisted quota/control transformation denies, preserves old/new originals and needs
+fresh original qualification. Whole positive fixture must show the three distinct cuts,
+correct own-profile joins and complete conservative closure, plus every changed-tuple/
+quota-failure/native-overlap rejection. The128 table reserves old/new P/Q/capacity/C128,
+journal104/preseal105/readback/channel objects together before any effect.
+
 ## 5. Source inventory and review gates
 
 Prospective dependent source: original-unit fixed-table reader/bounded graph walker,
 original capture journal and stage-index-unit reader; native BQ bootstrap admission;
 stage-specific exact index reader; issuer nonsecret/credential qualification and
 independent BQ readback; native console/PKCS8 enrollment and detached issuer output;
-original Windows/same-process Linux handoff; verifier algorithm/range/stack/IO
+original Windows/Linux brokered cross-birth handoff; verifier algorithm/range/stack/IO
 integration; full authentic-versus-synthetic positive and negative fixtures.
 These additions are absent/unimplemented, not a new permission under PA1/N2.
 

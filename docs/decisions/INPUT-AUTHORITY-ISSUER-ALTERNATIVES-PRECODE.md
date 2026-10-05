@@ -1,8 +1,17 @@
-# CLI39 IA1 coherent whole amendment repair03
+# CLI39 IA1 coherent whole amendment repair04
 
 Prospective whole candidate, not reviewed, selected authority or implementation
 permission. Read ALL ten sections with the normative
 [SP1 representation/stage appendix](IA1-SP1-REPRESENTATION-AND-STAGES-PRECODE.md).
+Sealed ENTIRE review03 REPORT SHA87ccd9e7750995bde4879481d3fc65891a8295f8ffe38624b7db4cdf142fa62f,
+ROOTfe9b7fc16542026da9dad0594804bda2b70a23040dd6dfbfad8a917a80fbf16d is
+WHOLE_IA1_ARCHITECTURE_NOGO_FOR_DEPENDENT_SOURCE_IMPLEMENTATION. Repair04 proposes
+R03-01 mutable preseal custody/final immutable transition, R03-02 original Linux
+cross-birth transport, and R03-03 preliminary B/production birth/final C derivation
+TOGETHER. None is cleared by this author's proposal. Repair03 frozen source/review,
+ordinary supporting00758dc/93af256, all inherited107 dirty paths and all older
+failures remain preserved. Explicit successor ownership on existing issue39 branch
+is the governed recovery exception; no checkout normalization/reset or new branch.
 Sealed review02 REPORT SHA39a398e44156c2318ffc89b90a5eba147843d55bcd23c73483be062dafe024b4,
 ROOT453b6573dc9de65b31fb8ae98fc6e7358c53ed0e2c005729ed885506f5268ef8 remains
 WHOLE_IA1_ARCHITECTURE_NOGO_FOR_DEPENDENT_SOURCE_IMPLEMENTATION. This complete
@@ -142,8 +151,10 @@ Initial qualification uses no signing key. It produces original NONSECRET calibr
 and evidence, independently read by BQ against the actual held graph. Only that
 nonsecret certificate permits the separately selected Q32 credential qualification
 stage R3a. It does NOT certify credential-inclusive production B. BQ independently
-reads actual R3a complete peaks/exit/private-copy custody before certifying finite
-credential-inclusive issuer B0 and admitting R3b production. Appendix section3
+reads actual R3a complete peaks/exit/private-copy custody before issuing a preliminary
+finite numeric/source-closure B decision, then admits a newly born production P/G/Q/
+capacity, then derives final exact-profile C128. Appendix section4 specifies all
+three cuts; a future P is never a preliminary certificate input. Appendix section3
 specifies every ordered prior authority, original input, absent future member and
 output cut; HA2 remains separate. Secrets are not first introduced after a purported
 complete production B derived solely from nonsecret qualification.
@@ -197,7 +208,8 @@ own Q0/case/capacity and four indexes selecting only PREEXISTING native/bootstra
 C1/C4/evidence. Issuer C0 is output outside R1; R2 independent BQ readback certifies
 nonsecret qualification. R3a credential qualification remains under Q32 with own
 P/G/Q0/cases/capacity/prior actual C; complete credential C0 is its output, and only
-later independent BQ readback supplies credential-inclusive production B for R3b.
+later independent BQ readback supplies a preliminary credential-inclusive B decision;
+production tuple birth/admission and exact derived C128 follow separately for R3b.
 Exact original stage cuts and native-unit membership are in appendix sections3/4.
 Consumer signed R includes the independently authenticated
 issuer-production certificate and authority lineage as required supporting originals,
@@ -225,7 +237,9 @@ actor/native/source/IO/readback leases count in SAME128 before effects. S/V/key
 leases appear only in the explicit stages requiring them; future output capacity
 is reserved without fake original references. Appendix sections1/2 propose precise
 NEW SP1 immutable source/capture/member-range representation and charged streaming,
-including entire source ancestry without equal-hash aliasing. Section4 gives every
+including entire source ancestry without equal-hash aliasing. Mutable preseal retention
+is independently authenticated BQ custody, explicitly distinct from final immutable
+SourceAuditUnit admission; no caller can rewrite a retired window extent. Section4 gives every
 slot1..128 across retained stages, exact multi-C cases, separate issuer P/G/Q/capacity
 and THREE distinct issuer births. No stage lineage is closed just to fit.
 This is a prospective concrete sourceful representation witness, not a claim of
@@ -282,7 +296,7 @@ inside R, not its own T/R/S/E closure. Image sharing is allowed only where actua
 original held/loaded image correlation and entry binding demonstrate it. Required
 helpers/CRT/modules and all source-owned backing are in the same complete image/
 dependency/capacity graph, not omitted because they lack a top-level role entry.
-Appendix section4 enumerates an exact positive same-process topology and distinct
+Appendix section4 enumerates an exact positive brokered distinct-birth topology and distinct
 initial/credential/production issuer births, held source/image/owner references
 and all stage controls. T's14 roles describe source authority roles, never a
 claim that three different issuer process births are one native process original.
@@ -369,7 +383,9 @@ the bound archive readback; timeout/finalizer/JSON snapshots cannot retire copie
 
 Keep original Windows cross-process DuplicateHandle full original sender/receiver
 birth/token/held-loaded-image/FILE_ID/owner/rights/noninheritance correlation. Linux
-same-process F_DUPFD_CLOEXEC only; SCM_RIGHTS/ptrace/pidfd_getfd not selected. Original
+SCM_RIGHTS on original BQ-owned Unix socketpair endpoints is now PROPOSED for
+cross-birth transfer; F_DUPFD_CLOEXEC remains intra-process only. ptrace and
+pidfd_getfd remain unselected. Appendix section4 gives every birth/channel cut. Original
 stage-required R/A/T/P/G/index/Q/C/case/capacity and authenticated actor/source
 leases, and S/V/anchor/key ONLY in stages requiring them, stay
 held through real EOF, one-use transfer BEFORE effects, archive flush/readback and
@@ -421,7 +437,11 @@ The sourceful whole fixture additionally requires the complete SP1 table/body/fu
 raw ancestry walker, every original range/native EOF/capture/readback association,
 exact128 retained stages including all three issuer births and separate native/
 issuer P/G/Q/capacity, absent initial future C/S/V/key, actual credential calibration
-BEFORE production B, and authentic independent BQ certification. Extra originals,
+BEFORE preliminary production B, exact production tuple birth/admission and final C128,
+and authentic independent BQ certification. Fixtures additionally cover every
+preseal partial-write/readback/footer/seal/change/crash state, each cross-birth
+SCM_RIGHTS/sender/receiver/rights/EOF/replay cut, and every forbidden profile/source/
+case/credential/ownership/quota transformation; appendix sections2/4 are normative. Extra originals,
 wrong immutable-unit membership, journal/footer/range/overflow/old-new overlap and
 source backing ownership failure must retain original evidence and charge. None
 of these fixtures is generated or executed by this precode proposal. Appendix

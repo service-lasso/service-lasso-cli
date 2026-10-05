@@ -292,3 +292,38 @@ production engine/library/SEA/native owner/writer/observer/archive/TC01..12/CA01
 remains unfinished, then DIFFERENT ENTIRE final SOURCE GO/NEW complete input admission
 before any build/import/parser/compiler/test/native calibration. No CI rerun/cancel,
 settings/main/cleanup/release/GA/promotion/deployment or partial delivery claim.
+
+## CLI39 IA1 whole repair04 — all three ENTIRE review03 findings
+
+Current prospective authority is ALL ten INPUT-AUTHORITY-ISSUER-ALTERNATIVES-PRECODE
+sections plus ALL normative IA1-SP1-REPRESENTATION-AND-STAGES-PRECODE sections, including
+preseal, cross-birth transport and finite-B derivation. It supersedes earlier prospective
+same-process-only/current repair03 mechanism wording; frozen historical originals stay.
+ENTIRE review03 REPORT87ccd9e7750995bde4879481d3fc65891a8295f8ffe38624b7db4cdf142fa62f /
+ROOTfe9b7fc16542026da9dad0594804bda2b70a23040dd6dfbfad8a917a80fbf16d remains NOGO.
+
+R03-01/IA1-01/IA1-04/HA1/HA4/N2 maps admitted BQ-only mutable preseal105, append-bound
+original capture writes/flush/independent readback98/authentic range retirement, durable
+failure retention and exact footer/writer-close/final immutable91..96/104 seal/archive
+transition. Preseal is never called immutable; Linux staging+new sealed memfd overlap
+has separate originals in the SAME128 graph, all windows/duplicates/backing charged.
+R03-02/IA1-04/HA1/HA5 maps proposed original Linux SCM_RIGHTS/SO_PASSCRED brokered serial
+birth/rights/source/image/once-only/EOF/archive cuts R0..R4, physical endpoints71/72 and
+already admitted caller69/70, nine distinct births and three issuer exits. Windows
+DuplicateHandle remains distinct. No actual principal, peer or channel is selected.
+R03-03/IA1-02/IA1-03/HA4/N2 maps separate preliminary finite-B/source-closure decision,
+new production P/G/Q/capacity birth+native admission, then newly born own-profile C128.
+Only the enumerated identical-behavior/quota transform is permitted; complete source-
+closed owning/error/native/new-old control overlap is included, changed tuples deny.
+
+Service1MiB/store4MiB/Core128MiB/Q12/C13/full Node22.23.2/ICU/API/library/SEA unchanged;
+Q32 qualification-only, actual B0/B2 UNKNOWN, T/S authentic choices unselected. Seven
+intentional document changes preserve ordinary00758dc/93af256 and107 individually
+classified inherited dirty paths, unfinished under issue39/PR42 successor ownership.
+No SP1/journal/index/native BQ/issuer/credential implementation, target parser/import/
+Node/compiler/test/native/ACL/ENV effects or actual authority selection. NEW DIFFERENT
+ENTIRE architecture review with complete current source/history/cumulative originals
+must assess all three mechanisms and positives/failure fixtures together; no partial GO.
+Exact human authority selection follows coherent review. Full ordinary positive product
+source/TC01..12/CA01..08, DIFFERENT final ENTIRE SOURCE GO/new complete authentic input
+admission, native qualification/Core/operator/publication/release remain separate open gates.
