@@ -242,3 +242,53 @@ IA1-01 maps complete genuine commit-to-root-tree-to-all-tree/blob traversal and 
 IA1-04 maps exact15 statement keys plus four closed original named-member Q/C/case/capacity indexes, complete actual multi-C/evidence joins and same128 native reference graph before effects; equal hashes never alias distinct originals. IA1-05 maps complete14-role native primary/confined writer/SEA/Node parent/facade/library transport/observer/provider/issuer/BQ executable/source/P joins without changing P or shared APIs/wires. IA1-06 maps exact original Monocypher4.0.3 commit ab2b16dd619ad5f6979a4fbe69cfa324a6fcc35f optional SHA512 Ed25519 verifier, full genuine source graph, original known public-result timing/point-encoding behavior, C11 ABI/build/security/range/workspace and actual service-owned fit prerequisites. Source capture selects no tool execution or authentic trust anchor.
 
 The complete repair must accompany NEW actual current-source/cumulative EvidenceROOT and NEW DIFFERENT ENTIRE architecture review before dependent IA1 code. Human subsequently selects the concrete real authority/anchor/credential/BQ role; no values are invented here. Full Node22.23.2/full ICU/Buffer/API/flags/library/SEA/Windows/Linux and original four authoring inputs remain. Service aggregate1MiB/store4MiB/Core128MiB, HA2 separate key-provider authority, shared18/10/11/13/11/memory20/Q12/C13 and conservative authenticated original-parent exit custody remain unchanged. Independent PA1/N2 approved ordinary actual source implementation continues; whole positive owning product/TC01..12/CA01..08 is unfinished. Different final ENTIRE SOURCE GO/new complete authentic input admission precedes native/compiler/parser/build/import/test/calibration; no CI retry/cancel/main/settings/release action.
+## CLI39 IA1 whole repair03 — prospective SP1 representation and ordered stages
+
+Current complete prospective contract is INPUT-AUTHORITY-ISSUER-ALTERNATIVES-PRECODE
+sections1..10 WITH docs/decisions/IA1-SP1-REPRESENTATION-AND-STAGES-PRECODE.md.
+Sealed entire review02 REPORT39a398e44156c2318ffc89b90a5eba147843d55bcd23c73483be062dafe024b4
+and ROOT453b6573dc9de65b31fb8ae98fc6e7358c53ed0e2c005729ed885506f5268ef8 remain
+WHOLE_IA1_ARCHITECTURE_NOGO_FOR_DEPENDENT_SOURCE_IMPLEMENTATION. Repair02/frozen01/
+review01/original failed-method/private/custody evidence are preserved unchanged.
+This current proposal supersedes repair02 current wording only; no partial GO.
+
+R02-01/IA1-01/IA1-04/HA1/HA4/HA5/N2 map NEW explicit SP1 original SourceUnit,
+SourceAuditUnit and StageIndexUnit representations, full raw Node/verifier/native/
+issuer/BQ/tool/SDK/CRT source and ancestry, independently admitted native immutable
+identity/member ranges/EOF, charged bounded streaming and actual retained raw
+capture readback. Original files are not falsely relabeled as their old kernel
+objects. Complete388495 historical associations without deduplication sum7722113187
+body bytes; fixed table49727360 plus header gives7771840611 below8GiB SOURCE FILE
+bound, not generated pack/native memory fit/authority. Complete retained128 witness
+includes all fourteen roles, every stage control, explicit same-process distinct-entry
+topology, multi-C simultaneous cases and THREE separate issuer births. Extra genuine
+originals require another fitting witness or truthful denial, never source truncation,
+metadata-as-native-reference, equal-hash alias, secret foreign pool or early retirement.
+
+R02-02/IA1-02/IA1-03/IA1-04/HA1/HA2/HA5 map ordered unsigned R0 native/bootstrap ->
+unsigned R1 nonsecret issuer Q32 -> independent BQ R2 readback -> explicitly selected
+unsigned R3a credential Q32 calibration -> independently certified credential-inclusive
+finite B0/R3b production -> signed R4 consumer handoff. Each exact preeffect set omits
+its OWN future outputs; only existing native/bootstrap C enters R1, no future issuer
+C/S/V/key self-authorizes initial qualification. R3a actual credential/OpenSSL/PKCS8/
+Buffer/native overlap calibration occurs BEFORE production B, with original private
+copies charged through genuine corresponding issuer exit. Human-selected HA2 ledger
+key and issuer signing key remain distinct authorities. Q32 never becomes production B.
+
+IA1-05/IA1-06/HA4/N1/N2/HA5 INSPECTION/TC01..12/CA01..08 map unchanged fourteen-role
+source/image/entry/native joins, original Monocypher4.0.3 optional SHA512 Ed25519/full
+raw graph/actual known behavior, complete actual1MiB native verifier/image/stack/CRT/
+IO/capture/metadata ownership, full Node22.23.2/full ICU/Buffer/API/library/SEA and
+complete original four authoring inputs/public-private wire/ordinary positive fixtures.
+Service1MiB/store4MiB/Core128MiB unchanged; B0/B2 remain UNKNOWN. Mac Deferred never PASS.
+
+No SP1 generator/index/journal/native BQ/issuer/credential implementation or authentic
+principal/anchor/key/source/native realm is authorized by this proposal. NEW DIFFERENT
+ENTIRE architecture review of all ten sections/appendix/all five mappings/complete
+current dirty+committed source and cumulative originals precedes dependent source;
+actual independent human authority selection remains separate. Ordinary approved
+PA1/N2 source work continues within existing PR42/issue39 ownership. Full positive
+production engine/library/SEA/native owner/writer/observer/archive/TC01..12/CA01..08
+remains unfinished, then DIFFERENT ENTIRE final SOURCE GO/NEW complete input admission
+before any build/import/parser/compiler/test/native calibration. No CI rerun/cancel,
+settings/main/cleanup/release/GA/promotion/deployment or partial delivery claim.

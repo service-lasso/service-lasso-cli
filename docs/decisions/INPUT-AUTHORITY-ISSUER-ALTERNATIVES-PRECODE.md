@@ -1,7 +1,14 @@
-# CLI39 IA1 coherent whole amendment repair02
+# CLI39 IA1 coherent whole amendment repair03
 
 Prospective whole candidate, not reviewed, selected authority or implementation
-permission. This records all six sealed review01 corrections together. Review01 ROOT0ca325bd013a5241555f4ff91438e650a82a05fe218f9bd3b098d360cc87065e and REPORT SHAe943f5542cc3b251bcda75293d6bf699960c9370911963efcfbfc2621b378933 are retained NO_GO originals. The exact
+permission. Read ALL ten sections with the normative
+[SP1 representation/stage appendix](IA1-SP1-REPRESENTATION-AND-STAGES-PRECODE.md).
+Sealed review02 REPORT SHA39a398e44156c2318ffc89b90a5eba147843d55bcd23c73483be062dafe024b4,
+ROOT453b6573dc9de65b31fb8ae98fc6e7358c53ed0e2c005729ed885506f5268ef8 remains
+WHOLE_IA1_ARCHITECTURE_NOGO_FOR_DEPENDENT_SOURCE_IMPLEMENTATION. This complete
+proposal addresses R02-01 representation/positive source graph and R02-02 ordered
+bootstrap/certification/credential cuts together; neither has a partial GO.
+This records all six sealed review01 corrections together. Review01 ROOT0ca325bd013a5241555f4ff91438e650a82a05fe218f9bd3b098d360cc87065e and REPORT SHAe943f5542cc3b251bcda75293d6bf699960c9370911963efcfbfc2621b378933 are retained NO_GO originals. The exact
 frozen01/421 candidate, its failed graph claim, statement cardinality error and
 all historical failures remain unchanged. IA1-dependent code is prohibited until
 a new different entire architecture review and the independent authority selection
@@ -23,10 +30,15 @@ initial qualification principal and native entry/source scope, IA1 issuer princi
 public32 anchor/fingerprint, issuer source/image, encrypted credential custody and
 Development scope. This task selects none of those authentic values. Selecting
 verifier engineering source below is not selecting a principal/key or execution.
+SP1 SourceUnit/SourceAuditUnit/StageIndexUnit are explicit NEW native original-unit
+representation proposals. None existed as selected repair02 input; no generator
+or native/issuer implementation is authorized before distinct whole review and
+the independent authentic authority selections. No authentic selection is invented.
 
 ## 2. Acyclic original byte graph
 
-Use three distinct objects: InputROOT R, detached statement S/signature V, and a
+For the signed consumer stage use three distinct objects: InputROOT R4, detached
+statement S/signature V, and a
 later EvidenceROOT E. R includes original payload members and their association
 index A, actor policy T, consumer P/G and Q/C/case/capacity indexes and originals.
 R MUST NOT include S, V, E, its own final hash, or the eventual archive manifest.
@@ -51,6 +63,13 @@ the current signed InputROOT. Every association explicitly identifies its graph
 role: payload-leaf, source-association-index, input-root, detached-statement,
 detached-signature, evidence-root/control, historical-original. No omission is
 hidden as normalization, no hash field is zeroed for a supposed canonical root.
+Here R denotes R4 only when statement S is discussed. Unsigned R0/R1/R3a/R3b
+have exact stage-specific original membership in appendix section3; R2 reads the
+held R1 and its genuine outputs. No future C/S/V/key/output enters its experiment's
+initial ROOT, and no output retroactively changes that ROOT. Each stage's new
+controls are born/admitted before the initial ROOT. SourceUnit holds complete
+source/historical captures, excludes its external A and later current ROOTs,
+and supplies authentic native member/range custody only after independent admission.
 
 ## 3. Exact statement
 
@@ -69,6 +88,8 @@ canonical integer/single complete value checks. No reserialization.
 Preimage is ASCII ServiceLassoOriginalInputAdmission1, NUL, big-endian u32 original
 S length, ORIGINAL S bytes. V is separate exactly64-byte Ed25519. R's raw bytes
 must match exact SHA/length through original EOF before any selected effects.
+These statement keys apply ONLY signed consumer R4. Unsigned initial/bootstrap/
+credential qualification uses no S/V or fabricated signature placeholder.
 
 ## 4. Concrete initial qualification authority, independent of IA1 output
 
@@ -117,9 +138,15 @@ metadata and concurrent same-owner primary/writer/SEA resources are all inside
 that owner when combined. A separate issuer P/Q/case/capacity tuple specifies the
 issuer image/entry and full relevant cases without misidentifying consumer primary
 image as issuer image. BQ authenticates this initial tuple before Node/secret entry.
-Initial qualification uses no signing key. It produces original calibration and
-evidence, independently read by BQ against the actual held graph. Only that measured
-finite complete owner certificate can authorize later issuer production entry.
+Initial qualification uses no signing key. It produces original NONSECRET calibration
+and evidence, independently read by BQ against the actual held graph. Only that
+nonsecret certificate permits the separately selected Q32 credential qualification
+stage R3a. It does NOT certify credential-inclusive production B. BQ independently
+reads actual R3a complete peaks/exit/private-copy custody before certifying finite
+credential-inclusive issuer B0 and admitting R3b production. Appendix section3
+specifies every ordered prior authority, original input, absent future member and
+output cut; HA2 remains separate. Secrets are not first introduced after a purported
+complete production B derived solely from nonsecret qualification.
 No numeric production B is chosen here. Unknown or failed calibration remains
 failure; successful native constructors alone cannot self-authenticate it.
 
@@ -140,7 +167,8 @@ capacity-plan respectively; platform matches S; raw<=262144. This is private raw
 input body capacity, no public control-frame/chunk limit change. entries is an
 ordered array of 1..128 exact five-key objects:
 purpose,actor,domain,memberName,memberSha256.
-purpose is issuer-initial,issuer-production,consumer-production or observer;
+purpose is bootstrap,issuer-initial,issuer-credential-qualification,
+issuer-production,consumer-production or observer;
 actor is an exact actor-policy role below; domain is 0,1,2 or4 as applicable;
 memberName is an original relative ROOT-member name, at most240 ASCII bytes,
 with only letters/digits/dot/underscore/hyphen/slash, no leading/trailing slash,
@@ -163,8 +191,15 @@ source-associations/roles/<role>.raw, matching each T entry. These names define
 private input graph selectors only; original native held-object identity remains
 required, and a named member cannot be replaced by a pathname reopen.
 
-The initial BQ packet uses issuer-initial Q0/case/capacity plus complete actual
-calibration/evidence. Consumer signed R includes the independently authenticated
+R0 native/bootstrap packet uses native Q/case/capacity and three indexes, no
+calibration index for its own future outputs. R1 issuer-initial packet uses issuer
+own Q0/case/capacity and four indexes selecting only PREEXISTING native/bootstrap
+C1/C4/evidence. Issuer C0 is output outside R1; R2 independent BQ readback certifies
+nonsecret qualification. R3a credential qualification remains under Q32 with own
+P/G/Q0/cases/capacity/prior actual C; complete credential C0 is its output, and only
+later independent BQ readback supplies credential-inclusive production B for R3b.
+Exact original stage cuts and native-unit membership are in appendix sections3/4.
+Consumer signed R includes the independently authenticated
 issuer-production certificate and authority lineage as required supporting originals,
 and all actual consumer qualification/calibration/case/capacity selections. Its
 profileSha256/grantSha256 name the ONE consumer P/G, not issuer P/G. Initial and
@@ -185,13 +220,19 @@ allowed only where the complete original capacity/case plan requires them and
 their original evidence explains overlap and combined ownership. No universal
 one-C/four-C assumption, no convenient sum of unrelated category peaks.
 
-All four indexes, their selected originals, all C evidence chunks, original R/A/T/
-P/G, detached S/V, BQ/issuer/caller/provider/native process/token/image/source/key/
-directory/readback leases count in the SAME128-reference admission/qualification
-graph before effects. There is no second index table allowance. A concrete positive
-multi-C/issuer fixture must enumerate its actual fitting graph and every source
-owner byte. Index array128 is a grammar maximum, not128 C plus unlimited auxiliary
-references. Required graph overflow denies before effects with retained originals.
+Every stage's actually required original indexes/members/evidence/R/A/T/P/G and
+actor/native/source/IO/readback leases count in SAME128 before effects. S/V/key
+leases appear only in the explicit stages requiring them; future output capacity
+is reserved without fake original references. Appendix sections1/2 propose precise
+NEW SP1 immutable source/capture/member-range representation and charged streaming,
+including entire source ancestry without equal-hash aliasing. Section4 gives every
+slot1..128 across retained stages, exact multi-C cases, separate issuer P/G/Q/capacity
+and THREE distinct issuer births. No stage lineage is closed just to fit.
+This is a prospective concrete sourceful representation witness, not a claim of
+native fit/selected current objects. No second table or arbitrary unselected capture
+container exists. Index array128 remains grammar maximum, never128 C plus auxiliaries.
+Required extra native originals need another explicit fitting witness or denial;
+overflow safety alone is never a positive product source/qualification result.
 
 ## 6. Full actor/executable/source crosswalk
 
@@ -241,6 +282,12 @@ inside R, not its own T/R/S/E closure. Image sharing is allowed only where actua
 original held/loaded image correlation and entry binding demonstrate it. Required
 helpers/CRT/modules and all source-owned backing are in the same complete image/
 dependency/capacity graph, not omitted because they lack a top-level role entry.
+Appendix section4 enumerates an exact positive same-process topology and distinct
+initial/credential/production issuer births, held source/image/owner references
+and all stage controls. T's14 roles describe source authority roles, never a
+claim that three different issuer process births are one native process original.
+Actual same-original correlation and separately admitted entry capability remain
+mandatory before any physical reference sharing.
 
 ## 7. Concrete verifier engineering source prerequisite
 
@@ -305,6 +352,11 @@ key is enrolled by parsing T. Qualification must include wrong/low-order keys,
 noncanonical R/A, S>=L, malformed/truncated signatures and original SHA512 domain
 cross-checks against the selected issuer API. Any extra encoding restriction or
 patched algorithm is an explicit codec/source amendment, not silently added here.
+Complete selected verifier ancestry/original optional/core bytes and original
+tool/SDK/CRT/native source enter SourceUnit with independently admitted original
+member/native semantics in appendix section1. SP1's table/stream/graph/hash/IO/
+journal/stack/native captures add fully charged actual service-owner work; no
+file-size arithmetic or compressed source label establishes the1MiB fit.
 
 ## 8. Handoff, lifetime and replay
 
@@ -318,13 +370,21 @@ the bound archive readback; timeout/finalizer/JSON snapshots cannot retire copie
 Keep original Windows cross-process DuplicateHandle full original sender/receiver
 birth/token/held-loaded-image/FILE_ID/owner/rights/noninheritance correlation. Linux
 same-process F_DUPFD_CLOEXEC only; SCM_RIGHTS/ptrace/pidfd_getfd not selected. Original
-R/A/T/P/G/index/Q/C/case/capacity/S/V and authenticated actor/key/source leases stay
+stage-required R/A/T/P/G/index/Q/C/case/capacity and authenticated actor/source
+leases, and S/V/anchor/key ONLY in stages requiring them, stay
 held through real EOF, one-use transfer BEFORE effects, archive flush/readback and
 independently observed actual disposition. Failed/pending/UNKNOWN IO preserves
 original output targets and full charge. Signature success never retires anything.
 Repeated immutable envelope bytes require fresh genuine native references; no global
 one-use publication database or implicit expiry. Revocation/rollover needs reviewed
 immutable policy and explicit owner action. Old evidence is retained.
+Full prior R0/R1/R3a/R3b/source/audit/certificate originals remain charged through
+the combined table in appendix section4. Nonsecret issuer exit and credential
+issuer exit are distinct genuine births/closure observations, not token/PID reuse.
+Original issuer private copies persist to genuine corresponding issuer exit.
+R3a independent calibration precedes credential-inclusive production B. Source
+windows retire only under actual journal readback/authenticated retention in
+appendix section2, never by transferring unknown backing to a foreign owner.
 
 ## 9. Complete Git/source custody correction
 
@@ -339,6 +399,11 @@ applicability audit by type+length+NUL+raw bytes, preserving old185683 understat
 and new185834 historical correction as distinct observations. No actual body hash
 failure is invented. New ordinary source since421 and full verifier inputs join
 the new entire cumulative EvidenceROOT, including retained method failures.
+Repair02 frozen candidate/review and the unsealed original SP1 draft remain
+historical inputs. Current source capture includes ALL tracked/dirty/untracked
+physical bodies; old committed-only/current-tree counts are not copied as current
+totals. Source-data arithmetic distinguishes all association bodies from distinct
+paths and native originals; no path normalization establishes physical identity.
 
 ## 10. Full fixtures, review and final boundary
 
@@ -352,6 +417,15 @@ cardinality, decoded duplicates/UTF8/integer/EOF/range/alias, concurrent transfe
 pending capture, failed readback and actual parent/issuer exit custody. A fixture
 cannot authenticate its own realm. No all-denial or opaque future constructor
 counts as whole positive source completion.
+The sourceful whole fixture additionally requires the complete SP1 table/body/full
+raw ancestry walker, every original range/native EOF/capture/readback association,
+exact128 retained stages including all three issuer births and separate native/
+issuer P/G/Q/capacity, absent initial future C/S/V/key, actual credential calibration
+BEFORE production B, and authentic independent BQ certification. Extra originals,
+wrong immutable-unit membership, journal/footer/range/overflow/old-new overlap and
+source backing ownership failure must retain original evidence and charge. None
+of these fixtures is generated or executed by this precode proposal. Appendix
+section5 names the complete absent dependent source inventory and whole review.
 
 No authentic BQ/issuer principal/public anchor/credential/provider/tool/image/input
 realm/B/catalog is currently selected. Review authorizes only a coherent source
