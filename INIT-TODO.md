@@ -256,3 +256,12 @@ must assess all three mechanisms and positives/failure fixtures together; no par
 Exact human authority selection follows coherent review. Full ordinary positive product
 source/TC01..12/CA01..08, DIFFERENT final ENTIRE SOURCE GO/new complete authentic input
 admission, native qualification/Core/operator/publication/release remain separate open gates.
+
+Repair04 complete-custody geometry correction: predecessor04's391274 associations
+retain8732689165 raw body bytes, exceeding the historical8GiB SourceUnit FILE bound
+BEFORE framing. Propose NEW finite16GiB file maximum17179869184 and derive the exact
+complete repeated-range table/body witness in the final04 freeze. Preserve the first
+04 incomplete/method-failure capture; no source truncation/compression/deduplication
+or free backing. This whole representation amendment changes no owning memory cap,
+service1MiB/store4MiB/Core128MiB, Q12/C13 or actual authority selection. The entire
+review must judge this corrected finite geometry with all R03-01..03 mechanisms.

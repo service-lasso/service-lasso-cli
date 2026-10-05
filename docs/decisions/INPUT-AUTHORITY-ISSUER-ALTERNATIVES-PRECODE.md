@@ -237,7 +237,10 @@ actor/native/source/IO/readback leases count in SAME128 before effects. S/V/key
 leases appear only in the explicit stages requiring them; future output capacity
 is reserved without fake original references. Appendix sections1/2 propose precise
 NEW SP1 immutable source/capture/member-range representation and charged streaming,
-including entire source ancestry without equal-hash aliasing. Mutable preseal retention
+including entire source ancestry without equal-hash aliasing. Repair04 explicitly
+proposes a16GiB SourceUnit FILE geometry ceiling for ALL cumulative repeated raw
+associations; predecessor04 already exceeds historical8GiB, which is not a current
+fit. No memory cap grows; current exact file geometry is in the new freeze witness. Mutable preseal retention
 is independently authenticated BQ custody, explicitly distinct from final immutable
 SourceAuditUnit admission; no caller can rewrite a retired window extent. Section4 gives every
 slot1..128 across retained stages, exact multi-C cases, separate issuer P/G/Q/capacity

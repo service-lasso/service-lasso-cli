@@ -29,7 +29,7 @@ Header is exactly64 bytes, little-endian: magic8 SLSPK001; version u32=1;
 recordStride u32=128; recordCount u64; tableOffset u64=64; tableBytes u64;
 bodyOffset u64; fileBytes u64; reserved u64=0. tableBytes=count*128 and
 bodyOffset=64+tableBytes, all arithmetic checked. Exact native immutable size/EOF
-equals fileBytes, maximum8589934592. Record128: originalAssociationId32,
+equals fileBytes, maximum17179869184. Record128: originalAssociationId32,
 nativeCaptureAssociationId32, rawSha25632, memberOffset u64, memberBytes u64,
 kind u32, sourceProject u32, reserved u64=0. kind raw0/commit1/tree2/blob3/tag4.
 IDs select independently authenticated A associations, not principals or credentials.
@@ -53,6 +53,14 @@ Conservatively duplicating every association gives49727360 table bytes and
 7771840611 total bytes, including64-byte header: below8589934592 without compression
 or deduplication. These are source-data arithmetic observations from the complete
 original manifest, not a generated SourceUnit, native memory fit or trust grant.
+The historical8GiB arithmetic above applies ONLY to candidate02. Complete ordinary
+successor04 retains391274 associations/8732689165 raw body bytes, already exceeding
+that OLD bound before its table. Repair04 therefore explicitly proposes a NEW16GiB
+SourceUnit FILE maximum17179869184; no source/history/control is dropped, compressed,
+deduplicated or given free backing. Final repair04 exact association/table/body arithmetic
+is derived from its complete raw manifest, not copied from02/03; all original Node/
+verifier/source/history/custody controls remain in the finite witness. This source-file
+geometry amendment changes NO service/store/Core/Node owner memory cap or API.
 New actual source/tool/native selections need a complete updated manifest and exact
 table/body enumeration before construction; exceeding the bound requires a separate
 reviewed choice, never truncation. Historical193377 Git/229283 distinct-path custody
@@ -69,7 +77,7 @@ cross-process Linux handoff is the NEW SCM_RIGHTS topology in section4,
 requiring whole review; F_DUPFD_CLOEXEC alone crosses no birth. Windows transfer retains full original
 sender/receiver birth/token/image/rights correlation. No neighbouring path lookup.
 Immutable-source backing, IO, cache, mapping and reader ownership are independently
-observed and fully charged where owned. An8GiB file bound creates no free memory pool.
+observed and fully charged where owned. The NEW16GiB file bound creates no free memory pool.
 Unknown ownership denies fit; service-owned source views/backing remain inside1MiB.
 
 ## 2. Original capture journal and bounded access
