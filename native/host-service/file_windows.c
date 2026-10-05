@@ -4,6 +4,12 @@
 static void zero(void *value, size_t bytes) {
   unsigned char *p = value; while (bytes--) *p++ = 0;
 }
+static int disjoint(const struct slcli_windows_file_capture *c,
+                      const void *data, size_t bytes) {
+  uintptr_t a=(uintptr_t)c,b=(uintptr_t)data;
+  return a<=UINTPTR_MAX-sizeof(*c)&&bytes<=UINTPTR_MAX&&
+           b<=UINTPTR_MAX-bytes&&!(a<b+bytes&&b<a+sizeof(*c));
+}
 static int clock_observe(struct slcli_windows_file_capture *c) {
   uint64_t seconds, remainder, whole, fraction;
   c->counter_status = QueryPerformanceCounter(&c->counter_raw);
@@ -33,8 +39,13 @@ static int mode_observe(struct slcli_windows_file_capture *c) {
   c->mode_args[1] = (uintptr_t)&c->mode_io;
   c->mode_args[2] = (uintptr_t)&c->mode;
   c->mode_args[3] = sizeof(c->mode); c->mode_args[4] = 16;
+  c->retained_native_io = 1;
   c->mode_status = NtQueryInformationFile(c->original, &c->mode_io, &c->mode,
                                           sizeof(c->mode), (FILE_INFORMATION_CLASS)16);
+  /* Pending native output still points into this SAME capture. A second call
+   * may not zero/reuse it. Only actual completed native query clears the guard. */
+  if (c->mode_status == 0 && c->mode_io.Status == 0 &&
+      c->mode_io.Information == sizeof(c->mode)) c->retained_native_io = 0;
   return c->mode_status == 0 && c->mode_io.Status == 0 &&
            c->mode_io.Information == sizeof(c->mode) && (c->mode & 0x30) != 0;
 }
@@ -42,7 +53,7 @@ int slcli_windows_file_observe(HANDLE original,
                                struct slcli_windows_file_capture *c) {
   uintptr_t start, sid;
   DWORD bytes, i;
-  if (!c || !original || original == INVALID_HANDLE_VALUE) return 0;
+  if (!c || c->retained_native_io || !original || original == INVALID_HANDLE_VALUE) return 0;
   zero(c, sizeof(*c)); c->original = original; c->operation = 1;
   c->observed = 1;
   if (!mode_observe(c)) { clock_observe(c); return 0; }
@@ -116,9 +127,10 @@ int slcli_windows_file_observe(HANDLE original,
 int slcli_windows_file_read(HANDLE original, unsigned char *destination,
                             DWORD bytes, uint64_t offset,
                             struct slcli_windows_file_capture *c) {
-  if (!c || !original || original == INVALID_HANDLE_VALUE || !destination ||
+  if (!c || c->retained_native_io || !original || original == INVALID_HANDLE_VALUE || !destination ||
       !bytes || bytes > 16384 || offset > INT64_MAX || bytes > (uint64_t)INT64_MAX - offset)
     return 0;
+  if (!disjoint(c,destination,bytes)) return 0;
   zero(c, sizeof(*c)); c->original = original; c->operation = 2;
   c->offset = offset; c->requested = bytes; c->observed = 1;
   if (!mode_observe(c)) { clock_observe(c); return 0; }
@@ -130,12 +142,14 @@ int slcli_windows_file_read(HANDLE original, unsigned char *destination,
   c->read_args[0] = (uintptr_t)original; c->read_args[1] = (uintptr_t)destination;
   c->read_args[2] = bytes; c->read_args[3] = (uintptr_t)&c->transferred_raw;
   c->read_args[4] = 0;
+  c->retained_native_io = 1;
   c->read_status = ReadFile(original, destination, bytes, &c->transferred_raw, NULL);
   c->status = (uint64_t)(uint32_t)c->read_status;
   if (!c->read_status) { c->error = GetLastError(); c->error_observed = 1; }
   if (c->transferred_raw > bytes) { clock_observe(c); return 0; }
   if (c->read_status || (c->error_observed && c->error == ERROR_HANDLE_EOF && !c->transferred_raw)) {
     c->returned_bytes = c->transferred_raw; c->bytes_observed = 1; c->completed = 1;
+    c->retained_native_io = 0;
   }
   /* Native EOF retains actual BOOL/error/count and a genuine empty capture.
    * All other no-byte failures remain unobserved, never SHA256(empty) success. */
@@ -145,9 +159,10 @@ int slcli_windows_file_read(HANDLE original, unsigned char *destination,
 int slcli_windows_file_write(HANDLE original, const unsigned char *source,
                              DWORD bytes, uint64_t offset,
                              struct slcli_windows_file_capture *c) {
-  if (!c || !original || original == INVALID_HANDLE_VALUE || !source ||
+  if (!c || c->retained_native_io || !original || original == INVALID_HANDLE_VALUE || !source ||
       !bytes || bytes > 16384 || offset > INT64_MAX ||
       bytes > (uint64_t)INT64_MAX - offset) return 0;
+  if (!disjoint(c,source,bytes)) return 0;
   zero(c, sizeof(*c)); c->original = original; c->operation = 3;
   c->offset = offset; c->requested = bytes; c->observed = 1;
   if (!mode_observe(c)) { clock_observe(c); return 0; }
@@ -159,25 +174,28 @@ int slcli_windows_file_write(HANDLE original, const unsigned char *source,
   c->read_args[0] = (uintptr_t)original; c->read_args[1] = (uintptr_t)source;
   c->read_args[2] = bytes; c->read_args[3] = (uintptr_t)&c->transferred_raw;
   c->read_args[4] = 0;
+  c->retained_native_io = 1;
   c->read_status = WriteFile(original, source, bytes, &c->transferred_raw, NULL);
   c->status = (uint64_t)(uint32_t)c->read_status;
   if (!c->read_status) { c->error = GetLastError(); c->error_observed = 1; }
   if (c->read_status && c->transferred_raw <= bytes) {
     c->returned_bytes = c->transferred_raw; c->bytes_observed = 1; c->completed = 1;
+    c->retained_native_io = 0;
   }
   if (!clock_observe(c)) return 0;
   return c->completed != 0;
 }
 int slcli_windows_file_flush(HANDLE original, struct slcli_windows_file_capture *c) {
   BOOL result;
-  if (!c || !original || original == INVALID_HANDLE_VALUE) return 0;
+  if (!c || c->retained_native_io || !original || original == INVALID_HANDLE_VALUE) return 0;
   zero(c, sizeof(*c)); c->original = original; c->operation = 4;
   c->read_args[0] = (uintptr_t)original;
   c->observed = 1;
+  c->retained_native_io = 1;
   result = FlushFileBuffers(original);
   c->status = (uint64_t)(uint32_t)result;
   if (!result) return error(c);
-  c->completed = 1;
+  c->completed = 1; c->retained_native_io = 0;
   if (!clock_observe(c)) return 0;
   return 1;
 }

@@ -75,6 +75,25 @@ completion and independently correlated capture/flush/readback; the actual ownin
 constructor and persistence routes are still required. Helpers do not close an
 input lease or manufacture a primitive receipt from a successful status.
 
+The native private JSON reader now borrows original offsets without a heap token
+tree. It preserves existing depth16/member4096/array4096/token65536 semantics,
+rejects decoded duplicate keys including escaped aliases, rejects invalid UTF8
+and unpaired surrogates, and decodes valid pairs/literal UTF8 equivalently. Exact
+closed object keys and canonical bounded unsigned integer/text readers support
+the original P/G/Q/C/ledger codecs. The selected body limits remain16384 and262144;
+this does not widen a source profile or inspection frame. Typed readers must
+validate the complete SAME held body before interpreting borrowed field spans.
+Source vectors are unexecuted and establish no authority, fit or native custody.
+
+Windows persistent raw capture storage now refuses reuse while a native query,
+read/write or flush remains retained; only genuinely observed completion clears
+the pending guard. Input/output ranges cannot overlap the capture structure.
+Clock/capture/ownership failure still retains original evidence and resources;
+completed native IO does not grant archive readback or buffer retirement. Actual
+owning callers must initialize their source-owned capture storage before use and
+hold it through independent persistence/readback. This guard neither admits an
+original handle nor supplies the unfinished native owning constructor.
+
 Still required before whole delivery: complete authenticated PA1 original caller/
 provider/ROOT/P/G/C/key acquisition and positive bootstrap, actual capture file
 producer/readers/archive correlation, complete typed control/effect/observer/ledger

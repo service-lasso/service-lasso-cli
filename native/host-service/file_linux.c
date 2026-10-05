@@ -8,6 +8,12 @@ static void zero(void *value, size_t bytes) {
   unsigned char *p = value;
   while (bytes--) *p++ = 0;
 }
+static int disjoint(const struct slcli_linux_file_capture *c,
+                      const void *data, size_t bytes) {
+  uintptr_t a=(uintptr_t)c,b=(uintptr_t)data;
+  return a<=UINTPTR_MAX-sizeof(*c)&&bytes<=UINTPTR_MAX&&
+           b<=UINTPTR_MAX-bytes&&!(a<b+bytes&&b<a+sizeof(*c));
+}
 static int clock_observe(struct slcli_linux_file_capture *c) {
   long result;
   c->clock_args[0] = CLOCK_MONOTONIC;
@@ -75,6 +81,7 @@ int slcli_linux_file_read(int original_fd, unsigned char *destination,
   long result;
   if (!c || original_fd < 0 || !destination || !bytes || bytes > INT64_MAX ||
       offset > INT64_MAX || bytes > (uint64_t)INT64_MAX - offset) return 0;
+  if (!disjoint(c,destination,bytes)) return 0;
   zero(c, sizeof(*c));
   c->operation = 2;
   c->args[0] = (uint64_t)original_fd; c->args[1] = (uintptr_t)destination;
@@ -97,6 +104,7 @@ int slcli_linux_file_write(int original_fd, const unsigned char *source,
   long result;
   if (!c || original_fd < 0 || !source || !bytes || bytes > 16384 ||
       offset > INT64_MAX || bytes > (uint64_t)INT64_MAX - offset) return 0;
+  if (!disjoint(c,source,bytes)) return 0;
   zero(c, sizeof(*c)); c->operation = 3;
   c->args[0] = (uint64_t)original_fd; c->args[1] = (uintptr_t)source;
   c->args[2] = bytes; c->args[3] = offset;

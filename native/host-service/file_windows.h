@@ -7,10 +7,13 @@
 #include <stdint.h>
 /* Persistent, precharged native capture storage. Unknown NT/IO completion must
  * retain this storage and original handle; it may not become a stack temporary
- * or a reused row. No function here admits a provider, peer or source lease. */
+ * or a reused row. Captures start in original zeroed owned storage; a retained
+ * native IO guard forbids subsequent reuse, and completed captures still must
+ * reach actual persistence/readback before their owner reuses storage. No
+ * function here admits a provider, peer or source lease. */
 struct slcli_windows_file_capture {
   HANDLE original;
-  uint32_t operation, observed, completed, bytes_observed;
+  uint32_t operation, observed, completed, bytes_observed, retained_native_io;
   uint64_t offset, requested, returned_bytes, status, error;
   uint64_t mode_args[5], information_args[4][4], security_args[5], read_args[5];
   uint32_t error_observed, mode;
