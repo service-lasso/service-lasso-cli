@@ -121,6 +121,15 @@ correlating unchanged rights/mode across the read. Short-read capture-capacity
 failure retains custody. Matching bytes
 do not authenticate ROOT/provider; native constructor/persistence remains required.
 
+The C11 profile reader now consumes the original closed v3 profile/nested image,
+endpoint, owner, store, retention, launch and copy grammars as borrowed original
+spans. It preserves original service/store/control/copy caps; per-binding8MiB is
+a subset of the complete measured B2 owner, not another runtime pool. Full-Node
+image/package fields remain unchanged. Profile digest/parse success supplies no
+issuer or native owner. Parser stack and span metadata require actual charge.
+All JSON output/count helpers now reject original-input aliases/range overflow
+before zeroing; unexecuted negative source vectors preserve original bodies.
+
 Still required before whole delivery: complete authenticated PA1 original caller/
 provider/ROOT/P/G/C/key acquisition and positive bootstrap, actual capture file
 producer/readers/archive correlation, complete typed control/effect/observer/ledger

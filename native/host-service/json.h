@@ -3,7 +3,9 @@
 #include <stddef.h>
 #include <stdint.h>
 /* Borrowed offsets into SAME original held bytes. Validation supplies no source
- * authority; the native owner retains and reobserves the original body/EOF. */
+ * authority; the native owner retains and reobserves the original body/EOF.
+ * Outputs/counts must be disjoint from borrowed raw bytes and from one another;
+ * overlap/overflow rejection precedes even failure-output zeroing. */
 struct slcli_json_span { size_t start, end; };
 int slcli_json_validate(const unsigned char *, size_t, size_t,
                          struct slcli_json_span *);

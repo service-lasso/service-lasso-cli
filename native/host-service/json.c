@@ -136,11 +136,17 @@ static int value(struct reader *r,uint32_t depth,int check,struct slcli_json_spa
   }
   span->end=r->at; return 1;
 }
+static int disjoint(const void *left,size_t n,const void *right,size_t m) {
+  uintptr_t a=(uintptr_t)left,b=(uintptr_t)right;
+  return left&&right&&a<=UINTPTR_MAX-n&&b<=UINTPTR_MAX-m&&
+           !(a<b+m&&b<a+n);
+}
 int slcli_json_validate(const unsigned char *raw,size_t bytes,size_t maximum,
                          struct slcli_json_span *out) {
   struct reader r; struct slcli_json_span root={0,0};
-  if(out) *out=root;
-  if(!raw||!out||!bytes||bytes>maximum||
+  if(!disjoint(raw,bytes,out,sizeof(*out))) return 0;
+  *out=root;
+  if(!bytes||bytes>maximum||
      (maximum!=16384&&maximum!=262144)||!slcli_utf8(raw,bytes,1)) return 0;
   r.raw=raw; r.bytes=bytes; r.at=0; r.members=0; r.tokens=0;
   if(!value(&r,0,1,&root)) return 0;
@@ -151,7 +157,10 @@ int slcli_json_object(const unsigned char *raw,size_t bytes,struct slcli_json_sp
                        const char *const *keys,size_t count,struct slcli_json_span *out) {
   struct reader r; struct slcli_json_span key,body,empty={0,0};
   uint64_t seen=0; size_t i,j;
-  if(!raw||!keys||!out||!count||count>64||object.start>=object.end||object.end>bytes||
+  if(!raw||!keys||!out||!count||count>64||
+     !disjoint(raw,bytes,out,count*sizeof(*out))||
+     !disjoint(keys,count*sizeof(*keys),out,count*sizeof(*out))||
+     object.start>=object.end||object.end>bytes||
      raw[object.start]!='{'||raw[object.end-1]!='}') return 0;
   for(i=0;i<count;++i) out[i]=empty;
   r.raw=raw; r.bytes=object.end; r.at=object.start+1; r.members=0; r.tokens=0;
@@ -175,8 +184,11 @@ int slcli_json_object(const unsigned char *raw,size_t bytes,struct slcli_json_sp
 int slcli_json_text(const unsigned char *raw,size_t bytes,struct slcli_json_span text,
                      unsigned char *destination,size_t capacity,int controls,size_t *written) {
   struct reader r; uint32_t s; unsigned char encoded[4]; size_t n,i,at=0;
-  if(written) *written=0;
-  if(!raw||!destination||!written||text.start>=text.end||text.end>bytes||
+  if(!disjoint(raw,bytes,destination,capacity)||
+     !disjoint(raw,bytes,written,sizeof(*written))||
+     !disjoint(destination,capacity,written,sizeof(*written))) return 0;
+  *written=0;
+  if(text.start>=text.end||text.end>bytes||
      raw[text.start]!='"'||raw[text.end-1]!='"'||(controls!=0&&controls!=1)) return 0;
   r.raw=raw; r.bytes=text.end-1; r.at=text.start+1; r.members=0; r.tokens=0;
   while(r.at<r.bytes) {
@@ -193,8 +205,9 @@ int slcli_json_text(const unsigned char *raw,size_t bytes,struct slcli_json_span
 int slcli_json_unsigned(const unsigned char *raw,size_t bytes,struct slcli_json_span number,
                          uint64_t maximum,int zero,uint64_t *out) {
   uint64_t value=0,digit; size_t i;
-  if(out) *out=0;
-  if(!raw||!out||number.start>=number.end||number.end>bytes||
+  if(!disjoint(raw,bytes,out,sizeof(*out))) return 0;
+  *out=0;
+  if(number.start>=number.end||number.end>bytes||
      (number.end-number.start>1&&raw[number.start]=='0')) return 0;
   for(i=number.start;i<number.end;++i) {
     if(raw[i]<'0'||raw[i]>'9') return 0;
@@ -207,8 +220,12 @@ int slcli_json_unsigned(const unsigned char *raw,size_t bytes,struct slcli_json_
 int slcli_json_array(const unsigned char *raw,size_t bytes,struct slcli_json_span array,
                       struct slcli_json_span *out,size_t capacity,size_t *count) {
   struct reader r; size_t used=0; struct slcli_json_span item;
-  if(count) *count=0;
-  if(!raw||!out||!count||!capacity||capacity>4096||array.start>=array.end||
+  if(!capacity||capacity>4096||
+     !disjoint(raw,bytes,out,capacity*sizeof(*out))||
+     !disjoint(raw,bytes,count,sizeof(*count))||
+     !disjoint(out,capacity*sizeof(*out),count,sizeof(*count))) return 0;
+  *count=0;
+  if(array.start>=array.end||
      array.end>bytes||raw[array.start]!='['||raw[array.end-1]!=']') return 0;
   r.raw=raw; r.bytes=array.end; r.at=array.start+1; r.members=0; r.tokens=0;
   space(&r);
