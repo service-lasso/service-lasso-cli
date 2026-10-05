@@ -13,4 +13,6 @@ int slcli_json_text(const unsigned char *, size_t, struct slcli_json_span,
                      unsigned char *, size_t, int, size_t *);
 int slcli_json_unsigned(const unsigned char *, size_t, struct slcli_json_span,
                          uint64_t, int, uint64_t *);
+int slcli_json_array(const unsigned char *, size_t, struct slcli_json_span,
+                      struct slcli_json_span *, size_t, size_t *);
 #endif

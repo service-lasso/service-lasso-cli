@@ -85,6 +85,18 @@ this does not widen a source profile or inspection frame. Typed readers must
 validate the complete SAME held body before interpreting borrowed field spans.
 Source vectors are unexecuted and establish no authority, fit or native custody.
 
+The original closed Q12/C13 consumers now validate the SAME full private JSON
+body and retain borrowed raw calibration bytes/digest. Qualification domain0/2
+has exact finite Q32 and original page/object/case/capacity/entry associations;
+production C0/C2 takes independently supplied finite measured-B claims instead
+of the superseded whole-Node8MiB. Service C1 remains1048576. Evidence retains
+128-reference/8MiB-object bounds, exact four keys, unique original names and
+matching source digest. Checked category arithmetic includes metadata inside
+runtime/stack/IO facts, without another physical pool. Codec acceptance does
+not authenticate original evidence, issuer, ROOT or native measurement. The
+complete original acquisition owner must independently correlate every source
+lease and native observation before transferring any actual owner or capability.
+
 Windows persistent raw capture storage now refuses reuse while a native query,
 read/write or flush remains retained; only genuinely observed completion clears
 the pending guard. Input/output ranges cannot overlap the capture structure.

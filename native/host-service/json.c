@@ -204,3 +204,21 @@ int slcli_json_unsigned(const unsigned char *raw,size_t bytes,struct slcli_json_
   if(!zero&&!value) return 0;
   *out=value; return 1;
 }
+int slcli_json_array(const unsigned char *raw,size_t bytes,struct slcli_json_span array,
+                      struct slcli_json_span *out,size_t capacity,size_t *count) {
+  struct reader r; size_t used=0; struct slcli_json_span item;
+  if(count) *count=0;
+  if(!raw||!out||!count||!capacity||capacity>4096||array.start>=array.end||
+     array.end>bytes||raw[array.start]!='['||raw[array.end-1]!=']') return 0;
+  r.raw=raw; r.bytes=array.end; r.at=array.start+1; r.members=0; r.tokens=0;
+  space(&r);
+  while(r.at<r.bytes&&r.raw[r.at]!=']') {
+    if(used==capacity||!value(&r,1,0,&item)) return 0;
+    out[used++]=item; space(&r);
+    if(r.at<r.bytes&&r.raw[r.at]==']') break;
+    if(r.at==r.bytes||r.raw[r.at++]!=',') return 0;
+    space(&r); if(r.at==r.bytes||r.raw[r.at]==']') return 0;
+  }
+  if(r.at+1!=array.end||r.raw[r.at]!=']') return 0;
+  *count=used; return 1;
+}
