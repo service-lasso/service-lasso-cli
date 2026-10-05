@@ -171,3 +171,200 @@ CLI39-HA5-INSPECTION binds the ENTIRE BLUEPRINT-003 HA1..HA5/native v3/library/p
 Before implementation, the whole amendment proposes a distinct authenticated private full-inspection BEGIN/CHUNK/END route from original SEA through original primary/service/facade to source-owned library, with every frame<=16384, complete dynamic inventory/policy/provenance, independent raw/source/receipt/equality checks and actual lifetime accounting. Native v3 READ/PLAN/CLOSE codes/caps, public OUTPUT bytes, original root route, F1/F2/F3, owner id/name, deadlines,4-user16-host/control/store limits and all publication/Core/operator gates remain required. New private data frames and explicit external client-copy accounting require fresh different ENTIRE architecture review and coordinated Core reader source binding; they are not implementation authority. closure.launch adds inspectionRouteRef under the exact blueprint amendment; parent coordinates Core only, this author cannot cross-write it. Existing landed Core1644 binding remains historical and cannot cover this new row until reconciled.
 
 Complete source preparation remains the intended unit after architecture review/landing. No narrow parser, EMPTY-capability product stub, guessed tuple, alternate observer, cap widening, stdout data tunnelling, input cleanup or compiler fallback is permitted. Actual source/profile/key/store/native actor/catalog/immutable tuple/Core F7 remain absent/unqualified. Different ENTIRE product source review plus NEW complete-input ROOT still precede every product import/parser/compiler/build/test/native/ACL/lifecycle/workflow action. This source-only proposal is blocked for architecture review, not implementation complete or acceptance.
+
+## #39 actual whole product-source implementation ownership (2026-10-04)
+
+The coordinated architecture pair CLI41/Core1653 is normally landed. This fresh Development SOURCE ONLY unit starts at CLI develop e5c431de9e383a8ca5a307bcc00b55b8f6997020/tree d9e7d2713972a46f59b857a7b9e2fcadc88972b4 and owns feature/39-actual-product-f4 in the isolated cli39-actual-product-f4-oct04 checkout. CLI39-TC01..TC12, CLI39-HA1..HA5, CLI39-HA5-INPUT, CLI39-HA5-INSPECTION and the scoped release requirements govern the COMPLETE production library/scaffold/fullpreview/materialize/dispose/facade/service/primary/SEA/writer/provider/observer/private-reader/resource-accounting source, full original owner inventory and all original error/deadline/publication/Core boundaries. Architecture GO is not product implementation or product SOURCE GO. The authenticated ADR native greeting supplies launchNonce; withdrawn F5 imposes no equality/new field.
+
+Pre-code traceability: canonical parsing/catalog/owner derivation maps TC01..TC05/TC07..TC11; native original source custody/READ/PLAN/CLOSE/writer readback maps TC06/TC12 and HA1/HA4; production service/facade/observer/prebinding/ledger/two-stage closure maps HA1..HA5/TC12; exact root and complete BEGIN/CHUNK/END/private copies/control-retention map CLI39-HA5-INPUT/INSPECTION and TC06/TC11/TC12; original-source scoped protected2/portable2 Windows/Linux TAR maps SPEC-CLI-SCOPED-RELEASE-ERRATA and SPEC-CLI-PROTECTED-NATIVE-CANDIDATE. Meaningful test source is UNEXECUTED. Missing actual profile/provider/keys/catalog/immutable pins/allocator/native grants/F7 and native1640 D1/D4/D8 NO-GO are preserved independently. No product imports/parsers/compiler/build/npm/tests/native/ACL/lifecycle/provisioning/dispatch/rerun before different ENTIRE final product SOURCE GO and NEW complete-input ROOT. Parent owns tracking/landing; every intentional commit is immediately pushed and PR-bound. No main access, nested delegation, other-worker takeover or cleanup.
+
+### #39 original profile acquisition source dependency (2026-10-05)
+
+HA1/HA2/HA5 precode acquisition caller/interface is recorded in
+`docs/decisions/PROFILE-ADMISSION-PRECODE.md`. BLUEPRINT003 already selects
+independently admitted external original profile commit/blob/raw bytes and
+separately admitted native key provider; it grants no invented profile signing
+key, sidecar, owner or catalogue. The current service-module raw profile
+embedding has a self-image-hash dependency. Its concrete original source
+admission provider must be resolved before implementing the acquisition route;
+an additional mechanism, if needed, requires a durable precode contract
+amendment and different entire architecture review. This bounded dependency
+does not stop independent whole production native observation/engine/source
+accounting authoring, does not lower caps or change any closed field, and is
+not a claim that missing provisioning blocks all product source preparation.
+
+PA1 whole architecture candidate in PROFILE-ADMISSION-PRECODE.md now specifies the complete P/G/C cycle, four viable dispositions, the minimal proposed original external tuple capability, exact existing HA1 independent input authority versus separate HA2 ledger key authority, trusted original admission caller/provider roles and reference lifetime, bootstrap aggregate control ownership and genuine empty denial. PA1 is not implemented authority or architecture GO; different ENTIRE coordinated review must decide the exact candidate before positive integration. No authentic provider/ROOT has been supplied and independent full engine/native source work continues.
+
+Exact PA1 source implementation authority: different ENTIRE architecture review ROOT8e39d61011bba38f065f7d0678a420f4548140f3adc15c8adfd259194bda0597, REPORTd9808799c3d26bef0f198b5473bea0c454ebe1978b2f9134305f0f9336703221, exact candidateab58ad7d142071d66b982b9cbeb34a1fa76c65be11bdce07ccb1d625da1f0834. Parent accepts source implementation only; author actual rereadALL26606 reviewobservations+2membersPASS. Implement whole PA1 native caller/provider/lease/original P/G/C readers and genuine separatelyadmittedHA2key; remove circular compiled associations. No authentic provider/actor/key/ROOT/resource/catalog/installation/execution grant supplied. Different ENTIRE final productSOURCEGO/newcompleteROOT remains required.
+
+N1 full Node startup/allocator precode candidate: docs/decisions/NODE-STARTUP-ALLOCATOR-PRECODE.md. Additional private bootstrap consumer/owner ABI and changed actual Node22.23.2 image/source/packaging require DIFFERENT ENTIRE architecture review; PA1 source-only decision does not authorize them. Original Node tag/commit and all 47300 source associations/41818 actual raw objects retained externally; no code execution, native fit, authority/input/image grant, cap waiver or product completion inferred. Continue complete independent product source; no final execution before ENTIRE final SOURCE GO/newROOT.
+
+N1 exact whole source architecture acceptance (2026-10-05): candidate ROOT 1e656577ff664b88f246900a75b2c7dfc4225bf4e4265135dd9d60bcc5784d72, independent whole review ROOT 6a91294b4841e2b192fe3ca9a0d779789771f7785db1f6bf13f891895c1dd5c9 and REPORT 7f51af4765be080bd2b895e868d19c7d00bd4a4cade3b0611981c0bf8d3993e0 authorize source implementation only of the exact decision in docs/decisions/NODE-STARTUP-ALLOCATOR-PRECODE.md. Author freshly verified all75551 actual associations and five review members; full product remains incomplete. Exact runtime/configuration changes outside that decision require their whole precode decision; no native fit/source/resource/image/key/catalog/installation or execution approval inferred. Finish entire actual PA1/N1 public/native owning routes and fixtures, then new complete inputROOT and different ENTIRE final source review before any executable action.
+
+N1 complete stack/CRT supplement S1 remains prospective pending a DIFFERENT ENTIRE architecture review: docs/decisions/NODE-STACK-CRT-CONFIGURATION-PRECODE.md, with exact original build counterevidence in NODE-STACK-SOURCE-COUNTEREVIDENCE.md. The proposed Windows/Linux main/default worker/pool/V8-stack and source-built static CRT choices explicitly change source/build/packaging/compatibility and private owning startup; no smaller-stack/configuration/CRT/ABI/image authority is inherited from N1. Full one-domain8MiB ledger includes original image/runtime/stack/guard/TLS/native/IO/metadata/copy/failure ownership, with no omitted category or new hosting/control budget. Original Windows CRT991 files and musl2932 associations/2708 genuine raw objects captured and byte verified solely as source candidates. No tool/native/provider/source/image/ROOT/calibration authority supplied. HA1..HA5/INPUT/INSPECTION/TC01..12/CA01..08/scoped packaging remain the entire intended source unit; independent source work continues, source is incomplete, and final product SOURCE GO/new complete ROOT remains required before executable actions.
+
+S1 exact different whole review SOURCE_NOGO (2026-10-05): review ROOT3b6f80b95a7916518476b8067591597fe121af3f90e2f456b0f6a67701f67d3a, REPORTd3f143093794c635c59c40f996dffd424dbdcb52b70aba16360b2a3b52573cb3. Author FULL read report/root and all30 actual ownmember bytes matched; independent review ALL367285 actual candidate inputs and complete genuine source graphs passed. Original selected Windows full-ICU initialized data33107424 alone exceeds unchanged8388608 source-owned image/runtime domain; source lowerbound37301728 with four S1 stacks, not RSS or exact compiled/native mapping evidence. No S1 stack/CRT/runtime configuration implemented. Original frozen candidate/review/failures preserved. PA1/N1 earlier exact source-only decisions and independent ordinary source work retain their separate boundaries.
+
+N2 full alternative/original-contract choice is prospective in docs/decisions/NATIVE-RUNTIME-N2-WHOLE-CONTRACT-CHOICE.md. Native authoring producer/owner port requires an explicit entire architecture amendment, complete Unicode/owner/native/public equivalence, all original physical image/runtime/stack/IO/metadata/copy accounting and unchanged caps. It cannot hide the independent original Node22.23.2/full-ICU library image contradiction. Exact original bound versus original full Node owned runtime/public library choice must be selected by the architecture/release owner; no larger cap, host baseline/second budget, foreign-image relabelling, changed Node/language/API requirement or removed library is authorized. All original TC01..12/CA01..08/shared proof/wire/rights/deadline/retained-parent/source authority/packaging obligations remain the entire unfinished intended product. No N2 implementation grant, final productSOURCEGO or execution is inferred.
+
+## #39 N2 explicit human memory-contract selection (2026-10-05)
+
+The human selected preservation of the full Node library and replacement of the whole-runtime 8 MiB limit with a measured finite budget. NATIVE-RUNTIME-N2-WHOLE-CONTRACT-CHOICE.md retains the original options and exact subsequent choice; historical options ROOT dcdc56d3daa24a9cfc87589f846a9a41fcf39142c8e09fdaffa32d88573fcecd retains all369165 actual associations, zero failures. This applies explicitly to domain0 combined primary/SEA and domain2 original Node parent; no host baseline exemption, hidden second pool, reduced ICU/language/API, removed library, or S1 smaller-stack configuration is selected. Service1MiB/store4MiB/Core128MiB are unchanged. S1 SOURCE_NOGO and all original evidence remain. CLI39-N2-MEASURED maps HA1/HA2/HA4/HA5/INPUT/INSPECTION/TC01..12/CA01..08/scoped source-built Node packaging to the complete measured image/runtime/stack/TLS/guard/IO/metadata/copy/native-ledger budget, real original admission provider/caller/ROOT and conservative original-parent exit ownership. The numerical production cap is not invented from the ICU lower bound. Whole amended precode and new actual current-source/cumulative-input ROOT require DIFFERENT ENTIRE architecture review before dependent runtime/cap implementation or native measurement; final product SOURCE GO and original executable/native/tool admission remain separate. Independent already-authorized production source work continues.
+## CLI39 N2 review03 normalization — current prospective contract
+
+The complete current decision is docs/decisions/NODE-MEASURED-FINITE-BUDGET-N2-PRECODE.md sections1..12. It supersedes rejected current N2 wording while retaining every frozen option, S1 SOURCE_NOGO and review03 original. Human-selected full Node/public library/Buffer/API/full ICU uses measured finite B0/B2; Q32 is finite prospective qualification capacity, never measured production B or a host exemption. Store4MiB and Core128MiB remain unchanged.
+
+PA1's aggregate service-owned1MiB includes bootstrap/runtime/stack/IO/image/lease/parser/capture/control together. Blueprint003 control wording does not erase PA1 ownership. Correct the draft's unsupported blanket attribution of every OS import: original backing and mapped-view ownership/source/image/lifetime/custody must be established individually; unknown denies fit. All service-owned linked/generated helpers, CRT/user images and bootstrap remain charged. This correction needs no new human cap choice. A transfer of genuinely known service-owned resources to larger B1 would require a separate material decision and is unselected.
+
+Traceability: HA1/PA1 requires actual independently admitted provider/caller/ROOT/P/G/C/key held readers; N1/N2 requires full early Node/runtime/image/stack allocation ownership and authenticated parent-copy ledger; HA4 requires positive typed C11 constructor and one complete1MiB aggregate; HA5 INPUT/INSPECTION requires the same four inputs, complete private wire and native returned copies; TC01..12/CA01..08 requires full ordinary Windows/Linux effects, writer/mode/rename/observer/archive closure and meaningful whole fixtures. Decision sections6..10 specify source actors, exact prospective codecs, capacity layout and positive constructor ordering. Stride arithmetic/static PE headers do not prove actual fit or authority.
+
+Fresh DIFFERENT entire architecture review of a NEW complete actual-source/cumulative-input ROOT precedes dependent N2 implementation. Complete positive product source and meaningful full fixtures then require DIFFERENT entire final SOURCE GO/new ROOT before authentic tool/native measurement admission and execution. Existing ordinary-source repairs are unexecuted. No partial GO, all-denial completion, provider/image/key grant, cap waiver, source generation/build/test/import/native/CI/settings action or release claim is authorized by this mapping.
+## CLI39 N2 independent whole architecture adoption05 — source implementation only
+
+Parent accepted independent WHOLE_ARCHITECTURE_GO_FOR_SOURCE_IMPLEMENTATION_ONLY for exact normalized candidate04 ROOT4bfd80a7497d13596de8cb0e2446c2ff5ad9676bd3356d9ec2ce37123861eb94 and decision35333 SHA8688b934d4e89933a44f8a6a6db43b6cad21d499284d3ec8ad751da08b1021fd. Review D:/projects/service-lasso/_audit/cli39-normalized-n2-entire-independent-oct05-05 ROOT34d64075c8e490242097b670843f5a12185418a4cc9795a33e31712fc1c83f90; REPORT15043 SHAc9ff0ff6dcc932a81ace1a140ffa8a76de72701cb1b31a2ebe47d69f59d81568. Author read full report/root and verified all9 manifest members plus2 ROOT members actual size/SHA PASS0, including337084596-byte original audited manifest. Frozen candidate04/review05/history remain unchanged.
+
+The selected twelve-section whole architecture is now approved for actual source implementation: complete positive C11 service/primary/writer, early full Node allocator/hooks/builtin/native parent copies, genuine admitted caller/provider/catalog/key readers, production ordinary library/SEA/native engine/writer/observer/archive/packaging and full meaningful TC01..12/CA01..08 fixtures. Declarative interfaces, opaque constructors, all-denial and unused components are not completion. Preserve full ICU/API/flags, B0/B2 measured-finite direction, aggregate service-owned1MiB, store4MiB and Core128MiB. Unknown native image/ownership fit remains unresolved and cannot be foreign relabeled. Q32 is not production B. Actual original source/tool/native actors/provider/ROOT/key/catalog/measurement remains separately absent/unadmitted.
+
+This adoption supersedes current pending-architecture language only for the exact candidate04 source choice. It grants no final product SOURCE GO, native fit, measured B, compiler/import/parser/build/test/native execution, resource/installation/publication/GA authority. Finish complete coherent positive source and whole fixtures, then NEW complete cumulative ROOT and DIFFERENT ENTIRE final SOURCE review and authentic input admission before execution. Same sole issue owner/PR42; every intentional coherent commit immediately pushed, no main or nested agents.
+## CLI39 IA1 original-input issuer amendment — prospective, not selected
+
+The complete candidate is docs/decisions/INPUT-AUTHORITY-ISSUER-ALTERNATIVES-PRECODE.md, read with EXTERNAL-INPUT-AUTHORITY-PROVISIONING-SOURCE-DESIGN.md and the entire PA1/N2/Blueprint003 source contract. No existing governing HA1/HA5 issuer implementation, credential-acquisition interface or authentic output has been identified. GitHub identity/Development publication permission and HA2 ledger MAC are not ROOT authority. Option E requires actual existing issuer source/credential/output and independent authority; recommended NEW IA1 requires independent explicit principal/public-anchor selection after whole architecture amendment review. No anchor/key/principal is created or selected here.
+
+IA1 specifies full-Node offline encrypted PKCS8/native console enrollment, exact private statement/actor codecs and original signature preimage, Windows original handle/Linux same-process lease handoff, original caller/image/owner/ROOT associations, one-use attempt transfer and exact-input/revocation lifetimes. New issuer/verifier/codec source is NOT covered by previous PA1/N2 GO and must not be implemented before NEW DIFFERENT ENTIRE amendment review. Shared public APIs/library/SEA/full ICU/flags and proof18/10/11/13/11/memory20 remain unchanged. Complete issuer finite full-Node ownership is explicit, not a hidden pool; service aggregate1MiB/store4MiB/Core128MiB remain unchanged. Original HA2 key-provider authority is separate and unsupplied.
+
+Traceability: HA1/PA1/HA5 INPUT maps exact original issuer/provider/caller/ROOT/P/G/Q/C and native handoff; HA2 maps separately admitted original key lease; HA4/N1/N2 maps complete actual verifier/image/stack/CRT/control/IO custody and early full-Node issuer ownership; HA5 INSPECTION/TC01..12/CA01..08 maps unchanged ordinary Windows/Linux positive effects, private wire, original parent copies and archive/retirement. Strict codecs/positive semantic fixtures do not authenticate originals. Current product source remains incomplete; independent approved ordinary native routes continue. Whole actual current source, intent/spec/backlog/INIT/traceability and cumulative original inputs must accompany IA1 review. No executable/native/tool/profile/CI/settings/release grant follows from this candidate.
+## CLI39 IA1 sealed NO_GO and coherent whole repair02 — prospective only
+
+Whole review01 ROOT0ca325bd013a5241555f4ff91438e650a82a05fe218f9bd3b098d360cc87065e / REPORT SHAe943f5542cc3b251bcda75293d6bf699960c9370911963efcfbfc2621b378933 rejects exact frozen421/candidate01. That candidate and every original failed/hash-method/private/custody body remain unchanged. Current canonical docs/decisions/INPUT-AUTHORITY-ISSUER-ALTERNATIVES-PRECODE.md sections1..10 is the complete prospective repair02, superseding the rejected current seven-role/circular-root and inconsistent cardinality proposal only. It has NO architecture/source/execution/authority GO yet.
+
+IA1-01 maps complete genuine commit-to-root-tree-to-all-tree/blob traversal and retained missing421 root correction. IA1-02 maps acyclic payload InputROOT, detached15-key statement/signature and later EvidenceROOT; leaf-only source associations cannot index themselves/envelope/final-root. IA1-03 maps explicitly NEW independently human-selected native BQ initial qualification authority and original source/caller/provider/tool/image/ROOT leases before issuer Q32/secret entry; no future IA1 self-signature/source review/constructor/token string selects that principal. Administrative issuer is domain0 combined same full-Node finite owner, not another pool. Actual principal/key/anchor/enrollment/realm/B remain absent and unselected.
+
+IA1-04 maps exact15 statement keys plus four closed original named-member Q/C/case/capacity indexes, complete actual multi-C/evidence joins and same128 native reference graph before effects; equal hashes never alias distinct originals. IA1-05 maps complete14-role native primary/confined writer/SEA/Node parent/facade/library transport/observer/provider/issuer/BQ executable/source/P joins without changing P or shared APIs/wires. IA1-06 maps exact original Monocypher4.0.3 commit ab2b16dd619ad5f6979a4fbe69cfa324a6fcc35f optional SHA512 Ed25519 verifier, full genuine source graph, original known public-result timing/point-encoding behavior, C11 ABI/build/security/range/workspace and actual service-owned fit prerequisites. Source capture selects no tool execution or authentic trust anchor.
+
+The complete repair must accompany NEW actual current-source/cumulative EvidenceROOT and NEW DIFFERENT ENTIRE architecture review before dependent IA1 code. Human subsequently selects the concrete real authority/anchor/credential/BQ role; no values are invented here. Full Node22.23.2/full ICU/Buffer/API/flags/library/SEA/Windows/Linux and original four authoring inputs remain. Service aggregate1MiB/store4MiB/Core128MiB, HA2 separate key-provider authority, shared18/10/11/13/11/memory20/Q12/C13 and conservative authenticated original-parent exit custody remain unchanged. Independent PA1/N2 approved ordinary actual source implementation continues; whole positive owning product/TC01..12/CA01..08 is unfinished. Different final ENTIRE SOURCE GO/new complete authentic input admission precedes native/compiler/parser/build/import/test/calibration; no CI retry/cancel/main/settings/release action.
+## CLI39 IA1 whole repair03 — prospective SP1 representation and ordered stages
+
+Current complete prospective contract is INPUT-AUTHORITY-ISSUER-ALTERNATIVES-PRECODE
+sections1..10 WITH docs/decisions/IA1-SP1-REPRESENTATION-AND-STAGES-PRECODE.md.
+Sealed entire review02 REPORT39a398e44156c2318ffc89b90a5eba147843d55bcd23c73483be062dafe024b4
+and ROOT453b6573dc9de65b31fb8ae98fc6e7358c53ed0e2c005729ed885506f5268ef8 remain
+WHOLE_IA1_ARCHITECTURE_NOGO_FOR_DEPENDENT_SOURCE_IMPLEMENTATION. Repair02/frozen01/
+review01/original failed-method/private/custody evidence are preserved unchanged.
+This current proposal supersedes repair02 current wording only; no partial GO.
+
+R02-01/IA1-01/IA1-04/HA1/HA4/HA5/N2 map NEW explicit SP1 original SourceUnit,
+SourceAuditUnit and StageIndexUnit representations, full raw Node/verifier/native/
+issuer/BQ/tool/SDK/CRT source and ancestry, independently admitted native immutable
+identity/member ranges/EOF, charged bounded streaming and actual retained raw
+capture readback. Original files are not falsely relabeled as their old kernel
+objects. Complete388495 historical associations without deduplication sum7722113187
+body bytes; fixed table49727360 plus header gives7771840611 below8GiB SOURCE FILE
+bound, not generated pack/native memory fit/authority. Complete retained128 witness
+includes all fourteen roles, every stage control, explicit same-process distinct-entry
+topology, multi-C simultaneous cases and THREE separate issuer births. Extra genuine
+originals require another fitting witness or truthful denial, never source truncation,
+metadata-as-native-reference, equal-hash alias, secret foreign pool or early retirement.
+
+R02-02/IA1-02/IA1-03/IA1-04/HA1/HA2/HA5 map ordered unsigned R0 native/bootstrap ->
+unsigned R1 nonsecret issuer Q32 -> independent BQ R2 readback -> explicitly selected
+unsigned R3a credential Q32 calibration -> independently certified credential-inclusive
+finite B0/R3b production -> signed R4 consumer handoff. Each exact preeffect set omits
+its OWN future outputs; only existing native/bootstrap C enters R1, no future issuer
+C/S/V/key self-authorizes initial qualification. R3a actual credential/OpenSSL/PKCS8/
+Buffer/native overlap calibration occurs BEFORE production B, with original private
+copies charged through genuine corresponding issuer exit. Human-selected HA2 ledger
+key and issuer signing key remain distinct authorities. Q32 never becomes production B.
+
+IA1-05/IA1-06/HA4/N1/N2/HA5 INSPECTION/TC01..12/CA01..08 map unchanged fourteen-role
+source/image/entry/native joins, original Monocypher4.0.3 optional SHA512 Ed25519/full
+raw graph/actual known behavior, complete actual1MiB native verifier/image/stack/CRT/
+IO/capture/metadata ownership, full Node22.23.2/full ICU/Buffer/API/library/SEA and
+complete original four authoring inputs/public-private wire/ordinary positive fixtures.
+Service1MiB/store4MiB/Core128MiB unchanged; B0/B2 remain UNKNOWN. Mac Deferred never PASS.
+
+No SP1 generator/index/journal/native BQ/issuer/credential implementation or authentic
+principal/anchor/key/source/native realm is authorized by this proposal. NEW DIFFERENT
+ENTIRE architecture review of all ten sections/appendix/all five mappings/complete
+current dirty+committed source and cumulative originals precedes dependent source;
+actual independent human authority selection remains separate. Ordinary approved
+PA1/N2 source work continues within existing PR42/issue39 ownership. Full positive
+production engine/library/SEA/native owner/writer/observer/archive/TC01..12/CA01..08
+remains unfinished, then DIFFERENT ENTIRE final SOURCE GO/NEW complete input admission
+before any build/import/parser/compiler/test/native calibration. No CI rerun/cancel,
+settings/main/cleanup/release/GA/promotion/deployment or partial delivery claim.
+
+## CLI39 IA1 whole repair04 � all three ENTIRE review03 findings
+
+Current prospective authority is ALL ten INPUT-AUTHORITY-ISSUER-ALTERNATIVES-PRECODE
+sections plus ALL normative IA1-SP1-REPRESENTATION-AND-STAGES-PRECODE sections, including
+preseal, cross-birth transport and finite-B derivation. It supersedes earlier prospective
+same-process-only/current repair03 mechanism wording; frozen historical originals stay.
+ENTIRE review03 REPORT87ccd9e7750995bde4879481d3fc65891a8295f8ffe38624b7db4cdf142fa62f /
+ROOTfe9b7fc16542026da9dad0594804bda2b70a23040dd6dfbfad8a917a80fbf16d remains NOGO.
+
+R03-01/IA1-01/IA1-04/HA1/HA4/N2 maps admitted BQ-only mutable preseal105, append-bound
+original capture writes/flush/independent readback98/authentic range retirement, durable
+failure retention and exact footer/writer-close/final immutable91..96/104 seal/archive
+transition. Preseal is never called immutable; Linux staging+new sealed memfd overlap
+has separate originals in the SAME128 graph, all windows/duplicates/backing charged.
+R03-02/IA1-04/HA1/HA5 maps proposed original Linux SCM_RIGHTS/SO_PASSCRED brokered serial
+birth/rights/source/image/once-only/EOF/archive cuts R0..R4, physical endpoints71/72 and
+already admitted caller69/70, nine distinct births and three issuer exits. Windows
+DuplicateHandle remains distinct. No actual principal, peer or channel is selected.
+R03-03/IA1-02/IA1-03/HA4/N2 maps separate preliminary finite-B/source-closure decision,
+new production P/G/Q/capacity birth+native admission, then newly born own-profile C128.
+Only the enumerated identical-behavior/quota transform is permitted; complete source-
+closed owning/error/native/new-old control overlap is included, changed tuples deny.
+
+Service1MiB/store4MiB/Core128MiB/Q12/C13/full Node22.23.2/ICU/API/library/SEA unchanged;
+Q32 qualification-only, actual B0/B2 UNKNOWN, T/S authentic choices unselected. Seven
+intentional document changes preserve ordinary00758dc/93af256 and107 individually
+classified inherited dirty paths, unfinished under issue39/PR42 successor ownership.
+No SP1/journal/index/native BQ/issuer/credential implementation, target parser/import/
+Node/compiler/test/native/ACL/ENV effects or actual authority selection. NEW DIFFERENT
+ENTIRE architecture review with complete current source/history/cumulative originals
+must assess all three mechanisms and positives/failure fixtures together; no partial GO.
+Exact human authority selection follows coherent review. Full ordinary positive product
+source/TC01..12/CA01..08, DIFFERENT final ENTIRE SOURCE GO/new complete authentic input
+admission, native qualification/Core/operator/publication/release remain separate open gates.
+
+Repair04 complete-custody geometry correction: predecessor04's391274 associations
+retain8732689165 raw body bytes, exceeding the historical8GiB SourceUnit FILE bound
+BEFORE framing. Propose NEW finite16GiB file maximum17179869184 and derive the exact
+complete repeated-range table/body witness in the final04 freeze. Preserve the first
+04 incomplete/method-failure capture; no source truncation/compression/deduplication
+or free backing. This whole representation amendment changes no owning memory cap,
+service1MiB/store4MiB/Core128MiB, Q12/C13 or actual authority selection. The entire
+review must judge this corrected finite geometry with all R03-01..03 mechanisms.
+
+## CLI39 IA1 whole repair05 - finite terminal cut across entire architecture
+
+Current authority remains a PROSPECTIVE proposal: ALL ten canonical IA1 sections,
+WHOLE normative SP1 appendix and ALL five intent/spec/backlog/INIT/.github mappings.
+Full independent IA104 REPORT SHAb8d6ced451a103b4c779b8246563abbf8bab10201a54b2fb1b410bb577c76d8c
+and ROOTb85deb0980e2359aeda1b4a4db0a2028eb499729eb80ac0fb4af9fc6c9059e3e remain NO_GO.
+R04-01/IA1-01/IA1-04/HA1/HA4/HA5/N2 maps finite Layer0 producer journals plus original
+Layer1 native append/flush/readback/retirement/footer/EOF/close/copy/seal/archive proof,
+explicit source-admitted nonrecursive foundation and ORIGINAL106/107/108 held ranges.
+Before effects, complete finite whole-lineage success/error/crash capacity and exact
+SAME128 overlap are reserved; no extra pool, unlogged Boolean, future self-signature,
+self-selected actor or loss of private proof. Terminal ACK remains held original108,
+not appended to its closed journal or archived by itself. Later acyclic E admits
+exact original identity/range custody; terminal proof originals remain held/charged.
+Failures retain originals/windows and deny continuation/reuse. FT01..FT07 SOURCE-UNRUN
+cover multiwindow success at EVERY R0/R1/R3a/R3b/R4-domain0/R4-domain2/certificate104,
+genuine EOF/closure/Linux seals/archive ACK plus failed readback/close/copy/seal/ACK,
+full retained capacity and crash/quarantine. Entire source closure includes this
+foundation and terminal tail in CutA/B/C; R03 preseal/SCM_RIGHTS/nine-birth and exact
+production-control/derived-C128 corrections stay together. This supersedes earlier
+prospective recursive same-journal wording, preserving every frozen historical byte.
+Service1MiB/store4MiB/Core128MiB/full Node22.23.2/ICU/API/Q12/C13 remain; Q32 qualification
+only, B0/B2 UNKNOWN, actual BQ/issuer/principal/realm/anchor/key/credential/native source/
+provider/tool/T/S UNSELECTED. Prior16GiB FILE witness9904524493 remains historical;
+new complete finite geometry is derived without omission/deduplication/compression.
+All107 individually classified inherited dirty paths and all nonproposal source stay
+byte-identical under unfinished issue39/PR42 sole successor custody. No dependent
+SP1/BQ/issuer/native/credential source or target execution before coherent whole fresh
+DIFFERENT review AND exact human choice. Ordinary approved PA1/N2 source remains
+separate and unfinished. Final ENTIRE product SOURCE GO/new authentic input admission,
+native qualification/Core/operator/publication/release remain separate open gates.
