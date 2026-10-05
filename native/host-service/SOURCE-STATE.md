@@ -130,6 +130,14 @@ issuer or native owner. Parser stack and span metadata require actual charge.
 All JSON output/count helpers now reject original-input aliases/range overflow
 before zeroing; unexecuted negative source vectors preserve original bodies.
 
+The PA1 six-key private grant C11 consumer checks the same original P digest,
+bounded NUL-free UTF8 native absolute route components, unique canonical native
+owners and the original128-owner bound. Windows drive/UNC/device volume semantics
+follow retained sourceGrantRoute's filepath classifier; source/license originals
+are captured as routing facts only, never selecting the installed Go runtime.
+Borrowed paths are routing only, especially keyPath; no pathname key reader or
+new issuer authority is implemented. Grant metadata/parser stack must be charged.
+
 Still required before whole delivery: complete authenticated PA1 original caller/
 provider/ROOT/P/G/C/key acquisition and positive bootstrap, actual capture file
 producer/readers/archive correlation, complete typed control/effect/observer/ledger
