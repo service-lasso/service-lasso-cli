@@ -16,6 +16,13 @@ struct slcli_windows_file_capture {
   uint32_t operation, observed, completed, bytes_observed, retained_native_io;
   uint64_t offset, requested, returned_bytes, status, error;
   uint64_t mode_args[5], information_args[4][4], security_args[5], read_args[5];
+  uint64_t access_args[5], handle_args[2], type_args[1];
+  PUBLIC_OBJECT_BASIC_INFORMATION access_raw;
+  NTSTATUS access_status;
+  ULONG access_bytes;
+  DWORD handle_flags, file_type;
+  DWORD type_error_seed;
+  BOOL handle_status;
   uint32_t error_observed, mode;
   NTSTATUS mode_status;
   IO_STATUS_BLOCK mode_io;
@@ -36,6 +43,7 @@ struct slcli_windows_file_capture {
   BOOL counter_status, frequency_status;
 };
 int slcli_windows_file_observe(HANDLE, struct slcli_windows_file_capture *);
+int slcli_windows_source_observe(HANDLE, struct slcli_windows_file_capture *);
 int slcli_windows_file_read(HANDLE, unsigned char *, DWORD, uint64_t,
                             struct slcli_windows_file_capture *);
 int slcli_windows_file_write(HANDLE, const unsigned char *, DWORD, uint64_t,

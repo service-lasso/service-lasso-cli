@@ -49,13 +49,48 @@ static int mode_observe(struct slcli_windows_file_capture *c) {
   return c->mode_status == 0 && c->mode_io.Status == 0 &&
            c->mode_io.Information == sizeof(c->mode) && (c->mode & 0x30) != 0;
 }
-int slcli_windows_file_observe(HANDLE original,
-                               struct slcli_windows_file_capture *c) {
+static int source_rights_observe(struct slcli_windows_file_capture *c) {
+  ACCESS_MASK access;
+  const ACCESS_MASK forbidden=0x00000002|0x00000004|0x00000010|0x00000100|
+    0x00010000|0x00040000|0x00080000|0x10000000|0x40000000;
+  c->type_args[0]=(uintptr_t)c->original;
+  c->type_error_seed=ERROR_SUCCESS;
+  SetLastError(c->type_error_seed);
+  c->file_type=GetFileType(c->original);
+  if(c->file_type!=FILE_TYPE_DISK) {
+    if(c->file_type==FILE_TYPE_UNKNOWN) {
+      c->error=GetLastError(); c->error_observed=1;
+    }
+    return 0;
+  }
+  c->access_args[0]=(uintptr_t)c->original;
+  c->access_args[1]=0;
+  c->access_args[2]=(uintptr_t)&c->access_raw;
+  c->access_args[3]=sizeof(c->access_raw);
+  c->access_args[4]=(uintptr_t)&c->access_bytes;
+  c->retained_native_io=1;
+  c->access_status=NtQueryObject(c->original,ObjectBasicInformation,&c->access_raw,
+                                sizeof(c->access_raw),&c->access_bytes);
+  if(c->access_status!=0||c->access_bytes!=sizeof(c->access_raw)) return 0;
+  c->retained_native_io=0;
+  access=c->access_raw.GrantedAccess;
+  /* Exact original source_lease_read_windows.go access policy: native granted
+   * bits, never requested rights or a successful read as rights evidence. */
+  if((access&0x00120081)!=0x00120081||(access&forbidden)) return 0;
+  c->handle_args[0]=(uintptr_t)c->original;
+  c->handle_args[1]=(uintptr_t)&c->handle_flags;
+  c->handle_status=GetHandleInformation(c->original,&c->handle_flags);
+  if(!c->handle_status) {c->error=GetLastError();c->error_observed=1;return 0;}
+  return !(c->handle_flags&HANDLE_FLAG_INHERIT);
+}
+static int file_observe(HANDLE original,
+                         struct slcli_windows_file_capture *c,int source_read_only) {
   uintptr_t start, sid;
   DWORD bytes, i;
   if (!c || c->retained_native_io || !original || original == INVALID_HANDLE_VALUE) return 0;
   zero(c, sizeof(*c)); c->original = original; c->operation = 1;
   c->observed = 1;
+  if(source_read_only&&!source_rights_observe(c)) { clock_observe(c); return 0; }
   if (!mode_observe(c)) { clock_observe(c); return 0; }
   c->information_args[0][0] = (uintptr_t)original;
   c->information_args[0][1] = FileIdInfo;
@@ -123,6 +158,12 @@ int slcli_windows_file_observe(HANDLE original,
     return 0;
   c->completed = 1;
   return 1;
+}
+int slcli_windows_file_observe(HANDLE original,struct slcli_windows_file_capture *c) {
+  return file_observe(original,c,0);
+}
+int slcli_windows_source_observe(HANDLE original,struct slcli_windows_file_capture *c) {
+  return file_observe(original,c,1);
 }
 int slcli_windows_file_read(HANDLE original, unsigned char *destination,
                             DWORD bytes, uint64_t offset,

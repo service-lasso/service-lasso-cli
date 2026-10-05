@@ -115,8 +115,10 @@ The held-input body reader now performs original before/read/actual EOF/after
 native captures into distinct precharged rows and retains every row/body on
 failure. It checks same held object, original size/change/owner observations and
 actual raw SHA. Linux requires original read-only CLOEXEC non-O_PATH flags;
-Windows granted rights still require the actual constructor's NtQueryObject
-observation. Short-read capture-capacity failure retains custody. Matching bytes
+Windows captures actual disk type, NtQueryObject granted access and original
+noninheritance, applying the retained original source-lease rights policy and
+correlating unchanged rights/mode across the read. Short-read capture-capacity
+failure retains custody. Matching bytes
 do not authenticate ROOT/provider; native constructor/persistence remains required.
 
 Still required before whole delivery: complete authenticated PA1 original caller/

@@ -22,6 +22,8 @@ static int same_object(const slcli_input_capture *a,const slcli_input_capture *b
      a->basic.LastWriteTime.QuadPart!=b->basic.LastWriteTime.QuadPart||
      a->basic.FileAttributes!=b->basic.FileAttributes||
      a->standard.NumberOfLinks!=b->standard.NumberOfLinks) return 0;
+  if(a->access_raw.GrantedAccess!=b->access_raw.GrantedAccess||
+     a->handle_flags!=b->handle_flags||a->mode!=b->mode) return 0;
   for(i=0;i<16;++i) if(a->identity.FileId.Identifier[i]!=b->identity.FileId.Identifier[i]) return 0;
   for(i=0;i<a->owner_sid_bytes;++i) if(a->owner_sid[i]!=b->owner_sid[i]) return 0;
   return 1;
@@ -63,9 +65,9 @@ int slcli_input_body_read(struct slcli_input_body *s,slcli_input_handle original
 #if defined(_WIN32)
   /* Captures must originate in zeroed owner storage. Windows mode/identity
    * query preserves pending native output; no row is reused in this attempt.
-   * Actual granted read-only rights admission remains the native constructor's
-   * separate original NtQueryObject obligation, never inferred from ReadFile. */
-  if(!slcli_windows_file_observe(original,&s->captures[0])) return 0;
+   * Actual granted read-only rights come from original NtQueryObject plus
+   * GetHandleInformation/GetFileType captures, never inferred from ReadFile. */
+  if(!slcli_windows_source_observe(original,&s->captures[0])) return 0;
 #else
   if(!slcli_linux_file_observe(original,&s->captures[0])||
      (s->captures[0].flags_status&O_ACCMODE)!=O_RDONLY||
@@ -91,7 +93,7 @@ int slcli_input_body_read(struct slcli_input_body *s,slcli_input_handle original
   if(s->bytes!=expected_bytes||s->capture_count>=s->capture_capacity) return 0;
   c=&s->captures[s->capture_count++];
 #if defined(_WIN32)
-  if(!slcli_windows_file_observe(original,c)) return 0;
+  if(!slcli_windows_source_observe(original,c)) return 0;
 #else
   if(!slcli_linux_file_observe(original,c)||
      c->flags_status!=s->captures[0].flags_status||
