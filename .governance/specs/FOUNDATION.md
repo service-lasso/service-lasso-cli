@@ -1,3 +1,6 @@
+# Superseded IA1 mapping location
+
+This note was mistakenly created in d432862. The active spec remains SPEC-CLI-FOUNDATION.md; its actual IA1 mapping is now there. The original mistaken body and commit remain preserved; this file supplies no independent active spec or authority.
 
 ## CLI39 IA1 original-input issuer amendment — prospective, not selected
 
