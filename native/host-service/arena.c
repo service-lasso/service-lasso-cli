@@ -3,19 +3,32 @@
 struct block { uint64_t bytes, requested, next, state; };
 _Static_assert(sizeof(struct block) == 32, "Reviewed in-arena header stride");
 enum { BLOCK_FREE = 1, BLOCK_LIVE = 2 };
+static int controls_separate(const struct slcli_arena *a,
+                             const struct slcli_memory_owner *o) {
+  uintptr_t arena, owner;
+  if (!a || !o) return 0;
+  arena = (uintptr_t)a; owner = (uintptr_t)o;
+  if (arena > UINTPTR_MAX - sizeof(*a) ||
+      owner > UINTPTR_MAX - sizeof(*o)) return 0;
+  return !(arena < owner + sizeof(*o) && owner < arena + sizeof(*a));
+}
 static int deny(struct slcli_arena *a) {
-  if (a && a->owner) a->owner->failed = 1;
+  if (a && (uintptr_t)a <= UINTPTR_MAX - sizeof(*a) &&
+      controls_separate(a, a->owner)) a->owner->failed = 1;
   return 0;
 }
 static struct slcli_extent *extent(struct slcli_arena *a) {
   struct slcli_extent *e;
-  if (!a || !a->owner || a->owner->failed || a->owner->count > 256 ||
+  if (!a || (uintptr_t)a > UINTPTR_MAX - sizeof(*a) ||
+      !controls_separate(a, a->owner) ||
+      a->owner->failed || a->owner->count > 256 ||
       a->extent >= 256 || a->extent >= a->owner->count)
     return 0;
   e = &a->owner->extents[a->extent];
   if (e->state != SLCLI_EXTENT_LIVE || !e->arena_initialized ||
       e->acquisition != a->acquisition ||
-      !e->base || e->reserved > SIZE_MAX || e->base % 16 ||
+      !e->base || e->reserved > SIZE_MAX || e->reserved > UINTPTR_MAX ||
+      e->base > UINTPTR_MAX - (uintptr_t)e->reserved || e->base % 16 ||
       e->reserved < sizeof(struct block) + 16) return 0;
   return e;
 }
@@ -38,13 +51,15 @@ int slcli_arena_init(struct slcli_arena *a, struct slcli_memory_owner *o,
                       uint32_t index) {
   struct slcli_extent *e;
   struct block *b;
-  if (!a || !o || o->failed || o->count > 256 || index >= 256 ||
+  if (!controls_separate(a, o) || o->failed || o->count > 256 || index >= 256 ||
       index >= o->count) return 0;
   e = &o->extents[index];
   if (e->state != SLCLI_EXTENT_LIVE || e->arena_initialized ||
       e->category == SLCLI_STACK ||
       !e->base || e->base % 16 ||
-      e->reserved > SIZE_MAX || e->reserved % 16 || e->reserved < 48)
+      e->reserved > SIZE_MAX || e->reserved > UINTPTR_MAX ||
+      e->base > UINTPTR_MAX - (uintptr_t)e->reserved ||
+      e->reserved % 16 || e->reserved < 48)
     return 0;
   /* Initial stack and owner/control descriptors never become payload arenas.
    * Their storage has its own original charged extent; no header may overwrite

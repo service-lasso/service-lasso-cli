@@ -171,3 +171,11 @@ permission. Unexecuted vectors call actual adapter entry points with every used
 operation marker and both observed states, requiring the entire row remain
 unchanged. This preserves supporting evidence only; it is not the unfinished
 original owning constructor, native fit or whole product SOURCE GO.
+
+Arena initialization also rejects owner/arena descriptor overlap and control
+range overflow before either descriptor or the original extent can be written.
+Every subsequent arena operation rechecks the original extent's address range
+before deriving block addresses. Unexecuted negative vectors use a genuine live
+extent and separately charged scratch to retain and compare the complete owner
+through rejected descriptor aliases. Actual native constructor/hook integration
+and whole product qualification remain unfinished.
