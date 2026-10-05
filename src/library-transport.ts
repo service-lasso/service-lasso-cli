@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { CliError } from "./errors.js";
 import { TemplateAdmission } from "./template-admissions.js";
 import { Cursor, S, u8, u32, frameMac, protocolDenied } from "./native-authoring-wire.js";
+import { waitForOriginalChildFinish } from "./child-finish.js";
 
 interface InstalledTransport {
   schema: "service-lasso.cli-library-transport.v3";
@@ -56,23 +57,32 @@ export class ClientAllocation {
   // of the actual original Node-parent exit can retire this client binding.
   get bytes(): number { return this.cumulative; }
 }
+// This channel carries only the authenticated host launch/control sequence.
+// InspectionLibrary BEGIN/CHUNK/END requires a separately held native channel
+// and its independent sequence starting at zero; it cannot use this stdout.
+// Full native constructor, allocator and inspection integration are unfinished.
 export class LibraryChannel {
   readonly allocation: ClientAllocation;
   private readonly nonce: Buffer; private readonly capability: Buffer;
   private readonly child: ChildProcessWithoutNullStreams;
   private sequence = 0; private sendSequence = 0; private pending = Buffer.alloc(0);
   private waiter?: { cap: number; operations: readonly number[]; resolve: (body: Buffer) => void; reject: (error: unknown) => void };
+  private finishWaiter?: { reject: (error: unknown) => void };
   private closed = false; private ending = false; private timer: NodeJS.Timeout;
   readonly deadline: number;
   private constructor(private readonly binding: InstalledTransport) {
     this.deadline = performance.now() + 40000;
     this.nonce = randomBytes(32); this.capability = randomBytes(32);
     this.allocation = new ClientAllocation(binding, () => this.cancel());
-    // This fixed installed facade authenticates the actual Node parent/package
-    // and the original service image natively. No PATH, compiler or env pin.
+    // Transitional source only: this pathname spawn does not establish original
+    // Node/image/custody authentication. The full native held constructor must
+    // replace it before any public route or positive qualification uses it.
     this.child = spawn(binding.facade, ["--library-v3"], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true, env: process.env });
     this.child.stdout.on("data", (bytes: Buffer) => this.receive(bytes));
     this.child.stderr.on("data", () => this.fail()); // Private transport has no diagnostic stream.
+    this.child.stdin.on("error", () => this.fail());
+    this.child.stdout.on("error", () => this.fail());
+    this.child.stderr.on("error", () => this.fail());
     this.child.once("error", () => this.fail()); this.child.once("exit", () => { if (!this.ending) this.fail(); });
     this.child.stdout.once("end", () => { if (!this.ending || this.pending.length) this.fail(); });
     this.timer = setTimeout(() => this.fail(), 40000);
@@ -85,6 +95,8 @@ export class LibraryChannel {
   private fail(): void {
     if (this.closed) return; this.closed = true; clearTimeout(this.timer); this.child.stdin.destroy(); this.child.stdout.destroy();
     const waiter = this.waiter; this.waiter = undefined; waiter?.reject(new CliError("template_session_unavailable", "The original template authoring session is unavailable."));
+    const finishing = this.finishWaiter; this.finishWaiter = undefined;
+    finishing?.reject(new CliError("template_session_unavailable", "The original template authoring session is unavailable."));
     // No kill/PID cleanup or process-exit assertion. Native service retains all
     // unresolved objects, parent/copy/control reservations and original evidence.
   }
@@ -101,7 +113,7 @@ export class LibraryChannel {
     if (length < 5 || length > this.waiter.cap || length > 16384) { this.fail(); return; }
     if (this.pending.length < length + 36) return;
     const body = this.pending.subarray(4, 4 + length), mac = this.pending.subarray(4 + length, length + 36);
-    if (!this.waiter.operations.includes(body[0]) || body.readUInt32BE(1) !== this.sequence || !timingSafeEqual(mac, frameMac("SLCLI-INSPECTION-LIBRARY-1\0", 0, this.nonce, this.capability, this.sequence, body))) { this.fail(); return; }
+    if (!this.waiter.operations.includes(body[0]) || body.readUInt32BE(1) !== this.sequence || !timingSafeEqual(mac, frameMac("SLCLI-HOST-LAUNCH-3\0", 1, this.nonce, this.capability, this.sequence, body))) { this.fail(); return; }
     this.sequence++; const waiter = this.waiter; this.waiter = undefined;
     this.allocation.reserve(this.allocation.objectCharge(body.length)); const copied = Buffer.from(body);
     this.pending = this.pending.subarray(length + 36); waiter.resolve(copied);
@@ -114,7 +126,7 @@ export class LibraryChannel {
     if (this.closed || performance.now() >= this.deadline || payload.length > 16379) sessionUnavailable();
     this.allocation.reserve(this.allocation.objectCharge(payload.length + 41));
     const sequence = this.sendSequence++, body = Buffer.concat([u8(operation), u32(sequence), payload]);
-    const mac = frameMac("SLCLI-INSPECTION-LIBRARY-1\0", 1, this.nonce, this.capability, sequence, body);
+    const mac = frameMac("SLCLI-HOST-LAUNCH-3\0", 0, this.nonce, this.capability, sequence, body);
     this.child.stdin.write(Buffer.concat([u32(body.length), body, mac]));
   }
   launch(root: string, entry: TemplateAdmission): void { this.send(1, Buffer.concat([u8(1), randomBytes(32), S(root), S(entry.catalogIdentity, 256), S("", 4096, true), u8(0), u8(0)])); }
@@ -123,13 +135,14 @@ export class LibraryChannel {
   }
   available(): boolean { return !this.closed && performance.now() < this.deadline; }
   async finish(): Promise<void> {
-    if (!this.available()) sessionUnavailable(); this.ending = true; this.child.stdin.end();
-    await new Promise<void>((resolve, reject) => {
-      let exit = false, stdoutEOF = this.child.stdout.readableEnded, stderrEOF = this.child.stderr.readableEnded;
-      const done = () => { if (exit && stdoutEOF && stderrEOF && this.pending.length === 0) { clearTimeout(this.timer); this.closed = true; resolve(); } };
-      this.child.stdout.once("end", () => { stdoutEOF = true; done(); }); this.child.stderr.once("end", () => { stderrEOF = true; done(); });
-      this.child.once("close", code => { if (code !== 0) { this.fail(); reject(new CliError("template_session_unavailable", "The original template authoring session is unavailable.")); } else { exit = true; done(); } });
-      this.child.once("error", error => { this.fail(); reject(error); }); done();
-    });
+    if (!this.available() || this.ending) sessionUnavailable(); this.ending = true;
+    const finishing = waitForOriginalChildFinish(this.child, () => this.pending.length);
+    this.finishWaiter = finishing;
+    // Register the owning operation BEFORE ending input: an immediate native
+    // channel error must settle it while original custody remains retained.
+    try { this.child.stdin.end(); } catch { this.fail(); }
+    try { await finishing.completion; } catch { this.fail(); return sessionUnavailable(); }
+    if (this.closed) return sessionUnavailable();
+    clearTimeout(this.timer); this.finishWaiter = undefined; this.closed = true;
   }
 }
