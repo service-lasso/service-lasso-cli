@@ -36,6 +36,16 @@ production hook callers remain required; this source is not an installed runtime
 allocator or a native fitting result. Parent-owned returned copies must use their
 separate genuine exit-retirement route, never this reusable temporary-block path.
 
+Fixed native framing now implements the original five closed MAC domains and
+the exact direction/nonce/sequence/body-length/body preimage, with fixed 16KiB
+frames and constant comparison. The inspection stream validates original bound
+run/nonce/receipt/catalog, full 768000-byte record, 16307-byte chunks, order and
+final domain hash without assembling a second record. Its exact borrowed native
+chunk must enter the owning original capture sink before frame reuse. END grants
+no EOF/flush/close/retirement, and successful MAC/grammar supplies no original
+channel/key/owner/source admission. Owning native readers and engine dispatch
+remain unfinished.
+
 Still required before whole delivery: complete authenticated PA1 original caller/
 provider/ROOT/P/G/C/key acquisition and positive bootstrap, actual capture file
 producer/readers/archive correlation, complete typed control/effect/observer/ledger
