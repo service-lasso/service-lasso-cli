@@ -111,6 +111,14 @@ any erase or write. Negative source vectors cover raw and profile aliases and
 range overflow; their large scratch object must already belong to the charged
 owner. These unexecuted vectors establish no native fit or authentic admission.
 
+The held-input body reader now performs original before/read/actual EOF/after
+native captures into distinct precharged rows and retains every row/body on
+failure. It checks same held object, original size/change/owner observations and
+actual raw SHA. Linux requires original read-only CLOEXEC non-O_PATH flags;
+Windows granted rights still require the actual constructor's NtQueryObject
+observation. Short-read capture-capacity failure retains custody. Matching bytes
+do not authenticate ROOT/provider; native constructor/persistence remains required.
+
 Still required before whole delivery: complete authenticated PA1 original caller/
 provider/ROOT/P/G/C/key acquisition and positive bootstrap, actual capture file
 producer/readers/archive correlation, complete typed control/effect/observer/ledger
