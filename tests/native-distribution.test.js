@@ -7,6 +7,9 @@ import { gzipSync } from "node:zlib";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { nativeQualificationStdio } from "../scripts/native-qualification-stdio.mjs";
+import { nativeLifecycleDiagnostics } from "../scripts/native-lifecycle-diagnostics.mjs";
+const diagnosticEnabled = process.env.SERVICE_LASSO_NATIVE_LIFECYCLE_DIAGNOSTICS === "1";
+const observe = nativeLifecycleDiagnostics(diagnosticEnabled);
 
 const node = process.execPath;
 const bundle = Object.freeze({ repository: "service-lasso/service-template", tag: "template-v1.2.3-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", commit: "a".repeat(40), templateVersion: "1.2.3", contractDigest: "b".repeat(64), contractSha256: "c".repeat(64), archiveSha256: "d".repeat(64), catalogIdentity: "service-template/stable/1.2.3", inventory: [], files: [{ path: "service.json", bytes: Buffer.from('{"id":"safe"}\n'), mode: 0o644 }, { path: "config/example.env", bytes: Buffer.from("PORT=8080\n"), mode: 0o644 }] });
@@ -61,7 +64,30 @@ async function controlledBundle(root) {
   const provenance = { schemaVersion: 1, templateRepository: "service-lasso/service-template", templateCommit: candidate.templateCommit, templateVersion: candidate.templateVersion, contractDigest: candidate.contractDigest, catalogIdentity: "controlled-source-test-fixture", origin: { kind: "controlled-source-test" } };
   await Promise.all([writeFile(join(root, "template-contract.json"), contract), writeFile(join(root, "template-candidate.json"), `${JSON.stringify(candidate)}\n`), writeFile(join(root, "template-provenance.json"), `${JSON.stringify(provenance)}\n`), writeFile(join(root, "service-template.tar.gz"), archiveBytes), ...Object.entries(payload).map(([path, value]) => { const index = path.lastIndexOf("/"); return (index < 0 ? Promise.resolve() : mkdir(join(root, path.slice(0, index)), { recursive: true })).then(() => writeFile(join(root, path), value)); })]);
 }
-function runNative(executable, args, environment) { return new Promise((resolve, reject) => { const child = spawn(executable, args, { env: environment, windowsHide: true, stdio: nativeQualificationStdio(["ignore", "pipe", "pipe"], environment) }); let stdout = "", stderr = ""; child.stdout.on("data", (value) => { stdout += value; }); child.stderr.on("data", (value) => { stderr += value; }); child.once("error", reject); child.once("close", (code, signal) => resolve({ code, signal, stdout, stderr })); }); }
+function runNative(executable, args, environment, ownedRuns) {
+  const lifetime = { actualClose: null, spawnError: false, streamError: false, stdoutEnded: false, stderrEnded: false };
+  const completion = new Promise((resolve, reject) => {
+    observe("native", "start");
+    const child = spawn(executable, args, { env: environment, windowsHide: true, stdio: nativeQualificationStdio(['ignore', 'pipe', 'pipe'], environment) });
+    lifetime.child = child;
+    child.once("spawn", () => observe("native", "spawn"));
+    child.once("exit", (code, signal) => observe("native", "exit", code, signal));
+    let stdout = '', stderr = '';
+    child.stdout.on('data', value => { stdout += value; });
+    child.stderr.on('data', value => { stderr += value; });
+    child.stdout.once('error', error => { lifetime.streamError = true; reject(error); });
+    child.stderr.once('error', error => { lifetime.streamError = true; reject(error); });
+    child.stdout.once('end', () => { lifetime.stdoutEnded = true; observe("native", "stdout-end"); });
+    child.stderr.once('end', () => { lifetime.stderrEnded = true; observe("native", "stderr-end"); });
+    // Rejection cannot retire the original child/stdio. Preserve close listener.
+    child.once('error', error => { lifetime.spawnError = true; observe("native", "spawn-error"); reject(error); });
+    child.once('close', (code, signal) => { lifetime.actualClose = { code, signal }; observe("native", "close", code, signal); resolve({ code, signal, stdout, stderr }); });
+  });
+  completion.fixtureLifetime = lifetime;
+  ownedRuns.push(completion);
+  completion.catch(() => {});
+  return completion;
+}
 
 test("native SEA packager records a direct host executable and smoke runs without Node on PATH", async () => {
   const output = await mkdtemp(join(tmpdir(), "service-lassoctl-native-"));
@@ -148,6 +174,7 @@ test("native SEA packager records a direct host executable and smoke runs withou
 
 test("controlled source admission exercises the native primary to SEA to gate to writer route despite a hostile helper PATH", async () => {
   const root = await mkdtemp(join(tmpdir(), "service-lassoctl-primary-route-"));
+  const ownedRuns = []; let fixtureComplete = false;
   // Qualification can pass the already-built executable here.  In that mode
   // this test proves the truthful empty-catalog result; it must never rebuild
   // a different test-admission binary and attach that result to production
@@ -160,10 +187,16 @@ test("controlled source admission exercises the native primary to SEA to gate to
     const hostileWriter = join(hostileDirectory, `service-lasso-confined-scaffold${process.platform === "win32" ? ".exe" : ""}`);
     await writeFile(hostileWriter, process.platform === "win32" ? "not a valid executable" : `#!/bin/sh\nprintf hostile > '${join(root, "hostile-executed").replace(/'/g, "'\\''")}'\nexit 1\n`);
     if (process.platform !== "win32") execFileSync("chmod", ["0700", hostileWriter]);
-    if (!suppliedExecutable) execFileSync(node, ["scripts/package-native.mjs", "--output", output, "--source-sha", sourceSha, "--version", version, "--controlled-test-admission"], { encoding: "utf8" });
+    if (!suppliedExecutable) {
+      observe('package', 'start');
+      try {
+        execFileSync(node, ['scripts/package-native.mjs', '--output', output, '--source-sha', sourceSha, '--version', version, '--controlled-test-admission', ...(diagnosticEnabled ? ['--diagnose-native-lifecycle'] : [])], { encoding: 'utf8', ...(diagnosticEnabled ? { stdio: ['ignore', 'pipe', 'inherit'] } : {}) });
+        observe('package', 'complete');
+      } catch (error) { observe('package', 'failed'); throw error; }
+    }
     const executable = suppliedExecutable ?? join(output, process.platform === "win32" ? "service-lassoctl.exe" : "service-lassoctl");
     const { SERVICE_LASSO_PRIMARY_GATE, SERVICE_LASSO_PRIMARY_GATE_PIPE, SERVICE_LASSO_PRIMARY_GATE_FD, SERVICE_LASSO_PRIMARY_GATE_CAPABILITY, ...inherited } = process.env;
-    const result = await runNative(executable, ["service", "init", "controlled-primary", "--template-root", templateRoot, "--directory", destination, "--json"], { ...inherited, PATH: hostileDirectory, SERVICE_LASSO_PRIMARY_GATE: "hostile", SERVICE_LASSO_PRIMARY_GATE_PIPE: "\\\\.\\pipe\\service-lasso-primary-0000000000000000000000000000000000000000000000000000000000000000", SERVICE_LASSO_PRIMARY_GATE_FD: "7", SERVICE_LASSO_PRIMARY_GATE_CAPABILITY: Buffer.alloc(32).toString("base64") });
+    const result = await runNative(executable, ["service", "init", "controlled-primary", "--template-root", templateRoot, "--directory", destination, "--json"], { ...inherited, PATH: hostileDirectory, SERVICE_LASSO_PRIMARY_GATE: "hostile", SERVICE_LASSO_PRIMARY_GATE_PIPE: "\\\\.\\pipe\\service-lasso-primary-0000000000000000000000000000000000000000000000000000000000000000", SERVICE_LASSO_PRIMARY_GATE_FD: "7", SERVICE_LASSO_PRIMARY_GATE_CAPABILITY: Buffer.alloc(32).toString("base64") }, ownedRuns);
     if (suppliedExecutable) {
       assert.ok(Number.isInteger(result.code) && result.code > 0, "the normal empty catalog must reject a controlled test bundle");
       assert.equal(result.signal, null);
@@ -183,8 +216,19 @@ test("controlled source admission exercises the native primary to SEA to gate to
       assert.ok(Number.isInteger(result.code) && result.code > 0, "unavailable route requires actual normal nonzero product closure");
       await writeFile(process.env.SERVICE_LASSO_NATIVE_ROUTE_RESULT, `${JSON.stringify({ schemaVersion: 1, status: "unavailable", executableSha256: digest(await readFile(executable)), innerClose: { code: result.code, signal: null }, destinationAbsent: true, hostileHelperAbsent: true })}\n`, { flag: "wx" });
     }
+    fixtureComplete = true;
   } finally {
-    await rm(root, { recursive: true, force: true });
+    const records = ownedRuns.map(run => {
+      const original = run.fixtureLifetime;
+      return { actualClose: original.actualClose, spawnError: original.spawnError, streamError: original.streamError, stdoutEnded: original.stdoutEnded, stderrEnded: original.stderrEnded };
+    });
+    if (!fixtureComplete || records.some(row => row.actualClose === null || row.spawnError || row.streamError || !row.stdoutEnded || !row.stderrEnded)) {
+      await writeFile(join(root, 'retained-fixture-lifetime.json'), `${JSON.stringify({ schema: 'service-lasso-test-fixture-lifetime.v1', fixtureComplete, nativeQualification: 'unestablished', records })}\n`, { flag: 'wx' });
+    } else {
+      const originalRoot = await lstat(root);
+      if (!originalRoot.isDirectory() || originalRoot.isSymbolicLink()) throw new Error('original controlled fixture root changed');
+      await rm(root, { recursive: true, force: true });
+    }
   }
 });
 
