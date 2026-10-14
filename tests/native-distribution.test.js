@@ -7,13 +7,52 @@ import { gzipSync } from "node:zlib";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { nativeQualificationStdio } from "../scripts/native-qualification-stdio.mjs";
+import { nativeLifecycleDiagnostics } from "../scripts/native-lifecycle-diagnostics.mjs";
+const diagnosticEnabled = process.env.SERVICE_LASSO_NATIVE_LIFECYCLE_DIAGNOSTICS === "1";
+const observe = nativeLifecycleDiagnostics(diagnosticEnabled);
 
 const node = process.execPath;
 const bundle = Object.freeze({ repository: "service-lasso/service-template", tag: "template-v1.2.3-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", commit: "a".repeat(40), templateVersion: "1.2.3", contractDigest: "b".repeat(64), contractSha256: "c".repeat(64), archiveSha256: "d".repeat(64), catalogIdentity: "service-template/stable/1.2.3", inventory: [], files: [{ path: "service.json", bytes: Buffer.from('{"id":"safe"}\n'), mode: 0o644 }, { path: "config/example.env", bytes: Buffer.from("PORT=8080\n"), mode: 0o644 }] });
-async function awaitGate(gate, stage) { for (let i = 0; i < 400; i++) { try { if ((await readFile(`${gate}.ready`, "utf8")) === stage) return; } catch {} await new Promise((resolve) => setTimeout(resolve, 10)); } throw new Error(`timed out waiting for ${stage}`); }
+async function awaitGate(gate, stage, originalRun) {
+  // The fixture's native gate owns10s. The controller has12s to observe that
+  // actual outcome; its deadline never grants child exit, EOF or retirement.
+  const deadline = performance.now() + 12000;
+  while (performance.now() < deadline) {
+    if (originalRun && originalRun.fixtureLifetime.actualClose !== null) {
+      await originalRun;
+      throw new Error(`original fixture closed before ${stage}`);
+    }
+    try { if ((await readFile(`${gate}.ready`, "utf8")) === stage) return; } catch {}
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  throw new Error(`fixture observation deadline before ${stage}; original custody unresolved`);
+}
 async function releaseGate(gate, stage) { await appendFile(`${gate}.continue`, `${stage}\n`); }
 function helperInput(destination) { return `${Buffer.from(destination).toString("base64")}\n${bundle.files.length}\n${bundle.files.map((file) => `${file.path}\t${file.mode.toString(8)}\t${file.bytes.toString("base64")}`).join("\n")}\n`; }
-function runHeldHelper(helper, destination) { const input = helperInput(destination); return new Promise((resolve, reject) => { const child = spawn(helper, ["--test-gate"], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true }); let stdout = "", stderr = ""; child.stdout.on("data", (value) => { stdout += value; }); child.stderr.on("data", (value) => { stderr += value; }); child.once("error", reject); child.once("close", (code) => { if (code === 0 && stderr === "" && /^ok\t[0-9a-f]{64}\n$/.test(stdout)) resolve(); else { const error = new Error(`held helper failed: ${stdout}${stderr}`); error.code = stdout.match(/^error\t([^\n]+)/)?.[1] ?? "write_rejected"; reject(error); } }); child.stdin.end(input); }); }
+function runHeldHelper(helper, destination, ownedRuns) {
+  const input = helperInput(destination);
+  const lifetime = { child: undefined, actualClose: null, spawnError: null };
+  const completion = new Promise((resolve, reject) => {
+    const child = spawn(helper, ["--test-gate"], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+    lifetime.child = child;
+    let stdout = "", stderr = "";
+    child.stdout.on("data", value => { stdout += value; }); child.stderr.on("data", value => { stderr += value; });
+    child.once("error", error => { lifetime.spawnError = error.code ?? "spawn_error"; reject(error); });
+    child.stdin.once("error", reject);
+    child.once("close", (code, signal) => {
+      lifetime.actualClose = { code, signal };
+      if (code === 0 && signal === null && stderr === "" && /^ok\t[0-9a-f]{64}\n$/.test(stdout)) resolve();
+      else { const error = new Error(`held helper failed: ${stdout}${stderr}`); error.code = stdout.match(/^error\t([^\n]+)/)?.[1] ?? "write_rejected"; reject(error); }
+    });
+    child.stdin.end(input);
+  });
+  completion.fixtureLifetime = lifetime;
+  ownedRuns?.push(completion);
+  // A gate observation may be pending when this original child rejects. Keep
+  // the SAME rejection for its owner, without an unhandled parallel promise.
+  completion.catch(() => {});
+  return completion;
+}
 function digest(value) { return createHash("sha256").update(value).digest("hex"); }
 function archive(payload) { const blocks = []; for (const [path, value] of Object.entries(payload)) { const bytes = Buffer.from(value), header = Buffer.alloc(512); Buffer.from(path).copy(header); Buffer.from("0000644\0").copy(header, 100); Buffer.from(`${bytes.length.toString(8).padStart(11, "0")}\0`).copy(header, 124); header[156] = 48; blocks.push(header, bytes, Buffer.alloc((512 - bytes.length % 512) % 512)); } return gzipSync(Buffer.concat([...blocks, Buffer.alloc(1024)])); }
 async function controlledBundle(root) {
@@ -25,7 +64,30 @@ async function controlledBundle(root) {
   const provenance = { schemaVersion: 1, templateRepository: "service-lasso/service-template", templateCommit: candidate.templateCommit, templateVersion: candidate.templateVersion, contractDigest: candidate.contractDigest, catalogIdentity: "controlled-source-test-fixture", origin: { kind: "controlled-source-test" } };
   await Promise.all([writeFile(join(root, "template-contract.json"), contract), writeFile(join(root, "template-candidate.json"), `${JSON.stringify(candidate)}\n`), writeFile(join(root, "template-provenance.json"), `${JSON.stringify(provenance)}\n`), writeFile(join(root, "service-template.tar.gz"), archiveBytes), ...Object.entries(payload).map(([path, value]) => { const index = path.lastIndexOf("/"); return (index < 0 ? Promise.resolve() : mkdir(join(root, path.slice(0, index)), { recursive: true })).then(() => writeFile(join(root, path), value)); })]);
 }
-function runNative(executable, args, environment) { return new Promise((resolve, reject) => { const child = spawn(executable, args, { env: environment, windowsHide: true, stdio: nativeQualificationStdio(["ignore", "pipe", "pipe"], environment) }); let stdout = "", stderr = ""; child.stdout.on("data", (value) => { stdout += value; }); child.stderr.on("data", (value) => { stderr += value; }); child.once("error", reject); child.once("close", (code, signal) => resolve({ code, signal, stdout, stderr })); }); }
+function runNative(executable, args, environment, ownedRuns) {
+  const lifetime = { actualClose: null, spawnError: false, streamError: false, stdoutEnded: false, stderrEnded: false };
+  const completion = new Promise((resolve, reject) => {
+    observe("native", "start");
+    const child = spawn(executable, args, { env: environment, windowsHide: true, stdio: nativeQualificationStdio(['ignore', 'pipe', 'pipe'], environment) });
+    lifetime.child = child;
+    child.once("spawn", () => observe("native", "spawn"));
+    child.once("exit", (code, signal) => observe("native", "exit", code, signal));
+    let stdout = '', stderr = '';
+    child.stdout.on('data', value => { stdout += value; });
+    child.stderr.on('data', value => { stderr += value; });
+    child.stdout.once('error', error => { lifetime.streamError = true; reject(error); });
+    child.stderr.once('error', error => { lifetime.streamError = true; reject(error); });
+    child.stdout.once('end', () => { lifetime.stdoutEnded = true; observe("native", "stdout-end"); });
+    child.stderr.once('end', () => { lifetime.stderrEnded = true; observe("native", "stderr-end"); });
+    // Rejection cannot retire the original child/stdio. Preserve close listener.
+    child.once('error', error => { lifetime.spawnError = true; observe("native", "spawn-error"); reject(error); });
+    child.once('close', (code, signal) => { lifetime.actualClose = { code, signal }; observe("native", "close", code, signal); resolve({ code, signal, stdout, stderr }); });
+  });
+  completion.fixtureLifetime = lifetime;
+  ownedRuns.push(completion);
+  completion.catch(() => {});
+  return completion;
+}
 
 test("native SEA packager records a direct host executable and smoke runs without Node on PATH", async () => {
   const output = await mkdtemp(join(tmpdir(), "service-lassoctl-native-"));
@@ -112,6 +174,7 @@ test("native SEA packager records a direct host executable and smoke runs withou
 
 test("controlled source admission exercises the native primary to SEA to gate to writer route despite a hostile helper PATH", async () => {
   const root = await mkdtemp(join(tmpdir(), "service-lassoctl-primary-route-"));
+  const ownedRuns = []; let fixtureComplete = false;
   // Qualification can pass the already-built executable here.  In that mode
   // this test proves the truthful empty-catalog result; it must never rebuild
   // a different test-admission binary and attach that result to production
@@ -124,10 +187,16 @@ test("controlled source admission exercises the native primary to SEA to gate to
     const hostileWriter = join(hostileDirectory, `service-lasso-confined-scaffold${process.platform === "win32" ? ".exe" : ""}`);
     await writeFile(hostileWriter, process.platform === "win32" ? "not a valid executable" : `#!/bin/sh\nprintf hostile > '${join(root, "hostile-executed").replace(/'/g, "'\\''")}'\nexit 1\n`);
     if (process.platform !== "win32") execFileSync("chmod", ["0700", hostileWriter]);
-    if (!suppliedExecutable) execFileSync(node, ["scripts/package-native.mjs", "--output", output, "--source-sha", sourceSha, "--version", version, "--controlled-test-admission"], { encoding: "utf8" });
+    if (!suppliedExecutable) {
+      observe('package', 'start');
+      try {
+        execFileSync(node, ['scripts/package-native.mjs', '--output', output, '--source-sha', sourceSha, '--version', version, '--controlled-test-admission', ...(diagnosticEnabled ? ['--diagnose-native-lifecycle'] : [])], { encoding: 'utf8', ...(diagnosticEnabled ? { stdio: ['ignore', 'pipe', 'inherit'] } : {}) });
+        observe('package', 'complete');
+      } catch (error) { observe('package', 'failed'); throw error; }
+    }
     const executable = suppliedExecutable ?? join(output, process.platform === "win32" ? "service-lassoctl.exe" : "service-lassoctl");
     const { SERVICE_LASSO_PRIMARY_GATE, SERVICE_LASSO_PRIMARY_GATE_PIPE, SERVICE_LASSO_PRIMARY_GATE_FD, SERVICE_LASSO_PRIMARY_GATE_CAPABILITY, ...inherited } = process.env;
-    const result = await runNative(executable, ["service", "init", "controlled-primary", "--template-root", templateRoot, "--directory", destination, "--json"], { ...inherited, PATH: hostileDirectory, SERVICE_LASSO_PRIMARY_GATE: "hostile", SERVICE_LASSO_PRIMARY_GATE_PIPE: "\\\\.\\pipe\\service-lasso-primary-0000000000000000000000000000000000000000000000000000000000000000", SERVICE_LASSO_PRIMARY_GATE_FD: "7", SERVICE_LASSO_PRIMARY_GATE_CAPABILITY: Buffer.alloc(32).toString("base64") });
+    const result = await runNative(executable, ["service", "init", "controlled-primary", "--template-root", templateRoot, "--directory", destination, "--json"], { ...inherited, PATH: hostileDirectory, SERVICE_LASSO_PRIMARY_GATE: "hostile", SERVICE_LASSO_PRIMARY_GATE_PIPE: "\\\\.\\pipe\\service-lasso-primary-0000000000000000000000000000000000000000000000000000000000000000", SERVICE_LASSO_PRIMARY_GATE_FD: "7", SERVICE_LASSO_PRIMARY_GATE_CAPABILITY: Buffer.alloc(32).toString("base64") }, ownedRuns);
     if (suppliedExecutable) {
       assert.ok(Number.isInteger(result.code) && result.code > 0, "the normal empty catalog must reject a controlled test bundle");
       assert.equal(result.signal, null);
@@ -147,8 +216,19 @@ test("controlled source admission exercises the native primary to SEA to gate to
       assert.ok(Number.isInteger(result.code) && result.code > 0, "unavailable route requires actual normal nonzero product closure");
       await writeFile(process.env.SERVICE_LASSO_NATIVE_ROUTE_RESULT, `${JSON.stringify({ schemaVersion: 1, status: "unavailable", executableSha256: digest(await readFile(executable)), innerClose: { code: result.code, signal: null }, destinationAbsent: true, hostileHelperAbsent: true })}\n`, { flag: "wx" });
     }
+    fixtureComplete = true;
   } finally {
-    await rm(root, { recursive: true, force: true });
+    const records = ownedRuns.map(run => {
+      const original = run.fixtureLifetime;
+      return { actualClose: original.actualClose, spawnError: original.spawnError, streamError: original.streamError, stdoutEnded: original.stdoutEnded, stderrEnded: original.stderrEnded };
+    });
+    if (!fixtureComplete || records.some(row => row.actualClose === null || row.spawnError || row.streamError || !row.stdoutEnded || !row.stderrEnded)) {
+      await writeFile(join(root, 'retained-fixture-lifetime.json'), `${JSON.stringify({ schema: 'service-lasso-test-fixture-lifetime.v1', fixtureComplete, nativeQualification: 'unestablished', records })}\n`, { flag: 'wx' });
+    } else {
+      const originalRoot = await lstat(root);
+      if (!originalRoot.isDirectory() || originalRoot.isSymbolicLink()) throw new Error('original controlled fixture root changed');
+      await rm(root, { recursive: true, force: true });
+    }
   }
 });
 
@@ -195,14 +275,30 @@ test("packaged confined helper keeps a held parent through a replacement and ret
   const sourceSha = "0123456789abcdef0123456789abcdef01234567";
   const version = "0.1.0-dev.0123456";
   const priorGate = process.env.SERVICE_LASSO_CONFINED_TEST_GATE, priorStage = process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE, priorFail = process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE;
-  t.after(async () => { if (priorGate === undefined) delete process.env.SERVICE_LASSO_CONFINED_TEST_GATE; else process.env.SERVICE_LASSO_CONFINED_TEST_GATE = priorGate; if (priorStage === undefined) delete process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE; else process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE = priorStage; if (priorFail === undefined) delete process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE; else process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE = priorFail; await rm(root, { recursive: true, force: true }); });
+  const ownedRuns = []; let fixtureComplete = false;
+  t.after(async () => {
+    if (priorGate === undefined) delete process.env.SERVICE_LASSO_CONFINED_TEST_GATE; else process.env.SERVICE_LASSO_CONFINED_TEST_GATE = priorGate;
+    if (priorStage === undefined) delete process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE; else process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE = priorStage;
+    if (priorFail === undefined) delete process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE; else process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE = priorFail;
+    const records = ownedRuns.map(run => ({ actualClose: run.fixtureLifetime.actualClose, spawnError: run.fixtureLifetime.spawnError }));
+    if (!fixtureComplete || records.some(row => row.actualClose === null || row.actualClose.code !== 0 || row.actualClose.signal !== null || row.spawnError !== null)) {
+      // Preserve failed/unknown original tree and held child. This is ordinary
+      // test-custody metadata, never a native qualification/retirement receipt.
+      await writeFile(join(root, "retained-fixture-lifetime.json"), `${JSON.stringify({ schema: "service-lasso-test-fixture-lifetime.v1", fixtureComplete, nativeQualification: "unestablished", records })}\n`, { flag: "wx" });
+      t.diagnostic(`Retained original fixture custody: ${root}`);
+      return;
+    }
+    const originalRoot = await lstat(root);
+    if (!originalRoot.isDirectory() || originalRoot.isSymbolicLink()) throw new Error("original owned fixture root changed");
+    await rm(root, { recursive: true, force: true });
+  });
   execFileSync(node, ["scripts/package-native.mjs", "--output", output, "--source-sha", sourceSha, "--version", version], { encoding: "utf8" });
   const provenance = JSON.parse(await readFile(join(output, "provenance.json"), "utf8"));
   const helper = join(output, provenance.confinedWriter.name);
   const parent = join(root, "parent"), oldParent = join(root, "parent-held"), outside = join(root, "outside"), destination = join(parent, "project"), gate = join(root, "swap-gate");
   await mkdir(parent); await mkdir(outside); process.env.SERVICE_LASSO_CONFINED_TEST_GATE = gate; process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE = "before-project-create";
-  const creation = runHeldHelper(helper, destination);
-  await awaitGate(gate, "before-project-create");
+  const creation = runHeldHelper(helper, destination, ownedRuns);
+  await awaitGate(gate, "before-project-create", creation);
   let replacementBlocked = false;
   try { await rename(parent, oldParent); await symlink(outside, parent, process.platform === "win32" ? "junction" : "dir"); } catch { replacementBlocked = true; }
   await releaseGate(gate, "before-project-create"); await creation;
@@ -211,15 +307,15 @@ test("packaged confined helper keeps a held parent through a replacement and ret
   if (process.platform !== "win32") {
     const leafParent = join(root, "leaf-parent"), leafDestination = join(leafParent, "project"), leafGate = join(root, "leaf-gate");
     await mkdir(leafParent); process.env.SERVICE_LASSO_CONFINED_TEST_GATE = leafGate; process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE = "before-project-commit"; delete process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE;
-    const leafCreation = runHeldHelper(helper, leafDestination); leafCreation.catch(() => {});
-    await awaitGate(leafGate, "before-project-commit"); await mkdir(leafDestination); await writeFile(join(leafDestination, "unowned.txt"), "preserve"); await releaseGate(leafGate, "before-project-commit");
+    const leafCreation = runHeldHelper(helper, leafDestination, ownedRuns);
+    await awaitGate(leafGate, "before-project-commit", leafCreation); await mkdir(leafDestination); await writeFile(join(leafDestination, "unowned.txt"), "preserve"); await releaseGate(leafGate, "before-project-commit");
     await assert.rejects(leafCreation, { code: "destination_exists" });
     assert.equal(await readFile(join(leafDestination, "unowned.txt"), "utf8"), "preserve"); await assert.rejects(readFile(join(leafDestination, "service.json")));
   }
   const failureParent = join(root, "failure-parent"), failureDestination = join(failureParent, "project"), failureGate = join(root, "failure-gate");
   await mkdir(failureParent); process.env.SERVICE_LASSO_CONFINED_TEST_GATE = failureGate; process.env.SERVICE_LASSO_CONFINED_TEST_GATE_STAGE = "after-file-write"; process.env.SERVICE_LASSO_CONFINED_TEST_FAIL_AFTER_GATE = "after-file-write";
-  const failure = runHeldHelper(helper, failureDestination); failure.catch(() => {});
-  await awaitGate(failureGate, "after-file-write");
+  const failure = runHeldHelper(helper, failureDestination, ownedRuns);
+  await awaitGate(failureGate, "after-file-write", failure);
   // The Windows writer deliberately holds its private project directory with
   // FILE_SHARE_READ only.  A concurrent caller therefore cannot add a file
   // while the native rollback boundary is live.  POSIX instead proves that an
@@ -244,11 +340,12 @@ test("packaged confined helper keeps a held parent through a replacement and ret
     const hostileParent = join(root, "hostile-parent"), hostileDestination = join(hostileParent, "project");
     await mkdir(hostileParent);
     execFileSync("icacls", [hostileParent, "/grant", "*S-1-1-0:(OI)(CI)F"], { stdio: "ignore" });
-    await runHeldHelper(helper, hostileDestination);
+    await runHeldHelper(helper, hostileDestination, ownedRuns);
     for (const target of [hostileDestination, join(hostileDestination, "config"), join(hostileDestination, "service.json"), join(hostileDestination, "config", "example.env")]) {
       const acl = execFileSync("icacls", [target], { encoding: "utf8" });
       assert.match(acl, /OWNER RIGHTS:\(F\)/i);
       assert.doesNotMatch(acl, /Everyone:\(F\)/i);
     }
   }
+  fixtureComplete = true;
 });

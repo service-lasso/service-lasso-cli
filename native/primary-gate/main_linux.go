@@ -100,21 +100,44 @@ type linuxLifecycle struct {
 	mu         sync.Mutex
 	pidfd      int
 	terminated bool
+	claimed    bool
+	connection net.Conn
 }
 
-func (l *linuxLifecycle) terminate() { l.mu.Lock(); l.terminated = true; l.mu.Unlock() }
+func (l *linuxLifecycle) terminate() {
+	l.mu.Lock()
+	l.terminated = true
+	connection := l.connection
+	l.mu.Unlock()
+	// Original channel close occurs outside the transition lock. It wakes the
+	// blocked protocol IO; neither close nor child Wait retires writer resources.
+	if connection != nil {
+		_ = connection.Close()
+	}
+}
 func (l *linuxLifecycle) admit(connection net.Conn) {
 	l.mu.Lock()
-	defer l.mu.Unlock()
-	if l.terminated {
+	if l.terminated || l.claimed {
+		l.mu.Unlock()
 		_ = connection.Close()
 		return
 	}
+	l.mu.Unlock()
 	ready, err := unix.Poll([]unix.PollFd{{Fd: int32(l.pidfd), Events: unix.POLLIN}}, 0)
 	if err != nil || ready != 0 {
 		_ = connection.Close()
 		return
 	}
+	l.mu.Lock()
+	if l.terminated || l.claimed {
+		l.mu.Unlock()
+		_ = connection.Close()
+		return
+	}
+	l.claimed = true
+	l.connection = connection
+	l.mu.Unlock()
+	// The claim is one-use. Never hold mu across protocol or writer IO.
 	materialize(connection)
 }
 func serveLinux(connection net.Conn, lifecycle *linuxLifecycle) {

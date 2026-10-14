@@ -6,7 +6,14 @@ import { gzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 import { basename, dirname, join, resolve } from "node:path";
 import { stagePrimaryGate } from "./stage-primary-gate.mjs";
+import { nativeLifecycleDiagnostics } from "./native-lifecycle-diagnostics.mjs";
 
+const observe = nativeLifecycleDiagnostics(process.argv.includes("--diagnose-native-lifecycle"));
+async function stage(label, operation) {
+  observe(label, "start");
+  try { const result = await operation(); observe(label, "complete"); return result; }
+  catch (error) { observe(label, "failed"); throw error; }
+}
 const nodeVersion = "22.23.2";
 const postjectVersion = "1.0.0-alpha.6";
 const esbuildVersion = "0.28.2";
@@ -26,8 +33,10 @@ function currentTarget() {
   return target;
 }
 
-function command(file, args, cwd = root) {
+function command(stage, file, args, cwd = root) {
+  observe(stage, "start");
   const result = spawnSync(file, args, { cwd, encoding: "utf8" });
+  observe(stage, result.status === 0 && !result.error ? "complete" : "failed", result.status, result.signal);
   if (result.status !== 0 || result.error) throw new Error(`${basename(file)} failed: ${result.error?.message ?? result.stderr ?? result.stdout}`);
 }
 
@@ -87,11 +96,11 @@ const seaConfig = join(output, "sea-config.json");
 
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
-command("go", ["build", "-trimpath", "-o", confinedWriter, "."], join(root, "native", "confined-scaffold"));
+command("writer-build", "go", ["build", "-trimpath", "-o", confinedWriter, "."], join(root, "native", "confined-scaffold"));
 const confinedWriterSha256 = sha256(await readFile(confinedWriter));
 let darwinHelperSha256 = null;
 if (process.platform === "darwin") {
-  command("go", ["build", "-trimpath", "-o", darwinHelper, "."], join(root, "native", "darwin-immutable-helper"));
+  command("darwin-helper-build", "go", ["build", "-trimpath", "-o", darwinHelper, "."], join(root, "native", "darwin-immutable-helper"));
   darwinHelperSha256 = sha256(await readFile(darwinHelper));
 }
 // This fixed tuple is solely an executable integration fixture. It is never
@@ -110,7 +119,7 @@ const controlledAdmissions = controlledTestAdmission ? [{
   archiveSha256: sha256(controlledArchive),
   catalogIdentity: "controlled-source-test-fixture",
 }] : [];
-await build({
+await stage("bundle", () => build({
   bundle: true,
   entryPoints: [join(root, "dist", "sea-entry.js")],
   format: "cjs",
@@ -128,16 +137,16 @@ await build({
     __SERVICE_LASSO_CONTROLLED_TEST_ADMISSIONS__: JSON.stringify(controlledAdmissions),
   },
   legalComments: "none",
-});
+}));
 await writeFile(seaConfig, `${JSON.stringify({ main: bundle, output: blob, disableExperimentalSEAWarning: true, useCodeCache: false, execArgvExtension: "none" }, null, 2)}\n`);
-command(process.execPath, ["--experimental-sea-config", seaConfig]);
+command("sea-blob", process.execPath, ["--experimental-sea-config", seaConfig]);
 await copyFile(process.execPath, executable);
-if (process.platform === "darwin") command("codesign", ["--remove-signature", executable]);
+if (process.platform === "darwin") command("signature-remove", "codesign", ["--remove-signature", executable]);
 const postject = join(root, "node_modules", "postject", "dist", "cli.js");
 const postjectArgs = [executable, "NODE_SEA_BLOB", blob, "--sentinel-fuse", fuse];
 if (process.platform === "darwin") postjectArgs.push("--macho-segment-name", "NODE_SEA");
-command(process.execPath, [postject, ...postjectArgs]);
-if (process.platform === "darwin") command("codesign", ["--sign", "-", executable]);
+command("postject", process.execPath, [postject, ...postjectArgs]);
+if (process.platform === "darwin") command("signature-add", "codesign", ["--sign", "-", executable]);
 
 // The published command is a compiled resident primary.  It embeds both
 // target-host images, so a normal invocation never chooses a helper from a
@@ -146,8 +155,8 @@ if (process.platform === "darwin") command("codesign", ["--sign", "-", executabl
 await copyFile(executable, embeddedSea);
 const gateSource = join(root, "native", "primary-gate");
 const gateBuild = join(output, ".primary-gate-build");
-await stagePrimaryGate({ source: gateSource, build: gateBuild, sea: embeddedSea, writer: confinedWriter, platform: process.platform, darwinHelperSha256 });
-command("go", ["build", "-trimpath", "-o", executable, "."], gateBuild);
+await stage("primary-stage", () => stagePrimaryGate({ source: gateSource, build: gateBuild, sea: embeddedSea, writer: confinedWriter, platform: process.platform, darwinHelperSha256 }));
+command("primary-build", "go", ["build", "-trimpath", "-o", executable, "."], gateBuild);
 await rm(gateBuild, { recursive: true, force: true });
 await rm(embeddedSea, { force: true });
 
@@ -162,5 +171,5 @@ const provenance = {
   tools: { node: nodeVersion, esbuild: esbuildVersion, postject: postjectVersion },
   sea: { mainFormat: "commonjs", useCodeCache: false, execArgvExtension: "none" },
 };
-await writeFile(join(output, "provenance.json"), `${JSON.stringify(provenance, null, 2)}\n`);
+await stage("provenance", () => writeFile(join(output, "provenance.json"), `${JSON.stringify(provenance, null, 2)}\n`));
 process.stdout.write(`${JSON.stringify(provenance)}\n`);

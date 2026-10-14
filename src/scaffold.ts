@@ -124,7 +124,7 @@ async function primaryMaterialize(input: string): Promise<{ stdout: string; stde
         const record = value as { version?: unknown; nonce?: unknown; code?: unknown; stdout?: unknown; stderr?: unknown };
         if (record.version !== 1 || record.nonce !== nonce || !Number.isInteger(record.code) || typeof record.stdout !== "string" || typeof record.stderr !== "string") return done(undefined);
         done({ code: record.code as number, stdout: Buffer.from(record.stdout, "base64").toString(), stderr: Buffer.from(record.stderr, "base64").toString() });
-      } catch { done(undefined); }
+      } catch { close(); }
     });
   });
 }

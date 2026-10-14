@@ -281,19 +281,43 @@ type windowsLifecycle struct {
 	process    windows.Handle
 	pid        uint32
 	terminated bool
+	claimed    bool
+	connection net.Conn
 }
 
-func (l *windowsLifecycle) terminate() { l.mu.Lock(); l.terminated = true; l.mu.Unlock() }
+func (l *windowsLifecycle) terminate() {
+	l.mu.Lock()
+	l.terminated = true
+	connection := l.connection
+	l.mu.Unlock()
+	// Original channel close occurs outside the transition lock. It wakes the
+	// blocked protocol IO; neither close nor child Wait retires writer resources.
+	if connection != nil {
+		_ = connection.Close()
+	}
+}
 func (l *windowsLifecycle) admit(connection net.Conn) bool {
 	l.mu.Lock()
-	defer l.mu.Unlock()
-	if l.terminated || !windowsPeerIs(connection, l.pid) {
+	if l.terminated || l.claimed {
+		l.mu.Unlock()
 		return false
 	}
+	l.mu.Unlock()
+	// Peer/kernel queries and all channel I/O occur outside the transition lock.
+	if !windowsPeerIs(connection,l.pid){return false}
 	state, err := windows.WaitForSingleObject(l.process, 0)
 	if err != nil || state != uint32(windows.WAIT_TIMEOUT) {
 		return false
 	}
+	l.mu.Lock()
+	if l.terminated || l.claimed {
+		l.mu.Unlock()
+		return false
+	}
+	l.claimed = true
+	l.connection = connection
+	l.mu.Unlock()
+	// The claim is one-use. Never hold mu across protocol or writer IO.
 	materialize(connection)
 	return true
 }

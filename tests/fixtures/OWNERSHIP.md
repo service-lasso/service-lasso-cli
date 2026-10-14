@@ -1,0 +1,7 @@
+# Original fixture ownership
+
+The finish peer is a real child of the test's original Node process. Its original FD3 is a separate release channel: stdin EOF deliberately leaves the child live, operation rejection settles only the shared production wait routine, and FD3 release allows natural exit. The owner waits for the actual child close. The regression does not exercise the transport's additional stdin/stdout destruction and does not establish native pending I/O, alias, buffer, allocation or capture retirement. It installs no admission profile, provider or native receipt.
+
+The confined writer fixture owns a ten second native gate. Its controller allows twelve seconds to observe the original result. Controller timeout is unresolved custody, never successful native exit or release. Every original helper promise retains the actual child and records actual close separately from operation or spawn failure. Failed, signalled, incomplete and unresolved runs retain their original scratch tree and lifetime record. Only a completed test with successful actual closes may remove its own original non-symlink scratch directory. These rules do not authorize changing any already running CI job or disposing another owner's resources.
+
+These are unexecuted source fixtures pending the complete source review and original tool/input admission. Ordinary child close and stream EOF are not the independent native qualification proof required by the full authoring contract.
