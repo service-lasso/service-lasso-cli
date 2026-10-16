@@ -45,5 +45,6 @@ int slcli_product_windows_birth_original(struct slcli_product_storage_windows *,
  const struct slcli_product_windows_birth_source *);
 int slcli_product_windows_birth_output_away_original(
  const struct slcli_product_windows_birth *,const void *,size_t);
+int slcli_product_windows_birth_matches_original(const struct slcli_product_windows_birth *);
 #endif
 #endif

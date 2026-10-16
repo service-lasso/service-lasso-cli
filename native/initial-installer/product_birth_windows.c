@@ -93,6 +93,73 @@ static int end(struct slcli_product_windows_birth *c,size_t i) {
  return c->calls[i].returned&&cut(c,&c->calls[i].after);
 }
 static int fail(struct slcli_product_windows_birth *c) {c->failed=1;c->storage_original->failed=1;return 0;}
+static int replay(const struct slcli_product_windows_birth *c,size_t index,
+ const uintptr_t *args,size_t count,uint64_t *prior,int size_query) {
+ const struct slcli_build_windows_call *r=&c->calls[index];size_t i;
+ if(r->called!=1||r->returned!=1||!slcli_native_clock_windows_matches_original(&r->before)||
+ !slcli_native_clock_windows_matches_original(&r->after)||r->before.tick<*prior||
+ r->before.tick>=c->expires||r->after.tick<r->before.tick||r->after.tick>=c->expires)return 0;
+ if(size_query) {if(r->raw||r->error_observed!=1||r->error!=ERROR_INSUFFICIENT_BUFFER)return 0;}
+ else if(!r->raw||r->error||r->error_observed)return 0;
+ for(i=0;i<12;i++)if(r->args[i]!=(i<count?args[i]:0))return 0;
+ *prior=r->after.tick;return 1;
+}
+int slcli_product_windows_birth_matches_original(const struct slcli_product_windows_birth *c) {
+ const struct slcli_product_windows_birth_source *s;const void *sd[2];size_t bytes[2],i,j;
+ uintptr_t a[10]={0};uint64_t prior;
+ if(!c||c->birth_captured!=1||c->failed||c->child_effects_possible!=1||!same(c)||
+ !slcli_native_clock_windows_matches_original(&c->entry)||!slcli_native_clock_windows_matches_original(&c->finish)||
+ c->entry.tick<c->storage_original->birth_entry_original.tick||c->entry.tick>=c->expires||
+ !c->command_original||!c->attributes_original)return 0;
+ s=&c->source_snapshot;prior=c->entry.tick;
+ if(!slcli_native_clock_windows_matches_original(&c->storage_original->birth_entry_original)||
+ !slcli_arena_live_block(&c->storage_original->arena_original,c->command_original,s->command_units*sizeof(WCHAR))||
+ !slcli_arena_live_block(&c->storage_original->arena_original,c->attributes_original,s->attribute_capacity)||
+ c->process_security.nLength!=sizeof(c->process_security)||c->process_security.lpSecurityDescriptor!=s->process_descriptor_original||c->process_security.bInheritHandle||
+ c->thread_security.nLength!=sizeof(c->thread_security)||c->thread_security.lpSecurityDescriptor!=s->thread_descriptor_original||c->thread_security.bInheritHandle||
+ c->startup_original.StartupInfo.cb!=sizeof(c->startup_original)||c->startup_original.StartupInfo.dwFlags!=STARTF_USESTDHANDLES||
+ c->startup_original.StartupInfo.hStdInput!=c->inherited_original[0]||
+ c->startup_original.StartupInfo.hStdOutput!=c->inherited_original[1]||
+ c->startup_original.StartupInfo.hStdError!=c->inherited_original[2]||
+ c->startup_original.lpAttributeList!=c->attributes_original)return 0;
+ for(i=0;i<5;i++) {
+ if(c->inherited_original[i]!=(i<3?s->standard_original[i]:i==3?c->storage_original->transport_original->readonly:c->storage_original->transport_original->parent)||
+ c->flags_original[i]!=HANDLE_FLAG_INHERIT)return 0;
+ a[0]=(uintptr_t)c->inherited_original[i];a[1]=(uintptr_t)&c->flags_original[i];
+ if(!replay(c,i,a,2,&prior,0))return 0;
+ }
+ sd[0]=s->process_descriptor_original;sd[1]=s->thread_descriptor_original;
+ bytes[0]=s->process_descriptor_bytes;bytes[1]=s->thread_descriptor_bytes;
+ for(j=0;j<2;j++) {
+ a[0]=(uintptr_t)sd[j];
+ if(!descriptor(sd[j],bytes[j])||!replay(c,SLCLI_PRODUCT_BIRTH_SD_VALID+j,a,1,&prior,0)||
+ !replay(c,SLCLI_PRODUCT_BIRTH_SD_LENGTH+j,a,1,&prior,0)||c->calls[SLCLI_PRODUCT_BIRTH_SD_LENGTH+j].raw!=bytes[j])return 0;
+ }
+ if(!replay(c,SLCLI_PRODUCT_BIRTH_CREATOR_PID,a,0,&prior,0)||
+ c->calls[SLCLI_PRODUCT_BIRTH_CREATOR_PID].raw!=c->storage_original->primary_original->process_original||
+ !replay(c,SLCLI_PRODUCT_BIRTH_CREATOR_TID,a,0,&prior,0)||
+ c->calls[SLCLI_PRODUCT_BIRTH_CREATOR_TID].raw!=c->storage_original->primary_original->thread_original)return 0;
+ a[0]=0;a[1]=1;a[2]=0;a[3]=(uintptr_t)&c->attribute_required;
+ if(!replay(c,SLCLI_PRODUCT_BIRTH_ATTRIBUTE_SIZE,a,4,&prior,1)||!c->attribute_required||c->attribute_required>s->attribute_capacity)return 0;
+ a[0]=(uintptr_t)c->attributes_original;a[3]=(uintptr_t)&c->attribute_returned;
+ if(!replay(c,SLCLI_PRODUCT_BIRTH_ATTRIBUTE_INIT,a,4,&prior,0)||c->attribute_returned>s->attribute_capacity)return 0;
+ a[1]=0;a[2]=PROC_THREAD_ATTRIBUTE_HANDLE_LIST;a[3]=(uintptr_t)c->inherited_original;a[4]=sizeof(c->inherited_original);a[5]=0;a[6]=0;
+ if(!replay(c,SLCLI_PRODUCT_BIRTH_ATTRIBUTE_HANDLES,a,7,&prior,0))return 0;
+ a[0]=(uintptr_t)s->image_original->member_original->leaf.original;a[1]=(uintptr_t)c->command_original;
+ a[2]=(uintptr_t)&c->process_security;a[3]=(uintptr_t)&c->thread_security;a[4]=TRUE;
+ a[5]=CREATE_SUSPENDED|CREATE_UNICODE_ENVIRONMENT|EXTENDED_STARTUPINFO_PRESENT;
+ a[6]=(uintptr_t)s->environment_original;a[7]=(uintptr_t)s->directory_original;
+ a[8]=(uintptr_t)&c->startup_original.StartupInfo;a[9]=(uintptr_t)&c->process_original;
+ if(!replay(c,SLCLI_PRODUCT_BIRTH_CREATE,a,10,&prior,0)||!c->process_original.hProcess||
+ !c->process_original.hThread||!c->process_original.dwProcessId||!c->process_original.dwThreadId)return 0;
+ a[0]=(uintptr_t)c->process_original.hProcess;a[1]=(uintptr_t)&c->creation_original;a[2]=(uintptr_t)&c->exit_original;
+ a[3]=(uintptr_t)&c->kernel_original;a[4]=(uintptr_t)&c->user_original;
+ if(!replay(c,SLCLI_PRODUCT_BIRTH_TIMES,a,5,&prior,0)||!replay(c,SLCLI_PRODUCT_BIRTH_CHILD_PID,a,1,&prior,0)||
+ c->calls[SLCLI_PRODUCT_BIRTH_CHILD_PID].raw!=c->process_original.dwProcessId)return 0;
+ a[0]=(uintptr_t)c->process_original.hThread;
+ if(!replay(c,SLCLI_PRODUCT_BIRTH_CHILD_TID,a,1,&prior,0)||c->calls[SLCLI_PRODUCT_BIRTH_CHILD_TID].raw!=c->process_original.dwThreadId)return 0;
+ return c->finish.tick>=prior&&c->finish.tick<c->expires;
+}
 int slcli_product_windows_birth_output_away_original(
  const struct slcli_product_windows_birth *c,const void *out,size_t n) {
  const struct slcli_product_windows_birth_source *s;
@@ -212,7 +279,8 @@ int slcli_product_windows_birth_original(struct slcli_product_storage_windows *s
  CALL(GetProcessId(c->process_original.hProcess));if(r->raw!=c->process_original.dwProcessId)return fail(c);
  i=SLCLI_PRODUCT_BIRTH_CHILD_TID;r=&c->calls[i];r->args[0]=(uintptr_t)c->process_original.hThread;
  CALL(GetThreadId(c->process_original.hThread));if(r->raw!=c->process_original.dwThreadId)return fail(c);
- if(!cut(c,&c->finish))return fail(c);s->prior_tick=c->finish.tick;c->birth_captured=1;return 1;
+ if(!cut(c,&c->finish))return fail(c);s->prior_tick=c->finish.tick;c->birth_captured=1;
+ if(!slcli_product_windows_birth_matches_original(c))return fail(c);return 1;
 }
 #undef CALL
 #endif
