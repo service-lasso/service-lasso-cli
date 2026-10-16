@@ -22,13 +22,14 @@ static int tick(struct slcli_memory_capture *c) {
   uint64_t seconds, remainder, whole, fraction;
   zero(&v, sizeof(v));
   zero(&frequency, sizeof(frequency));
+  c->tick_calls = 1;
   counter_ok = QueryPerformanceCounter(&v);
-  frequency_ok = QueryPerformanceFrequency(&frequency);
   c->tick_raw[0] = (uint64_t)v.QuadPart;
-  c->tick_raw[1] = (uint64_t)frequency.QuadPart;
-  c->tick_status[0] = (uint64_t)(uint32_t)counter_ok;
-  c->tick_status[1] = (uint64_t)(uint32_t)frequency_ok;
+  c->tick_status[0] = (uint64_t)(uint32_t)counter_ok;c->tick_returns = 1;
   c->tick_calls = 2;
+  frequency_ok = QueryPerformanceFrequency(&frequency);
+  c->tick_raw[1] = (uint64_t)frequency.QuadPart;
+  c->tick_status[1] = (uint64_t)(uint32_t)frequency_ok;c->tick_returns = 2;
   if (!counter_ok || !frequency_ok || v.QuadPart <= 0 || frequency.QuadPart <= 0)
     return 0;
   seconds = (uint64_t)(v.QuadPart / frequency.QuadPart);
@@ -80,11 +81,12 @@ int slcli_platform_acquire(struct slcli_memory_owner *o, uint32_t category,
                       PAGE_READWRITE);
   c->result = (uintptr_t)base;
   c->native_status = (uint64_t)(uintptr_t)base;
+  c->native_acquired = base != NULL;
+  c->observed = 1;
   if (!base) {
     c->native_error = GetLastError();
     c->native_error_observed = 1;
   }
-  c->observed = 1;
   if (base && !slcli_memory_partial_acquired(o, &c->request, (uintptr_t)base))
     return 0;
   if (!tick(c) || !base) {
@@ -97,6 +99,7 @@ int slcli_platform_acquire(struct slcli_memory_owner *o, uint32_t category,
   c->query_args[2] = sizeof(geometry);
   observed = VirtualQuery(base, &geometry, sizeof(geometry));
   c->query_result = observed;
+  if (!observed) { c->query_error = GetLastError(); c->query_error_observed = 1; }
   copy(c->geometry, &geometry, sizeof(geometry));
   c->geometry_bytes = (uint32_t)observed;
   if (observed != sizeof(geometry) || geometry.AllocationBase != base ||
@@ -135,11 +138,11 @@ int slcli_platform_release(struct slcli_memory_owner *o, uint32_t index,
   result = VirtualFree((void *)e->base, 0, MEM_RELEASE);
   c->result = (uintptr_t)(uint32_t)result;
   c->native_status = (uint64_t)(uint32_t)result;
+  c->observed = 1;
   if (!result) {
     c->native_error = GetLastError();
     c->native_error_observed = 1;
   }
-  c->observed = 1;
   /* Retain charge until the independent raw-capture reader validates this
    * actual result/tick and calls slcli_memory_retired. Never free on JS dispose. */
   if (!result || !tick(c)) {

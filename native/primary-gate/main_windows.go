@@ -38,6 +38,7 @@ const (
 	gateObjDontReparse            = 0x1000
 	gateFileListDirectory         = 0x0001
 	gateFileReadData              = 0x0001
+	gateFileReadAttributes        = 0x0080
 	gateFileWriteData             = 0x0002
 	gateDeleteAccess              = 0x10000
 	gateReadControl               = 0x20000
@@ -63,6 +64,8 @@ type gateObjectAttributes struct {
 	securityQualityOfService uintptr
 }
 type gateIOStatusBlock struct{ status, information uintptr }
+type gateNativeOpenError struct{ status windows.NTStatus; ioStatus,information uintptr; lastError error }
+func(e *gateNativeOpenError)Error()string{return "native original open unavailable"}
 
 var gateNtDll = syscall.NewLazyDLL("ntdll.dll")
 var gateNtCreateFile = gateNtDll.NewProc("NtCreateFile")
@@ -73,12 +76,18 @@ func gateOpen(name string, parent windows.Handle, access, disposition, options u
 		// is supplied; Win32's C:\\ spelling is not an NT object name.
 		name = `\??\` + name
 	}
-	pointer, err := syscall.UTF16PtrFromString(name)
+	encoded, err := syscall.UTF16FromString(name)
 	if err != nil {
 		return 0, err
 	}
-	length := uint16(len(syscall.StringToUTF16(name))-1) * 2
-	u := gateUnicodeString{length, length + 2, pointer}
+	// Both byte lengths must fit UNICODE_STRING, including its terminator.
+	// Check before narrowing so an oversized route cannot select a prefix.
+	if len(encoded) > int(^uint16(0))/2 {
+		return 0, fmt.Errorf("native original open unavailable")
+	}
+	pointer := &encoded[0]
+	length := uint16((len(encoded) - 1) * 2)
+	u := gateUnicodeString{length, uint16(len(encoded) * 2), pointer}
 	var securityDescriptor uintptr
 	if descriptor != nil {
 		securityDescriptor = uintptr(unsafe.Pointer(descriptor))
@@ -91,10 +100,10 @@ func gateOpen(name string, parent windows.Handle, access, disposition, options u
 	}
 	status, _, callErr := gateNtCreateFile.Call(uintptr(unsafe.Pointer(&handle)), uintptr(access), uintptr(unsafe.Pointer(&attributes)), uintptr(unsafe.Pointer(&iosb)), 0, 0, gateShareRead, uintptr(disposition), uintptr(options), 0, 0)
 	if int32(status) < 0 {
-		if callErr != syscall.Errno(0) {
-			return 0, callErr
-		}
-		return 0, fmt.Errorf("NtCreateFile status 0x%x", status)
+		// NtCreateFile returns NTSTATUS, not an authoritative GetLastError.
+		// Retain its actual original return/IO status and any handle value for
+		// private custody; the public failure remains a closed safe code.
+		return handle, &gateNativeOpenError{windows.NTStatus(status),iosb.status,iosb.information,callErr}
 	}
 	return handle, nil
 }
@@ -206,7 +215,8 @@ func main() {
 		failAt("private directory")
 	}
 	defer windows.CloseHandle(directoryHandle)
-	defer os.RemoveAll(directory)
+	// Original stage images and failed attempts are retained. A pathname-based
+	// recursive cleanup cannot establish original-object disposal authority.
 	seaName := "service-lassoctl.sea.exe"
 	helperName := "service-lasso-confined-scaffold.exe"
 	seaHandle, err := stageImage(directoryHandle, seaName, seaBytes)
@@ -238,7 +248,7 @@ func main() {
 	// close or appearing before this launch.
 	child := exec.Command(filepath.Join(directory, seaName), os.Args[1:]...)
 	child.Stdin, child.Stdout, child.Stderr = os.Stdin, os.Stdout, os.Stderr
-	child.Env = gateEnvironment(os.Environ(), "windows-v2", pipe, 0)
+	child.Env = gateEnvironment(os.Environ(), "windows-v3", pipe, 0)
 	if err := child.Start(); err != nil {
 		fail()
 	}

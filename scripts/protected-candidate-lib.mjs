@@ -78,3 +78,6 @@ export function assertProviderPreflight({ immutable, branch, protection, environ
 }
 export function canonicalPublicAssetUrl(url, name, tag) { let parsed; try { parsed = new URL(url); } catch { fail("release asset URL is invalid."); } const expected = `/service-lasso/service-lasso-cli/releases/download/${encodeURIComponent(tag)}/${encodeURIComponent(name)}`; if (parsed.protocol !== "https:" || parsed.hostname !== "github.com" || parsed.port || parsed.username || parsed.password || parsed.search || parsed.hash || parsed.pathname !== expected) fail("release asset URL is not canonical GitHub."); return parsed; }
 export function allowedRedirect(url) { let parsed; try { parsed = new URL(url); } catch { fail("public redirect URL is invalid."); } if (parsed.protocol !== "https:" || !["github.com", "objects.githubusercontent.com", "release-assets.githubusercontent.com"].includes(parsed.hostname) || parsed.port || parsed.username || parsed.password || parsed.hash) fail("public redirect host is not allowed."); return parsed; }
+
+// Shared unchanged inner archive grammars; scoped dispatch validates its own outer schema first.
+export { readTarArchive, native as verifyNativeArchive };

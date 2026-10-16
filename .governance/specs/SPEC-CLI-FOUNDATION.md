@@ -368,3 +368,122 @@ SP1/BQ/issuer/native/credential source or target execution before coherent whole
 DIFFERENT review AND exact human choice. Ordinary approved PA1/N2 source remains
 separate and unfinished. Final ENTIRE product SOURCE GO/new authentic input admission,
 native qualification/Core/operator/publication/release remain separate open gates.
+
+## Issue #39 October16 source continuation
+
+Sole delivery owner /root/cli39_release_delivery_oct16 works from current develop
+ df5c1b62d64061d3d8117aa998e96597fcd5834b in the policy-owned
+39-development-release-oct16 checkout. Retained legacy native/scripts/src/tests
+source is transferred under CLI39-RETAINED-SOURCE-TRANSFER-OCT16.sha256; the
+original mixed index and checkout remain untouched. This restores missing source
+dependencies; it does not qualify, freeze or complete the implementation.
+
+The selected prebirth slot3 method now has a once-only native F_GETFD observation
+and returning replay. Exact -EBADF permits absence only when no retained known
+source occurrence owns3; present3 must match the actual retained custody,
+self-pidfd or opened-file occurrence. Foreign3 is refused without close. Clone
+chronology consumes the actual probe afterclock. Parent maximum is3*(N0+N1)+14,
+and the child has ten distinct raw rows. All source remains UNRUN. Genuine
+initial ROOT/source/profile, clone/child-local acquisition, full Windows/Linux
+Node/default actions and the entire remaining sequence remain required.
+
+CI38563583179/job115850523828 fails the pinned Core9bef build at
+src/server/index.ts(9179,1), TS1005 '}' expected, before CLI acceptance. No repin
+is justified by latest HEAD alone. Complete independent source review and NEW
+exact authentic ROOT/input/command admission precede local product execution;
+natural new-push CI remains separately allowed. Protected Development publication
+and same-byte Core integration remain incomplete; macOS N/A, never PASS.
+
+### October16 actual stopped-child producer source
+
+The next owning body consumes the fresh prepared roster and actual slot3 probe,
+then performs once clone3(CLONE_PIDFD,SIGCHLD) with no shared VM/FD table. Parent
+pidfd output is retained parent-locally; child's raw0 is a separate shared native
+observation. Child uses ten fixed rows for TRACEME/selfpid/selftid/STOP/F_GETFD3,
+conditional known-owned close3/dup3 or SAME custody3 F_SETFD, held execveat and
+cleanup-only exit_group127. It reobserves its own3 and compares the selected
+prebirth branch; parent numeric flags never become child-native observations.
+Successful exec has only called/before, no invented return or afterclock. Failed
+useful steps set failed before once cleanup exit. Unexpected cleanup return keeps
+raw/returned/trap-attempted; the subsequent fixed trap is FAILED/UNKNOWN, never
+termination or borrower-release proof. No signal disposition or spin is invented.
+
+Clone/child/observer source construction supplies no authentic ROOT/source/profile
+association. Complete native descriptor/private stack/loader/control/failed-prefix
+precharge and genuine preceding reservation still must be acquired by the fixed
+source caller before activation. All source UNRUN; whole fit UNKNOWN. The entire
+remaining sequence, independent review, new ROOT admission and protected release
+acceptance gates remain unchanged.
+
+October16 returning closure: actual parent completion additionally replays every
+child-owned successful-prefix row against SAME clone PID/TID, post-CONT STOP
+return, source-selected3 branch and held exec inputs; unused branch/exit rows stay
+fresh. Successful exec remains called-only with no returned/raw/postclock, joined
+to the independently observed actual exec event. This completes raw stopped-child
+mechanics only. Actual postexec child-local acquisition and genuine initial
+source/principal/reservation/profile constructor remain absent. No current source
+freeze, wholeGO, execution, qualification or release claim follows.
+
+### October16 exec-stop mapping acquisition source
+
+Before source activation, the fixed parent derives /proc/<SAME actual clone PID>/maps
+using checked decimal PID geometry, opens once readonly/CLOEXEC/NOFOLLOW and retains
+native fstat/getfl/getfd and complete bounded short-read/EOF originals. Complete
+source-selected output capacity B has checked B+5 row maximum: four fixed native
+calls, at most B positive-short read calls and one EOF/overflow probe. Each row has
+two original clock calls, plus one final clock. Buffer-full always probes one extra
+byte and refuses actual non-EOF; no truncation-as-complete. All capture/buffer/row
+storage excludes SAME birth/wait/control and complete borrowed graph before writes.
+Native outputs/descriptor survive errors/expiry. No close, seek, resume or loaded
+source grant follows. Proc namespace/mount/kernel/source and complete held-loaded/
+interpreter/writer/private-stack graph remain independently required; maps bytes,
+path or successful capture are only retained observations. All source UNRUN.
+
+### October16 full source-runtime builder continuation
+
+The active implementation frontier is the actual full Node source builder.
+Windows generation and compilation become distinct fixed original vcbuild phases:
+release x64 full-icu vs2022 projgen nobuild, retained generated config.gypi and
+used configure flags, then release x64 full-icu vs2022 noprojgen. Generated actual
+JSON variables must preserve x64/nonshared/static CRT/full ICU/bundled V8/default
+platform/snapshot/codecache/WebAssembly/inspector/lite-mode exclusion before the
+compiler phase; post-build held readback must equal that complete original config.
+The fixed upstream configure source emits JSON after one literal generated header,
+so no Python eval or regex-as-config substitution is selected. Complete generated
+MSBuild/runtime library/link ancestry and tool/native-owner/loaded closure remain
+required. Exact source-derived command/capture geometry is checked before effects.
+No producerComplete gate is waived by partial repairs. All source UNRUN; actual
+complete Windows/Linux recipe, genuine member/tool inputs, whole source review and
+NEW exact ROOT/commands still precede execution. No older binary/fake manifest or
+reduced runtime route is accepted.
+
+
+Issue39 current native-builder and scoped release status (2026-10-16)
+
+The fixed private native build-owner contract is native/build-owner/CONTRACT.md. The selected private Node-API bridge is docs/decisions/CLI39-FIXED-SOURCE-BUILDER-BRIDGE-OCT16.md. Parent intent approval for the existing bridge permits source implementation only; it supplies no ENTIRE SOURCE_GO, native input/ROOT admission or execution. No public command callback, extra prerequisite action, JSON issuer or ambient default principal is selected.
+
+Windows source connects initial prefix/arena observations, distinct issuing-effective/process-primary token captures, actual held compiler/Node tuple acquisition, original import/export and actual loaded module/address correspondence, fixed stopped compiler birth, child-token/handle/image-file/relocated-byte observations, and finite native stdout/stderr custody. File opens use issuing-effective; CreateProcessW and child correspondence retain the separate selected primary. Fixed stdin has zero writes and an actual one-use parent writer close before birth. Parent child-end closes, idle/short bytes/native EOF, descendant writers, natural exits and failed/pending custody remain distinct. Exact source/API input byte candidates and active retention are recorded in docs/decisions/CLI39-BUILD-BOOTSTRAP-ABI-INPUTS-OCT16.md; byte/hash/RVA equality creates no source/loaded/capacity/ROOT authority. Header surface is Node-API8; eventual actual support is >=8, independently of the exact Node22.23.2 image/source/header/import tuple.
+
+Windows initial A uses the independently intent-approved fixed PowerShell/CLR selection (8e01c8dc4813893e02303dbc508079d456f1d6ae). Actual private source connects held compiler/tool-module sources, principal/PBI/parent correspondence, the fixed18-unit plan and native stopped compiler birth to separate streams, actual event hFile, full image captures, original PE import/export/bound/delay declarations and same-child API-set observations. Prebirth finite route storage joins importer/default namespace values, unique actual hosts, named/ordinal EAT entries and bounded cycle-checked forwarders to full IAT targets. Native capture, held source/relocation expectation and final full-byte correspondence now have distinct markers. Ordinary-IAT effects derive exact source/export targets; narrowly typed pre-user cookie outputs remain separate from the immutable expected vector, with native birth/event/source/slot/case and bracketing raw readbacks. Overlap, foreign phases and all unexplained bytes deny. See native/build-owner/CONTRACT.md and docs/decisions/CLI39-INITIAL-WINDOWS-LOADER-EFFECTS-OCT16.md for exact effects, costs and remaining cookie/TLS/load-config/loader-state/source gaps. Fresh independent bounded INTENT_GO at5cfab831f751f9064845b51e395804ae5b6b04e6 selects the cookie creation-output body; its actual fixed pipeline and source TLS/callback/index/template geometry are now implemented but UNRUN. The fixed root-thread TLS index/vector/full source-template relation now has prebirth native storage, actual thread-basic/TEB/event joins, independent rereads and separate typed four-byte output handling; missing/unchanged states never assert initialized/ready. Exact private ABI and initial source/case/actor/profile qualification, later loader/CRT/callback phases and other threads remain unfinished. See docs/decisions/CLI39-INITIAL-WINDOWS-TLS-RELATION-OCT16.md. No event is continued and producerComplete remains false. Initial full source/profile/creation-case construction, full descendants/events/streams/natural closure, standalone controller, fixed compile/link/load/adapter and child-local B remain OUR unfinished source. Linux selection (2c5f03b710e62bb2e678a2c2323d6915153c89a7) still needs its complete native-only body/controller/recipe and actual initial namespace PID plus pre-CLR SIGCHLD/engine-creation history; current signal state or a boolean cannot recover that history. Independent initial admission remains external; missing factories are implementation debt. Product installer/TUI source/reservation/deadline/CRT-entry construction is distinct and unfinished. Parent pointers, copied fields, layout/version equality and correspondence cannot issue either owner. All source remains UNRUN pending fresh ENTIRE review and new exact admission.
+
+The separate no-input release-scoped.yml implements the approved Windows/Linux protected2/portable2 lane: six declared payloads, manifest and seven-row checksum file (eight files), unchanged native1 archive grammar and retained historical protected1/all3 paths. Source-pinned scope, exact selected required CI jobs/current head/attempt/workflow, same-provider producer/publisher, same-byte immutable archive/provenance controls remain mandatory; owner-deferred macOS results cannot excuse any selected failure. Current effective inherited no-bypass tag update/delete restrictions and exact annotated-OID/source joins at mutation boundaries/after immutable publication repair the confirmed scoped tag race. Current protected-control custody remains; sequential reads do not promise atomic exclusion of administrator policy changes. No settings or credential mutation occurred.
+
+The fixed genuine positive-native producer dependency remains unavailable and fails closed; negative controlled-route/open evidence cannot satisfy existing positive closed-receipt/native prerequisites. producerComplete remains false. All changed product source/structural fixtures remain locally UNRUN. The earlier cumulative cf7 independent review ended substantially incomplete and grants no ENTIRE SOURCE_GO. Fresh complete independent cumulative review and NEW exact genuine ROOT/input/command admission precede local parser/compiler/emitter/install/generator/build/test/load execution. Natural hosted CI remains failing; no tests were rerun/cancelled/skipped to obtain qualification. Protected Development publication, same-byte Core integration, full default actions and usable release remain unproven. No GA, promotion or deployment is claimed.
+
+CLI39 product-installer/TUI ABI precode (2026-10-16): docs/decisions/CLI39-PRODUCT-INSTALLER-TUI-ABI-PRECODE-OCT16.md maps HA5 product launch ownership to concrete private native parent/child source work, distinct from build A/B. TUI's GNU-style plan has no selected compiler/CRT; proposed coherent MSVC14.44/SDK26100 C11 and explicit source entry/helper closure requires independent intent review and TUI-owned plan alignment before implementation. Existing source/principal/memory/deadline/section originals are constraints and actual custody, never serialized authority. All product constructors/helper closure/consumer activation remain unimplemented and gated; producerComplete remains false. No execution/admission/qualification follows.
+
+CLI39 Windows terminal lifecycle source: initial_windows_command.ps1 preallocates actual duplicate/wait/exit captures before birth, duplicates the root process before terminal ContinueDebugEvent, and separately observes actual post-continuation process signaling/code. No event-family dispatcher/descendant closure is implemented by this unit; only the private completion duplicate is once-closed after its actual PID/signal/exit-code borrowers; other references remain retained and producerComplete=false. native/build-owner/CONTRACT.md records exact source/cost limits. Source UNRUN; full review/new admission still required.
+
+Installer precode representation correction: control ledger/arena descriptors stay outside payload extent; actual section and distinct operation-caller rows use separate exact arena live blocks, with separate retained deadline/origin/prior/descriptor ranges and unchanged existing exclusions. Previous embedded transport selection was rejected in complete bounded intent review. Corrected proposal needs a fresh different bounded review; no body or execution authorized.
+
+CLI39 actual initial product storage source: native/initial-installer/product_storage_windows.h/.c now captures paid initial prefix/arena/native principal occurrences and allocates separate exact caller/origin/deadline/transport blocks. Authentic independently admitted preparation owner/source/native/cost/original initial deadline covers pre-arena work; FIRST actual product original is constructed directly in its final arena cell before publication, never replaces or renews an existing product original. docs/decisions/CLI39-PRODUCT-STORAGE-CONSTRUCTION-OCT16.md records source graph, ordering, exclusion, costs and lifetime limits. storage_constructed is correspondence only; full native product constructor/child/TUI/family/source/helper/Node/Linux work remains unfinished. Source UNRUN, producerComplete=false, whole review/new admission still required.
+
+CLI39 private product section source now connects the actual prepared operation to fixed native two-principal protected SD/ACL construction, bounded self-relative readback, fresh effective/primary observations and existing real unnamed-section transport creation. Exact caller/control/deadline/live-block predicates remain. All thirteen SD API rows/clocks, native principals, descriptor/copies/ACL/aliases and failed overlap are retained and REQUIRE genuine full profile qualification before effects; no SD success issues source/finance/family authority. Pure labelled byte correspondence/denial fixtures are UNRUN. Publication/child/rejoin/prologue/helper/TUI/family/full Node/Linux construction remains unfinished and producerComplete=false. See docs/decisions/CLI39-PRODUCT-STORAGE-CONSTRUCTION-OCT16.md.
+
+CLI39/TUI whole84 exclusion repair: actual product_source_windows.h/.c exports slcli_product_windows_initial_source_excludes_output with the complete existing known nested span walk; native storage uses SAME API, retaining its richer actual output/control exclusion separately. Standalone source makes no native calls and issues no source/graph/funding/clock/family authority. Added export-only null/region-multiplication guards; all prior provider/principal/source/actor/occurrence checks remain. Exact held header/implementation/nested closure is a required TUI source operand. Labelled synthetic exclusion geometry/denial vectors are UNRUN and deliberately lack genuine native clocks/profiles. docs/decisions/CLI39-PURE-INITIAL-SOURCE-EXCLUSION-OCT16.md records ABI and boundaries. Fresh cumulative whole review/new admission still precedes execution; full product/Node/Linux work remains active.
+
+CLI39 product deadline handoff PRECODE: docs/decisions/CLI39-PRODUCT-ABSOLUTE-DEADLINE-HANDOFF-PRECODE-OCT16.md proposes preserving the parent's original absolute deadline across the complete child family, with genuine child-local admission cuts and no-later inherited absolute phase expirations. Corrected4fc explicitly defines same-process references and child-owned clocks; fresh DIFFERENT bounded intent must resolve that scope against its SAME-origin wording before dependent body. Protected native section/birth/source/rights/object correspondence, preparation coverage, nested Go explicit additional readonly handle, full finite custody and all no-renewal denials are proposed, not implemented or qualified. Shared physical origin remains an explicit alternative, not an assumed mandate; existing arena/native-clock/deadline predicates unchanged. No target execution, new authority, public budget/phase change or producerComplete flip. Whole known source/initial admission and real Windows/Linux/Node/product implementation remain owed.
+CLI39 deadline handoff selection: fresh DIFFERENT complete bounded b52cf30bc7186e9b9559ae151fceb8984539fa93 review returned INTENT_GO, accepted by parent for private source body only. Preserve unchanged parent original over complete family, genuine child-local admission cut with no-later absolute phase bound/no duration, paid pre-cut preparation, actual host/QPC-domain and conservative rounding, native readonly section/rights/object/birth/source/alias custody. Nested Go uses separately acquired fixed third readonly handle, never repurposes root128 or changes debugger ownership. Generic local arena/deadline/native-clock predicates unchanged. Complete typed constructors/codec/source costs/native cases, full product/A/B/Node/Linux and whole final SOURCE_GO/new admission remain owed; no execution/qualification/publication grant or guard change. See docs/decisions/CLI39-PRODUCT-ABSOLUTE-DEADLINE-HANDOFF-PRECODE-OCT16.md.
+CLI39 selected deadline source checkpoint: product_deadline_windows.h/.c now implements the pure closed64-byte absolute-bound codec and actual parent publication into its existing privately acquired product section, complete full-body readback, original parent/active-phase snapshots and existing once-use native writer unmap/independent close. Actual source/profile/phase/reservation are genuine prerequisites, never issued by scalars or publication_completed. All remaining logical transport bytes are zero; old Node encoder unchanged. Publication control/source/deadline/SD/output exclusions and raw clocks/cost/lifetime limits are mapped in docs/decisions/CLI39-PRODUCT-DEADLINE-PUBLICATION-OCT16.md. Pure labelled codec fixtures UNRUN. Native created-child object/rights/extent/source/birth acquisition, paid local cuts/rounding, typed consumer/helper/family and full A/Node/Linux remain unfinished; no production activation/guard flip or target execution. Final whole review/new admission still owed.
+CLI39/TUI joint semantic native-profile representation selected: fresh DIFFERENT ENTIRE review of TUI7545e1b30abc410737d0e2565859eccd87703a07/treea75d9005ea91d27076e81c604380ecc1624f7df4 returned INTENT_GO, accepted by parent. TUI owns closed11-role principal/image/writer semantic types/finite derivation, actual captures/schema3 encoder/held gate/compile+pair. CLI owns genuine INITIAL/nativecase/source-table constructor, complete before-first-capture source geometry/financing/reserve/caller/localcut/actual child and multiple observer/family/output-file custody. TUI semantic header uses actual CLI source/resource/principal/held-file types without including CLI nativecase; future CLI nativecase consumes SAME actual TUI header through explicit held qualified operand with no fallback/copy/callback. Native returned required length, aggregate profile, rows/spans/counts/hash/newrecord do not issue source/financing/native authority. Public reserved TOKEN_ACCESS_INFORMATION fields retain actual NULL/0 correspondence, no invented opaque parsing or unsupported claim/conditional-ACE token exclusion. All full physical/failure/borrower/source/layout helper requirements and old budgets/deadlines stay. New C-to-Go private assembler bridge ABI, if needed, requires concrete separate fresh intent before body. Joint precode .governance/project/TUI1-WINDOWS-PROFILE-PRODUCER-PRECODE-20261016.md (TUI blob b11d7d6bfabca89c098b8aeead130e35743326f3 SHA25636a7f392c1ced31a8f5f41ec7435ce658bb8f5a8ec70cc838d396aa38b28c38d). No whole SOURCE_GO/input admission/native proof/activation/guard flip/publication follows; actual bodies and whole final review/new ROOT remain owed.
+CLI39 public child deadline source stage: product_route_windows.h/.c implements distinct fixed32-byte .slprout locator syntax/zero-default denial, following existing stopped-child route-cell source pattern. product_deadline_child_windows.h/.c actually captures native readonly/granted-rights/inherited flags/map geometry/full independent readbacks, parent native process/birth/PBI/liveness/token/SID/statistics and final route/process/body rechecks under paid INITIAL prefix before any local product clock/caller/deadline exists. Initial inputs/static route exclude WHOLE arena before allocator header/padding effects; actual control/native rows retained. Fixed24 APIs+fresh clocks=130 ordinary success calls plus conditional errors and all physical/source/failure costs; view/process/token/aliases retained through real last borrowers. native_capture_completed is NOT source/case/reserve/family/entry/admission. Parent actual fixed created-child route write/readback/CompareObjectHandles, genuine semantic nativecase/caller/family/source construction, conservative final-cell local cut, helpers/fullWindows/Linux/Node remain owned work. PUBLIC C route does not alter Go root128 or add a fourth Go handle; privateGo keeps its own creator/debugger and selected third readonly handle. docs/decisions/CLI39-PRODUCT-CHILD-DEADLINE-ACQUISITION-OCT16.md records exact source/ABI/cost/lifetime/negative cases. Pure synthetic route denials UNRUN, no fake native positive, no targetexecution/guardflip. Whole final source review/new complete admission still required.

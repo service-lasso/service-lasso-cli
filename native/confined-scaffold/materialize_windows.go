@@ -15,4 +15,8 @@ func materialize(destination string, entries []entry) error {
  if !filepath.IsAbs(destination) { return fmt.Errorf("destination is not absolute") }
  return materializeNt(destination, entries)
 }
+func materializeObserved(destination string,entries []entry,digest *writerReadbackDigest)error{
+ if !filepath.IsAbs(destination){return fmt.Errorf("destination is not absolute")}
+ return materializeNtObserved(destination,entries,digest)
+}
 var _ = os.FileMode(0)

@@ -8,8 +8,14 @@ struct slcli_initial_child_input_linux {
  const struct slcli_initial_child_string_linux *argv_spans,*env_spans;
  uint64_t argc,envc;
 };
+enum { SLCLI_INITIAL_CHILD_TRACEME=0,SLCLI_INITIAL_CHILD_GETPID=1,
+ SLCLI_INITIAL_CHILD_GETTID=2,SLCLI_INITIAL_CHILD_STOP=3,
+ SLCLI_INITIAL_CHILD_GETFD3=4,SLCLI_INITIAL_CHILD_CLOSE3=5,
+ SLCLI_INITIAL_CHILD_DUP3=6,SLCLI_INITIAL_CHILD_SETFD3=7,
+ SLCLI_INITIAL_CHILD_EXEC=8,SLCLI_INITIAL_CHILD_EXIT=9,
+ SLCLI_INITIAL_CHILD_CALLS=10 };
 struct slcli_initial_child_control_linux {
- struct slcli_initial_custody_call_linux child_calls[8];
+ struct slcli_initial_custody_call_linux child_calls[SLCLI_INITIAL_CHILD_CALLS];
  long clone_child_raw;
  uint32_t clone_child_returned,failed,exit_called,exit_returned,trap_attempted;
 };

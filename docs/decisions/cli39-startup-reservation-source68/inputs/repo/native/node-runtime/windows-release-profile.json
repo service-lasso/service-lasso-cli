@@ -1,0 +1,76 @@
+{
+  "schema": "service-lasso.cli39.windows-source-profile.v1",
+  "state": "CURRENT_INTENDED_PROFILE_RECIPE_IMPLEMENTATION_IN_PROGRESS",
+  "node": {
+    "version": "22.23.2",
+    "originalCommit": "aa4c77582be995286fc6e00aaf530dc7ade102a9",
+    "platform": "win32",
+    "architecture": "x64",
+    "configuration": "Release",
+    "shared": false,
+    "forceDynamicCRT": 0,
+    "runtimeLibrary": "MultiThreaded",
+    "runtimeSwitch": "/MT",
+    "icu": "full-icu",
+    "v8": "full-default",
+    "jit": true,
+    "defaultWorkers": true,
+    "reducedRuntime": false
+  },
+  "crt": {
+    "ucrtSourceVersion": "10.0.26100.0",
+    "vcruntimeSourceVersion": "14.44.35207",
+    "linkage": "static",
+    "enclave": false,
+    "fullOriginalSourceClosureRequired": true,
+    "archiveUnitFlagsAndExports": "UNFINISHED_REQUIRES_AUTHENTIC_CURRENT_SOURCE",
+    "preentryBeforeCRTAllocation": "UNFINISHED_REQUIRED",
+    "eventualArchiveAndImageProvenance": "UNQUALIFIED"
+  },
+  "images": [
+    "facade82-image79",
+    "SEA80-image35"
+  ],
+  "simultaneousOwnership": {
+    "domain": "B0",
+    "capacityRows": 128,
+    "ordinaryCompletedStartupCheckedGlobalLocksPerProcess": 15,
+    "ordinaryCompletedStartupLowIOInitAttemptsPerProcess": 64,
+    "conditionalRowsPerProcess": 79,
+    "conditionalTwoProcessRows": 158,
+    "conditionalExcessRows": 30,
+    "nativeBirthSuccess": "UNQUALIFIED",
+    "completeOtherResourceExpansion": "UNFINISHED",
+    "scope": "Exact intended ordinary nonenclave UCRT profile; failure may stop before79; backing extents do not collapse distinct synchronization objects"
+  },
+  "generator": {
+    "fixedCommonGypi": "https://raw.githubusercontent.com/nodejs/node/aa4c77582be995286fc6e00aaf530dc7ade102a9/common.gypi",
+    "defaultReleaseRuntimeType": 0,
+    "expectedOriginalCaller": [
+      "vcbuild.bat",
+      "configure.py",
+      "tools/gyp/pylib/gyp/MSVSSettings.py"
+    ],
+    "overridePolicy": "No shared/dynamic/enclave/reduced/default-worker override",
+    "admission": "SOURCE_ONLY_NO_EXECUTION"
+  },
+  "packaging": {
+    "runtimeInput": "Genuine full source-built same-owner qualified image",
+    "processExecPathCopyAllowed": false,
+    "currentLegacyProducer": "scripts/package-native.mjs",
+    "replacement": "UNFINISHED"
+  },
+  "currentSource": {
+    "nodeGyp": "native/node-runtime/overlay/node.gyp",
+    "nodeGypSha256": "417866a319ccbad0f925ff91596372091a606df23b655062cfe9ad70b787e402",
+    "crtOverlayAssociations": "native/crt-runtime/SOURCE-ASSOCIATIONS.json",
+    "crtOverlayAssociationsSha256": "18dc656be460898f8be4f9f9a4252c1ad45c03bc14a983e44f19069e67f775d2"
+  },
+  "gates": {
+    "capacityChangeAllowed": false,
+    "wholeSourceGO": false,
+    "nativeInputAdmitted": false,
+    "targetExecutionAllowed": false,
+    "publicationAllowed": false
+  }
+}

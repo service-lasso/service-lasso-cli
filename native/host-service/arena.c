@@ -1,8 +1,6 @@
 #include "arena.h"
 
-struct block { uint64_t bytes, requested, next, state; };
-_Static_assert(sizeof(struct block) == 32, "Reviewed in-arena header stride");
-enum { BLOCK_FREE = 1, BLOCK_LIVE = 2 };
+#include "arena_layout.h"
 static int controls_separate(const struct slcli_arena *a,
                              const struct slcli_memory_owner *o) {
   uintptr_t arena, owner;
@@ -14,45 +12,63 @@ static int controls_separate(const struct slcli_arena *a,
 }
 static int deny(struct slcli_arena *a) {
   if (a && (uintptr_t)a <= UINTPTR_MAX - sizeof(*a) &&
-      controls_separate(a, a->owner)) a->owner->failed = 1;
+      controls_separate(a, a->owner) &&
+      slcli_memory_owner_mutable(a->owner)) a->owner->failed = 1;
   return 0;
 }
 static struct slcli_extent *extent(struct slcli_arena *a) {
   struct slcli_extent *e;
   if (!a || (uintptr_t)a > UINTPTR_MAX - sizeof(*a) ||
       !controls_separate(a, a->owner) ||
+      !slcli_memory_owner_writable(a->owner) ||
       a->owner->failed || a->owner->count > 256 ||
       a->extent >= 256 || a->extent >= a->owner->count)
     return 0;
   e = &a->owner->extents[a->extent];
+  /* Attachment belongs to the original ledger, so a copied descriptor cannot
+   * hide it. Incomplete bootstrap remains unavailable to general queries. */
+  if(!slcli_memory_owner_unattached(a->owner)&&
+     (a->owner->bq_owner_original!=a->owner||
+      a->owner->bq_arena_original!=a||!a->owner->bq_caller_original||
+      a->owner->bq_extent_original!=a->extent||
+      a->owner->bq_acquisition_original!=a->acquisition||
+      a->owner->bq_attachment_state<2||a->owner->bq_attachment_state>4))return 0;
   if (e->state != SLCLI_EXTENT_LIVE || !e->arena_initialized ||
       e->acquisition != a->acquisition ||
       !e->base || e->reserved > SIZE_MAX || e->reserved > UINTPTR_MAX ||
       e->base > UINTPTR_MAX - (uintptr_t)e->reserved || e->base % 16 ||
-      e->reserved < sizeof(struct block) + 16) return 0;
+      e->reserved < sizeof(struct slcli_arena_block_header) + 16 ||
+      a->allocation_floor%16||a->allocation_floor>e->reserved-48||
+      a->allocation_floor!=((uint64_t)e->arena_initialized-1)*16) return 0;
   return e;
 }
-static struct block *block_at(struct slcli_extent *e, uint64_t offset) {
-  struct block *b;
-  if (offset % 16 || offset > e->reserved - sizeof(struct block)) return 0;
-  b = (struct block *)(e->base + (uintptr_t)offset);
-  if (b->bytes % 16 || b->bytes < sizeof(struct block) + 16 ||
+static struct slcli_arena_block_header *block_at(struct slcli_extent *e, uint64_t offset) {
+  struct slcli_arena_block_header *b;
+  if (offset % 16 || offset > e->reserved - sizeof(struct slcli_arena_block_header)) return 0;
+  b = (struct slcli_arena_block_header *)(e->base + (uintptr_t)offset);
+  if (b->bytes % 16 || b->bytes < sizeof(struct slcli_arena_block_header) + 16 ||
       b->bytes > e->reserved - offset ||
-      (b->state != BLOCK_FREE && b->state != BLOCK_LIVE) ||
-      (b->state == BLOCK_FREE && b->requested) ||
-      (b->state == BLOCK_LIVE && !b->requested) ||
-      b->requested > b->bytes - sizeof(struct block) ||
+      (b->state != SLCLI_ARENA_BLOCK_FREE && b->state != SLCLI_ARENA_BLOCK_LIVE) ||
+      (b->state == SLCLI_ARENA_BLOCK_FREE && b->requested) ||
+      (b->state == SLCLI_ARENA_BLOCK_LIVE && !b->requested) ||
+      b->requested > b->bytes - sizeof(struct slcli_arena_block_header) ||
       (!b->next && offset + b->bytes != e->reserved) ||
       (b->next && (b->next != offset + b->bytes ||
-                   b->next > e->reserved - sizeof(struct block)))) return 0;
+                   b->next > e->reserved - sizeof(struct slcli_arena_block_header)))) return 0;
   return b;
 }
 int slcli_arena_init(struct slcli_arena *a, struct slcli_memory_owner *o,
                       uint32_t index) {
   struct slcli_extent *e;
-  struct block *b;
-  if (!controls_separate(a, o) || o->failed || o->count > 256 || index >= 256 ||
+  struct slcli_arena_block_header *b;
+  size_t i;
+  if (!controls_separate(a, o) || !slcli_memory_owner_mutable(o) ||
+      o->failed || o->count > 256 || index >= 256 ||
       index >= o->count) return 0;
+  /* Fresh native descriptor constructor only. Inspect object bytes, never an
+   * indeterminate fresh owner pointer. This also forbids resetting an existing
+   * attached original by supplying a different otherwise mutable owner. */
+  for(i=0;i<sizeof(*a);i++)if(((const unsigned char *)a)[i])return 0;
   e = &o->extents[index];
   if (e->state != SLCLI_EXTENT_LIVE || e->arena_initialized ||
       e->category == SLCLI_STACK ||
@@ -69,72 +85,139 @@ int slcli_arena_init(struct slcli_arena *a, struct slcli_memory_owner *o,
       ((uintptr_t)o < e->base && e->base - (uintptr_t)o < sizeof(*o)) ||
       ((uintptr_t)a < e->base && e->base - (uintptr_t)a < sizeof(*a))) return 0;
   a->owner = o; a->extent = index; a->acquisition = e->acquisition;
-  b = (struct block *)e->base;
+  a->allocation_floor=0;
+  b = (struct slcli_arena_block_header *)e->base;
   b->bytes = e->reserved; b->requested = 0; b->next = 0;
-  b->state = BLOCK_FREE;
+  b->state = SLCLI_ARENA_BLOCK_FREE;
   e->arena_initialized = 1;
   return 1;
+}
+size_t slcli_arena_allocation_bytes(size_t requested) {
+  if(!requested||requested>SIZE_MAX-(15+sizeof(struct slcli_arena_block_header)))return 0;
+  return ((requested+15)&~(size_t)15)+sizeof(struct slcli_arena_block_header);
 }
 void *slcli_arena_alloc(struct slcli_arena *a, size_t requested) {
   struct slcli_extent *e = extent(a);
   uint64_t offset = 0, need;
-  struct block *b, *tail;
+  struct slcli_arena_block_header *b, *tail;
+  if(!a||!slcli_memory_owner_mutable(a->owner))return 0;
   if (!requested) return 0;
   if (!e || requested > UINT64_MAX - 47) {
     deny(a); return 0;
   }
+  offset=a->allocation_floor;
   need = ((uint64_t)requested + 15) & ~(uint64_t)15;
-  need += sizeof(struct block);
+  need += sizeof(struct slcli_arena_block_header);
   for (;;) {
     b = block_at(e, offset);
     if (!b) { deny(a); return 0; }
-    if (b->state == BLOCK_FREE && b->bytes >= need) {
+    if (b->state == SLCLI_ARENA_BLOCK_FREE && b->bytes >= need) {
       if (b->bytes - need >= 48) {
-        tail = (struct block *)(e->base + (uintptr_t)(offset + need));
+        tail = (struct slcli_arena_block_header *)(e->base + (uintptr_t)(offset + need));
         tail->bytes = b->bytes - need; tail->requested = 0;
-        tail->next = b->next; tail->state = BLOCK_FREE;
+        tail->next = b->next; tail->state = SLCLI_ARENA_BLOCK_FREE;
         b->next = offset + need; b->bytes = need;
       }
-      b->requested = requested; b->state = BLOCK_LIVE;
-      return (void *)(e->base + (uintptr_t)offset + sizeof(struct block));
+      b->requested = requested; b->state = SLCLI_ARENA_BLOCK_LIVE;
+      return (void *)(e->base + (uintptr_t)offset + sizeof(struct slcli_arena_block_header));
     }
     if (!b->next) return 0; /* Capacity exhaustion is a real allocation failure. */
     offset = b->next;
   }
 }
+int slcli_arena_live_range(struct slcli_arena *a,const void *value,size_t bytes) {
+  struct slcli_extent *e=extent(a);struct slcli_arena_block_header *b;uint64_t offset=0;
+  uintptr_t address=(uintptr_t)value,start;
+  if(!e||!value||!bytes||address>UINTPTR_MAX-bytes)return 0;
+  for(;;) {
+    b=block_at(e,offset);if(!b)return 0;
+    start=e->base+(uintptr_t)offset+sizeof(struct slcli_arena_block_header);
+    if(b->state==SLCLI_ARENA_BLOCK_LIVE&&address>=start&&
+      address-start<=b->requested&&bytes<=b->requested-(address-start))return 1;
+    if(!b->next)return 0;offset=b->next;
+  }
+}
+int slcli_arena_live_block(struct slcli_arena *a,const void *value,size_t bytes) {
+  struct slcli_extent *e=extent(a);struct slcli_arena_block_header *b;uint64_t offset=0;
+  uintptr_t address=(uintptr_t)value,start;
+  if(!e||!value||!bytes||address>UINTPTR_MAX-bytes)return 0;
+  for(;;) {
+    b=block_at(e,offset);if(!b)return 0;
+    start=e->base+(uintptr_t)offset+sizeof(struct slcli_arena_block_header);
+    if(address==start)return b->state==SLCLI_ARENA_BLOCK_LIVE&&b->requested==bytes;
+    if(!b->next)return 0;offset=b->next;
+  }
+}
 int slcli_arena_free(struct slcli_arena *a, void *value) {
   struct slcli_extent *e = extent(a);
   uint64_t offset = 0;
-  struct block *b, *previous = 0, *next;
+  struct slcli_arena_block_header *b, *previous = 0, *next;
   uintptr_t address = (uintptr_t)value;
+  if(!a||!slcli_memory_owner_mutable(a->owner))return 0;
   if (!value) return 1;
-  if (!e || address < e->base + sizeof(struct block) ||
+  if (!e || address < e->base + sizeof(struct slcli_arena_block_header) ||
       address >= e->base + (uintptr_t)e->reserved) return deny(a);
+  if(address<e->base+(uintptr_t)a->allocation_floor+sizeof(struct slcli_arena_block_header))return deny(a);
+  offset=a->allocation_floor;
   for (;;) {
     b = block_at(e, offset);
     if (!b) return deny(a);
-    if (e->base + (uintptr_t)offset + sizeof(struct block) == address) break;
+    if (e->base + (uintptr_t)offset + sizeof(struct slcli_arena_block_header) == address) break;
     if (!b->next) return deny(a);
     previous = b; offset = b->next;
   }
-  if (b->state != BLOCK_LIVE) return deny(a);
+  if (b->state != SLCLI_ARENA_BLOCK_LIVE) return deny(a);
   /* Erase requested bytes before reuse; physical extent charge never changes. */
   { volatile unsigned char *p = value; uint64_t n = b->requested;
     while (n--) *p++ = 0; }
-  b->requested = 0; b->state = BLOCK_FREE;
+  b->requested = 0; b->state = SLCLI_ARENA_BLOCK_FREE;
   if (b->next) {
     next = block_at(e, b->next);
     if (!next) return deny(a);
-    if (next->state == BLOCK_FREE) { b->bytes += next->bytes; b->next = next->next; }
+    if (next->state == SLCLI_ARENA_BLOCK_FREE) { b->bytes += next->bytes; b->next = next->next; }
   }
-  if (previous && previous->state == BLOCK_FREE) {
+  if (previous && previous->state == SLCLI_ARENA_BLOCK_FREE) {
     previous->bytes += b->bytes; previous->next = b->next;
   }
   return 1;
 }
+int slcli_arena_resize_in_place(struct slcli_arena *a,void *value,size_t original,size_t requested) {
+  struct slcli_extent *e=extent(a);struct slcli_arena_block_header *b,*next=0,*tail;
+  uint64_t offset=0,need,available,following;size_t i;
+  if(!a||!slcli_memory_owner_mutable(a->owner))return 0;
+  if(!e||!value||!original||!requested||requested>UINT64_MAX-47)return deny(a);
+  if((uintptr_t)value<e->base+(uintptr_t)a->allocation_floor+sizeof(*b))return deny(a);
+  offset=a->allocation_floor;
+  for(;;) {
+    b=block_at(e,offset);if(!b)return deny(a);
+    if(e->base+(uintptr_t)offset+sizeof(*b)==(uintptr_t)value)break;
+    if(!b->next)return deny(a);offset=b->next;
+  }
+  if(b->state!=SLCLI_ARENA_BLOCK_LIVE||b->requested!=original)return deny(a);
+  need=(((uint64_t)requested+15)&~UINT64_C(15))+sizeof(*b);
+  available=b->bytes;following=b->next;
+  if(b->next) {
+    next=block_at(e,b->next);if(!next)return deny(a);
+    if(next->state==SLCLI_ARENA_BLOCK_FREE){available+=next->bytes;following=next->next;}
+  }
+  if(need>available)return 0; /* No old block/header/body mutation on capacity failure. */
+  /* Erase contracted bytes before writing any resulting free-block header.
+   * Every geometry/capacity/neighbor check precedes the first mutation. */
+  if(requested<original) {
+    volatile unsigned char *raw=value;
+    for(i=requested;i<original;i++)raw[i]=0;
+  }
+  if(available-need>=48) {
+    tail=(void *)(e->base+(uintptr_t)(offset+need));
+    tail->bytes=available-need;tail->requested=0;tail->next=following;tail->state=SLCLI_ARENA_BLOCK_FREE;
+    b->bytes=need;b->next=offset+need;
+  } else {b->bytes=available;b->next=following;}
+  b->requested=requested;return 1;
+}
 void *slcli_arena_calloc(struct slcli_arena *a, size_t count, size_t size) {
   unsigned char *p;
   size_t bytes, i;
+  if(!a||!slcli_memory_owner_mutable(a->owner))return 0;
   if (size && count > SIZE_MAX / size) return 0;
   bytes = count * size;
   p = slcli_arena_alloc(a, bytes);
@@ -143,22 +226,25 @@ void *slcli_arena_calloc(struct slcli_arena *a, size_t count, size_t size) {
 }
 void *slcli_arena_realloc(struct slcli_arena *a, void *value, size_t bytes) {
   struct slcli_extent *e;
-  struct block *b;
+  struct slcli_arena_block_header *b;
   uint64_t offset = 0, original, i;
   unsigned char *replacement;
+  if(!a||!slcli_memory_owner_mutable(a->owner))return 0;
   if (!value) return slcli_arena_alloc(a, bytes);
   if (!bytes) { slcli_arena_free(a, value); return 0; }
   e = extent(a);
   if (!e) { deny(a); return 0; }
+  if((uintptr_t)value<e->base+(uintptr_t)a->allocation_floor+sizeof(*b)){deny(a);return 0;}
+  offset=a->allocation_floor;
   for (;;) {
     b = block_at(e, offset);
     if (!b) { deny(a); return 0; }
-    if (e->base + (uintptr_t)offset + sizeof(struct block) == (uintptr_t)value)
+    if (e->base + (uintptr_t)offset + sizeof(struct slcli_arena_block_header) == (uintptr_t)value)
       break;
     if (!b->next) { deny(a); return 0; }
     offset = b->next;
   }
-  if (b->state != BLOCK_LIVE) { deny(a); return 0; }
+  if (b->state != SLCLI_ARENA_BLOCK_LIVE) { deny(a); return 0; }
   original = b->requested;
   /* Old and new native blocks coexist until copying and original release. On
    * capacity failure the caller still owns the untouched original allocation. */

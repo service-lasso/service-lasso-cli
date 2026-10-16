@@ -1,0 +1,20 @@
+{
+  "library": "Kernelbase.lib",
+  "primaryDocumentation": "https://learn.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-compareobjecthandles",
+  "state": "SOURCE_UNRUN_HEADER_OBSERVED_CANONICAL_SDK_IMPORT_LIBRARY_NOT_FOUND",
+  "records": [
+    {
+      "path": "C:/Program Files (x86)/Windows Kits/10/Include/10.0.26100.0/um/handleapi.h",
+      "state": "RAW_OBSERVED_UNQUALIFIED_NO_SOURCE_TOOL_NATIVE_ADMISSION",
+      "sha256": "c967fdf1a98e4ce8d501dae26b905f6452173b2be1c25e6aa2e5eeae415369cc",
+      "bytes": 2578
+    }
+  ],
+  "schema": "service-lasso.cli39.preentry-sdk-dependency-observations.v1",
+  "module": "Kernelbase.dll",
+  "sdk": "10.0.26100.0",
+  "architecture": "x64",
+  "minimumOperatingSystem": "Windows10_API_DEPENDENCY_NOT_RELEASE_DECLARATION",
+  "api": "CompareObjectHandles",
+  "importRecipe": "native/host-service/kernelbase-preentry.def -> original LIB /DEF /MACHINE:X64 -> fresh slcli-kernelbase.lib and .exp; UNRUN and module authority UNSUPPLIED"
+}

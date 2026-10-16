@@ -1,0 +1,199 @@
+{
+  "schema": "service-lasso.cli39-runtime-row-section-amendment.v3",
+  "selected": true,
+  "snapshotVersion": 3,
+  "headerBytes": 6,
+  "rowBytes": 124,
+  "maximumRows": null,
+  "maximumSnapshotBytes": null,
+  "observeOuterBytes": 42,
+  "maximumObserveBodyBytes": null,
+  "fields": [
+    {
+      "offset": 0,
+      "bytes": 4,
+      "name": "id",
+      "type": "u32BE"
+    },
+    {
+      "offset": 4,
+      "bytes": 1,
+      "name": "nativeClass",
+      "type": "closedU8_0_22"
+    },
+    {
+      "offset": 5,
+      "bytes": 1,
+      "name": "state",
+      "type": "closedU8_0_3"
+    },
+    {
+      "offset": 6,
+      "bytes": 8,
+      "name": "charged",
+      "type": "u64BE"
+    },
+    {
+      "offset": 14,
+      "bytes": 32,
+      "name": "nativeIdentityDigest",
+      "type": "B32_orZeroOnlyTypedUnborn"
+    },
+    {
+      "offset": 46,
+      "bytes": 4,
+      "name": "handleIndex",
+      "type": "u32BE_orFFFFFFFF"
+    },
+    {
+      "offset": 50,
+      "bytes": 32,
+      "name": "observationAssociation",
+      "type": "B32"
+    },
+    {
+      "offset": 82,
+      "bytes": 1,
+      "name": "ownerDomain",
+      "type": "closedU8_0_1_2_4"
+    },
+    {
+      "offset": 83,
+      "bytes": 1,
+      "name": "processRole",
+      "type": "closedU8_0_7"
+    },
+    {
+      "offset": 84,
+      "bytes": 1,
+      "name": "producerSlot",
+      "type": "inputSlot_1_128"
+    },
+    {
+      "offset": 85,
+      "bytes": 1,
+      "name": "consumerSlot",
+      "type": "inputSlot_1_128_or0Absent"
+    },
+    {
+      "offset": 86,
+      "bytes": 4,
+      "name": "sourceMember",
+      "type": "u32BE_nonzero_SourceUnit12"
+    },
+    {
+      "offset": 90,
+      "bytes": 8,
+      "name": "nativeRights",
+      "type": "u64BE_platform_source_join"
+    },
+    {
+      "offset": 98,
+      "bytes": 2,
+      "name": "aliasOf",
+      "type": "u16BE_legacy_pending_coordinated_R_width_orFFFFAbsent"
+    },
+    {
+      "offset": 100,
+      "bytes": 2,
+      "name": "physicalExtent",
+      "type": "u16BE_samePhysical256_orFFFFAbsent"
+    },
+    {
+      "offset": 102,
+      "bytes": 4,
+      "name": "captureFirst",
+      "type": "u32BE_original_range_record"
+    },
+    {
+      "offset": 106,
+      "bytes": 4,
+      "name": "captureCount",
+      "type": "u32BE_checked_original_range_count"
+    },
+    {
+      "offset": 110,
+      "bytes": 4,
+      "name": "startCut",
+      "type": "u32BE_selected_original_cut"
+    },
+    {
+      "offset": 114,
+      "bytes": 4,
+      "name": "endCut",
+      "type": "u32BE_selected_original_cut_or0Unresolved"
+    },
+    {
+      "offset": 118,
+      "bytes": 2,
+      "name": "effectFlags",
+      "type": "u16BE_closed_bits0_7"
+    },
+    {
+      "offset": 120,
+      "bytes": 1,
+      "name": "inputSlot",
+      "type": "inputSlot_1_128_or0NotApplicable"
+    },
+    {
+      "offset": 121,
+      "bytes": 1,
+      "name": "applicabilityAndTerminal",
+      "type": "low4_absence_bits_high3_membership0_4_bit7_primaryTerminalDependency"
+    },
+    {
+      "offset": 122,
+      "bytes": 2,
+      "name": "reserved",
+      "type": "zero"
+    }
+  ],
+  "nativeKinds": [
+    "process",
+    "thread",
+    "channel",
+    "stream",
+    "input-file",
+    "pending-io",
+    "buffer",
+    "candidate",
+    "image-map",
+    "private-map",
+    "stack",
+    "guard",
+    "tls",
+    "fls",
+    "mutex",
+    "srw-lock",
+    "condition",
+    "semaphore",
+    "timer",
+    "socket",
+    "event",
+    "directory",
+    "section"
+  ],
+  "inputMembership": "independently admitted SP1 paid process/actor/input rows; native thread birth remains separately observed",
+  "captureCountWidthReason": "u32 preserves full genuine one-byte short-read/poll range geometry without silently imposing65535 capture cap; actual retained capacity/source budget remains independently bounded",
+  "runtimeFit": "UNKNOWN",
+  "nativeNumericExpansion": "UNSUPPLIED",
+  "sourceGO": false,
+  "inputAdmission": false,
+  "targetExecution": "NONE",
+  "applicabilityMasks": {
+    "allowed": 255,
+    "inputAbsent": 2,
+    "handleAbsent": 8,
+    "extentAbsent": 4,
+    "consumerAbsent": 1,
+    "membershipMask": 112,
+    "membershipShift": 4,
+    "primaryTerminalDependency": 128
+  },
+  "canonicalRules": "DESIGN.md canonical rules, validation matrix and source-owned terminal/pending contracts integral",
+  "numericCapacityState": "R UNKNOWN; historical128/16KiB implementation remains migration debt",
+  "compatibility": "v3 readers reject v1/v2; prior WIRE.json retained unchanged as historical v2 design evidence",
+  "legacyImplementationFrameBytes": 16384,
+  "sectionHandlePolicy": "class22 H; independent original/duplicate HANDLE rows and close lifetimes",
+  "viewPolicy": "class9 N; separate native view/unmap/borrower row, same physical256 extent"
+}

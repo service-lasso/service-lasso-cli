@@ -1,0 +1,27 @@
+{
+  "schema": "service-lasso.cli39.current-recipe-originals.v1",
+  "historicalRestoration": false,
+  "completeRecipe": false,
+  "rows": [
+    {
+      "path": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\inc\\corecrt_internal.h",
+      "relativePath": "inc/corecrt_internal.h",
+      "bytes": 74158,
+      "sha256": "bad095a8a91e6cb55d7e28083ccb9db5ffbfa53d18668b9448acff284985e936",
+      "ownSemanticRead": "ENTIRE_EOF_CURRENT",
+      "nativeExecution": "NONE",
+      "purpose": "Current intended static ordinary CRT source-build recipe and concrete reservation derivation",
+      "admission": "SOURCE_ONLY_NOT_TOOL_OR_NATIVE_ADMISSION"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\internal\\winapi_thunks.cpp",
+      "relativePath": "internal/winapi_thunks.cpp",
+      "bytes": 37607,
+      "sha256": "64d965d1989f1a5f8fe82932b5f90df78d29470dba287089ef5677ce9452df66",
+      "ownSemanticRead": "ENTIRE_EOF_CURRENT",
+      "nativeExecution": "NONE",
+      "purpose": "Current intended static ordinary CRT source-build recipe and concrete reservation derivation",
+      "admission": "SOURCE_ONLY_NOT_TOOL_OR_NATIVE_ADMISSION"
+    }
+  ]
+}

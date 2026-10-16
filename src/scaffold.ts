@@ -6,12 +6,13 @@ import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Socket, connect } from "node:net";
 import { CliError } from "./errors.js";
+import { validateAuthoring } from "./template-owner.js";
 import { AcceptedTemplateBundle, acceptedTemplateFiles, loadAcceptedTemplateBundle, requireAcceptedTemplateIdentity, templateContractPreview } from "./template.js";
 export interface ServiceScaffoldOptions { id: string; directory: string; name?: string; dryRun?: boolean; templateRoot?: string; }
 export interface ServiceScaffoldResult { directory: string; files: string[]; dryRun: boolean; }
-export function validateServiceId(id: string): string { if (!/^[a-z][a-z0-9-]{1,63}$/.test(id)) throw new CliError("invalid_service_id", "Service id must use lowercase letters, numbers, and hyphens (2-64 characters)."); return id; }
-export function previewServiceScaffold(options: ServiceScaffoldOptions): Record<string, unknown> { return { directory: resolve(options.directory), serviceId: validateServiceId(options.id), dryRun: true, files: [], writes: false, runtimeMutation: false, template: templateContractPreview() }; }
-export function scaffoldFiles(options: ServiceScaffoldOptions): Record<string, string> { validateServiceId(options.id); return requireAcceptedTemplateIdentity(); }
+export function validateServiceId(id: string): string { validateAuthoring(id); return id; }
+export function previewServiceScaffold(options: ServiceScaffoldOptions): Record<string, unknown> { validateAuthoring(options.id, options.name); return { directory: resolve(options.directory), serviceId: validateServiceId(options.id), dryRun: true, files: [], writes: false, runtimeMutation: false, template: templateContractPreview() }; }
+export function scaffoldFiles(options: ServiceScaffoldOptions): Record<string, string> { validateAuthoring(options.id, options.name); return requireAcceptedTemplateIdentity(); }
 const helperName = `service-lasso-confined-scaffold${process.platform === "win32" ? ".exe" : ""}`;
 let sourceHelper: string | undefined;
 function sha256(value: Buffer | string): string { return createHash("sha256").update(value).digest("hex"); }
@@ -141,7 +142,7 @@ async function confinedMaterialize(destination: string, files: Awaited<ReturnTyp
   if (!match) throw new CliError("unsafe_scaffold_destination", "The project destination could not be created through the confined writer.");
   throw new CliError(`confined_writer_${match[1]}`, "The project destination could not be created through the confined writer.");
 }
-export async function createServiceScaffold(options: ServiceScaffoldOptions): Promise<ServiceScaffoldResult> { validateServiceId(options.id); const destination = resolve(options.directory); if (!options.templateRoot) return requireAcceptedTemplateIdentity(); const bundle = await loadAcceptedTemplateBundle(options.templateRoot); return materializeAcceptedTemplate(destination, bundle, Boolean(options.dryRun)); }
+export async function createServiceScaffold(options: ServiceScaffoldOptions): Promise<ServiceScaffoldResult> { validateAuthoring(options.id, options.name); const destination = resolve(options.directory); if (!options.templateRoot) return requireAcceptedTemplateIdentity(); const bundle = await loadAcceptedTemplateBundle(options.templateRoot); return materializeAcceptedTemplate(destination, bundle, Boolean(options.dryRun)); }
 /** Materialize only a bundle already admitted by the source-owned resolver. */
 export async function materializeAcceptedTemplate(destinationInput: string, bundle: AcceptedTemplateBundle, dryRun = false): Promise<ServiceScaffoldResult> {
   const destination = resolve(destinationInput), files = await acceptedTemplateFiles(bundle);

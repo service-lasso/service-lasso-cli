@@ -1,6 +1,6 @@
 #include "json.h"
 #include "wire.h"
-struct reader { const unsigned char *raw; size_t bytes, at; uint32_t members,tokens; };
+struct reader { const unsigned char *raw; size_t bytes, at; uint32_t members,tokens,member_limit,token_limit,array_limit; };
 static void space(struct reader *r) {
   while(r->at<r->bytes&&(r->raw[r->at]==' '||r->raw[r->at]=='\t'||
         r->raw[r->at]=='\r'||r->raw[r->at]=='\n')) ++r->at;
@@ -101,7 +101,7 @@ static int digits(struct reader *r) {
 static int value(struct reader *r,uint32_t depth,int check,struct slcli_json_span *span) {
   unsigned char first,closing; size_t content; uint32_t count=0;
   struct slcli_json_span key,item;
-  space(r); if(depth>16||r->at==r->bytes||(check&&++r->tokens>65536)) return 0;
+  space(r); if(depth>16||r->at==r->bytes||(check&&++r->tokens>r->token_limit)) return 0;
   span->start=r->at; first=r->raw[r->at];
   if(first=='"') return string(r,span);
   if(first=='{'||first=='[') {
@@ -109,10 +109,10 @@ static int value(struct reader *r,uint32_t depth,int check,struct slcli_json_spa
     if(r->at<r->bytes&&r->raw[r->at]==closing) { span->end=++r->at; return 1; }
     for(;;) {
       if(first=='{') {
-        if((check&&++r->members>4096)||!string(r,&key)||
+        if((check&&++r->members>r->member_limit)||!string(r,&key)||
            (check&&duplicate(r,content,key,depth))) return 0;
         space(r); if(r->at==r->bytes||r->raw[r->at++]!=':') return 0;
-      } else if(++count>4096) return 0;
+      } else if(++count>r->array_limit) return 0;
       if(!value(r,depth+1,check,&item)) return 0;
       space(r); if(r->at==r->bytes) return 0;
       if(r->raw[r->at]==closing) { span->end=++r->at; return 1; }
@@ -148,13 +148,84 @@ int slcli_json_validate(const unsigned char *raw,size_t bytes,size_t maximum,
   *out=root;
   if(!bytes||bytes>maximum||
      (maximum!=16384&&maximum!=262144)||!slcli_utf8(raw,bytes,1)) return 0;
-  r.raw=raw; r.bytes=bytes; r.at=0; r.members=0; r.tokens=0;
+  r.raw=raw; r.bytes=bytes; r.at=0; r.members=0; r.tokens=0; r.member_limit=4096; r.token_limit=65536; r.array_limit=4096;
   if(!value(&r,0,1,&root)) return 0;
   space(&r); if(r.at!=bytes) return 0;
   *out=root; return 1;
 }
-int slcli_json_object(const unsigned char *raw,size_t bytes,struct slcli_json_span object,
-                       const char *const *keys,size_t count,struct slcli_json_span *out) {
+int slcli_json_ha2_validate(const unsigned char *raw,size_t bytes,size_t maximum,
+  const struct slcli_json_ha2_plan *plan,struct slcli_json_span *out) {
+  struct reader r;struct slcli_json_span root={0,0};
+  uint32_t tokens,members,array_items;
+  /* Snapshot immutable private work bounds before touching output. Exact
+   * source/native owner and arena admission is the real caller's obligation. */
+  if(!plan||!disjoint(raw,bytes,out,sizeof(*out))||
+     !disjoint(plan,sizeof(*plan),out,sizeof(*out))||
+     !disjoint(plan,sizeof(*plan),raw,bytes))return 0;
+  tokens=plan->tokens;members=plan->members;array_items=plan->array_items;
+  if((maximum!=524288&&maximum!=1048576)||!bytes||bytes>maximum||
+     !tokens||!members||!array_items||tokens>1048576||members>1048576||
+     array_items>1048576)return 0;
+  *out=root;if(!slcli_utf8(raw,bytes,1))return 0;
+  r.raw=raw;r.bytes=bytes;r.at=0;r.members=0;r.tokens=0;
+  r.member_limit=members;r.token_limit=tokens;r.array_limit=array_items;
+  if(!value(&r,0,1,&root))return 0;
+  space(&r);if(r.at!=bytes)return 0;
+  /* HA2 raw members preserve their canonical original final LF exactly. */
+  if(root.start||root.end+1!=bytes||raw[root.end]!='\n')return 0;
+  *out=root;return 1;
+}
+int slcli_json_ha2_array_next(const unsigned char *raw,size_t bytes,struct slcli_json_span array,
+  const struct slcli_json_ha2_plan *plan,struct slcli_json_ha2_array_cursor *cursor,
+  struct slcli_json_span *out,int *done) {
+  struct reader r;struct slcli_json_span item;size_t at;
+  if(!raw||!plan||!cursor||!out||!done||
+     !disjoint(raw,bytes,cursor,sizeof(*cursor))||!disjoint(raw,bytes,out,sizeof(*out))||
+     !disjoint(raw,bytes,done,sizeof(*done))||!disjoint(raw,bytes,plan,sizeof(*plan))||
+     !disjoint(cursor,sizeof(*cursor),out,sizeof(*out))||
+     !disjoint(cursor,sizeof(*cursor),done,sizeof(*done))||
+     !disjoint(cursor,sizeof(*cursor),plan,sizeof(*plan))||
+     !disjoint(out,sizeof(*out),done,sizeof(*done))||
+     !disjoint(out,sizeof(*out),plan,sizeof(*plan))||
+     !disjoint(done,sizeof(*done),plan,sizeof(*plan)))return 0;
+  if(cursor->failed||cursor->complete)return 0;
+  if(!bytes||bytes>1048576||!plan->tokens||!plan->members||!plan->array_items||
+     plan->tokens>1048576||plan->members>1048576||plan->array_items>1048576||
+     array.start>=array.end||array.end>bytes||raw[array.start]!='['||raw[array.end-1]!=']')goto fail;
+  if(!cursor->started) {
+    if(cursor->at||cursor->count||cursor->raw_original||cursor->raw_bytes||
+       cursor->plan_original||cursor->array_original.start||cursor->array_original.end||
+       cursor->plan_snapshot.tokens||cursor->plan_snapshot.members||cursor->plan_snapshot.array_items)goto fail;
+    cursor->raw_original=raw;cursor->raw_bytes=bytes;cursor->array_original=array;
+    cursor->plan_original=plan;cursor->plan_snapshot=*plan;
+    cursor->started=1;cursor->at=array.start+1;
+  }
+  if(cursor->raw_original!=raw||cursor->raw_bytes!=bytes||cursor->plan_original!=plan||
+     cursor->array_original.start!=array.start||cursor->array_original.end!=array.end||
+     cursor->plan_snapshot.tokens!=plan->tokens||cursor->plan_snapshot.members!=plan->members||
+     cursor->plan_snapshot.array_items!=plan->array_items)goto fail;
+  at=cursor->at;
+  if(at<array.start+1||at>=array.end||cursor->count>plan->array_items)goto fail;
+  /* Selected canonical bodies have no internal whitespace. A later item
+   * starts only at the previous exact comma, never by caller offset seeking. */
+  if(raw[at]==']') {
+    if(at+1!=array.end)goto fail;
+    cursor->complete=1;*done=1;return 1;
+  }
+  if(cursor->count>=plan->array_items)goto fail;
+  r.raw=raw;r.bytes=array.end;r.at=at;r.members=0;r.tokens=0;
+  r.member_limit=plan->members;r.token_limit=plan->tokens;r.array_limit=plan->array_items;
+  if(!value(&r,1,0,&item)||item.start!=at||r.at>=array.end)goto fail;
+  at=r.at;
+  if(raw[at]==',') {
+    at++;if(at>=array.end||raw[at]==']')goto fail;
+  } else if(raw[at]!=']'||at+1!=array.end)goto fail;
+  cursor->at=at;cursor->count++;*out=item;*done=0;return 1;
+fail:
+  cursor->failed=1;return 0;
+}
+static int object_work(const unsigned char *raw,size_t bytes,struct slcli_json_span object,
+                       const char *const *keys,size_t count,const struct slcli_json_ha2_plan *plan,struct slcli_json_span *out) {
   struct reader r; struct slcli_json_span key,body,empty={0,0};
   uint64_t seen=0; size_t i,j;
   if(!raw||!keys||!out||!count||count>64||
@@ -162,8 +233,13 @@ int slcli_json_object(const unsigned char *raw,size_t bytes,struct slcli_json_sp
      !disjoint(keys,count*sizeof(*keys),out,count*sizeof(*out))||
      object.start>=object.end||object.end>bytes||
      raw[object.start]!='{'||raw[object.end-1]!='}') return 0;
+  if(plan&&(!disjoint(plan,sizeof(*plan),raw,bytes)||
+     !disjoint(plan,sizeof(*plan),out,count*sizeof(*out))||
+     !plan->tokens||!plan->members||!plan->array_items||
+     plan->tokens>1048576||plan->members>1048576||plan->array_items>1048576))return 0;
   for(i=0;i<count;++i) out[i]=empty;
-  r.raw=raw; r.bytes=object.end; r.at=object.start+1; r.members=0; r.tokens=0;
+  r.raw=raw; r.bytes=object.end; r.at=object.start+1; r.members=0; r.tokens=0; r.member_limit=4096; r.token_limit=65536; r.array_limit=4096;
+  if(plan){r.member_limit=plan->members;r.token_limit=plan->tokens;r.array_limit=plan->array_items;}
   space(&r);
   while(r.at<r.bytes&&r.raw[r.at]!='}') {
     if(!string(&r,&key)) return 0;
@@ -181,6 +257,15 @@ int slcli_json_object(const unsigned char *raw,size_t bytes,struct slcli_json_sp
      seen!=(count==64?UINT64_MAX:(UINT64_C(1)<<count)-1)) return 0;
   return 1;
 }
+int slcli_json_object(const unsigned char *raw,size_t bytes,struct slcli_json_span object,
+  const char *const *keys,size_t count,struct slcli_json_span *out) {
+  return object_work(raw,bytes,object,keys,count,0,out);
+}
+int slcli_json_ha2_object(const unsigned char *raw,size_t bytes,struct slcli_json_span object,
+  const char *const *keys,size_t count,const struct slcli_json_ha2_plan *plan,struct slcli_json_span *out) {
+  if(!plan||!bytes||bytes>1048576)return 0;
+  return object_work(raw,bytes,object,keys,count,plan,out);
+}
 int slcli_json_text(const unsigned char *raw,size_t bytes,struct slcli_json_span text,
                      unsigned char *destination,size_t capacity,int controls,size_t *written) {
   struct reader r; uint32_t s; unsigned char encoded[4]; size_t n,i,at=0;
@@ -190,7 +275,7 @@ int slcli_json_text(const unsigned char *raw,size_t bytes,struct slcli_json_span
   *written=0;
   if(text.start>=text.end||text.end>bytes||
      raw[text.start]!='"'||raw[text.end-1]!='"'||(controls!=0&&controls!=1)) return 0;
-  r.raw=raw; r.bytes=text.end-1; r.at=text.start+1; r.members=0; r.tokens=0;
+  r.raw=raw; r.bytes=text.end-1; r.at=text.start+1; r.members=0; r.tokens=0; r.member_limit=4096; r.token_limit=65536; r.array_limit=4096;
   while(r.at<r.bytes) {
     if(!scalar(&r,&s)||(!controls&&(s<32||s==127))) return 0;
     if(s<0x80) { n=1; encoded[0]=(unsigned char)s; }
@@ -227,7 +312,7 @@ int slcli_json_array(const unsigned char *raw,size_t bytes,struct slcli_json_spa
   *count=0;
   if(array.start>=array.end||
      array.end>bytes||raw[array.start]!='['||raw[array.end-1]!=']') return 0;
-  r.raw=raw; r.bytes=array.end; r.at=array.start+1; r.members=0; r.tokens=0;
+  r.raw=raw; r.bytes=array.end; r.at=array.start+1; r.members=0; r.tokens=0; r.member_limit=4096; r.token_limit=65536; r.array_limit=4096;
   space(&r);
   while(r.at<r.bytes&&r.raw[r.at]!=']') {
     if(used==capacity||!value(&r,1,0,&item)) return 0;
@@ -238,4 +323,21 @@ int slcli_json_array(const unsigned char *raw,size_t bytes,struct slcli_json_spa
   }
   if(r.at+1!=array.end||r.raw[r.at]!=']') return 0;
   *count=used; return 1;
+}
+int slcli_json_canonical_ascii_object(const unsigned char *raw,size_t bytes,
+  struct slcli_json_span root,const char *const *keys,const struct slcli_json_span *fields,
+  size_t count,int whole) {
+  size_t at=root.start,i,j;
+  if(!raw||!keys||!fields||!count||count>64||(whole!=0&&whole!=1)||
+    root.end>bytes||root.start>=root.end||raw[at++]!='{')return 0;
+  if(whole&&(root.start||root.end>=bytes||root.end+1!=bytes||raw[root.end]!='\n'))return 0;
+  for(i=0;i<count;i++) {
+    if(!keys[i]||at>=root.end||raw[at++]!='"')return 0;
+    for(j=0;keys[i][j];j++)if(at>=root.end||raw[at++]!=(unsigned char)keys[i][j])return 0;
+    if(at>root.end||root.end-at<2||raw[at++]!='"'||raw[at++]!=':'||fields[i].start!=at||
+      fields[i].end<=at||fields[i].end>root.end)return 0;
+    for(j=at;j<fields[i].end;j++)if(raw[j]<33||raw[j]>126||raw[j]=='\\')return 0;
+    at=fields[i].end;if(i+1<count&&(at>=root.end||raw[at++]!=','))return 0;
+  }
+  return at+1==root.end&&raw[at]=='}';
 }

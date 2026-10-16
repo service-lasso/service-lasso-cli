@@ -25,6 +25,11 @@ struct slcli_calibration {
 };
 int slcli_qualification_parse(const unsigned char *,size_t,const unsigned char[32],
                                struct slcli_qualification *);
+/* Distinct selected HA2 service qualifier. It must never be accepted by the
+ * ordinary runtimeQ12 domain0/2 decoder or treated as a native certificate. */
+int slcli_ha2_service_qualification_parse(const unsigned char *,size_t,
+                                          const unsigned char[32],
+                                          struct slcli_qualification *);
 int slcli_calibration_parse(const unsigned char *,size_t,const unsigned char[32],
                              struct slcli_calibration *);
 #endif

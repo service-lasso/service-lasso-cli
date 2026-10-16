@@ -1,0 +1,14 @@
+# Complete bounded current input coverage
+
+INPUTS.json enumerates42 exact current text/source members. Every input was raw-read through EOF, copied to a fresh in-repo destination, and source-before/source-after/saved size and SHA256 were compared. No binary copied, historical deleted artifact restored or target executed. Own semantic EOF credit is the same author's actual current whole reads, not inherited peer review69. Selected19 DESIGN and selected67 DESIGN were additionally reread from these frozen copies in full disjoint chunks; unchanged exact input hashes join prior current-source own EOF reads for CRT/config/process/implementation. Scope is bounded static startup reservation derivation, not whole implementation or transitive CRT/archive/runtime admission.
+
+Coverage by input group:
+- selected19 DESIGN, PROCESS-AND-RUNTIME-CONTRACT19, IMPLEMENTATION-AND-ACCEPTANCE19 and README: full roles, SAME B0/process separation, preeffect/count/capture, terminal overlap and no-free-resource requirements. Original UNSELECTED historical headings preserved; current parent explicitly selects surviving19/67 source contracts.
+- selected67 DESIGN, WIRE and README: same128 reservation/no reuse/native class/variant/physical/capture/accounting, terminal memberships and complete snapshot. Pending transition full implementation remains unfinished.
+- current windows-release-profile, node.gyp, recipe68 and SOURCE-ASSOCIATIONS: intended nonshared /MT full Node and complete archive requirements; distinguish current overlay from original blob and unqualified archive/preentry output.
+- four fixed original Node configuration bodies plus CURRENT-INPUTS: complete original configure.py/vcbuild.bat/common.gypi/MSVSSettings.py own EOF, exact fixed commit/blob/raw hashes, source configuration conversion and default features. No generated configuration executed.
+- eight installed UCRT bodies: full15 global enumeration, actual wrapper, initialization/forward/unwind chain,64 first-array loop/constants, native failure semantics.
+- thirteen installed VCRT bodies: static wmain startup and utility call ordering, linkage controls, one lock count, original PTD allocation and complete FLS/TLS downlevel variant, actual original API wrappers.
+- six current input/observation JSON controls: exact current original/header/startup/resource metadata and tool/archive hashes; no binaries or proof of ABI/link selection.
+
+The total42 includes the four Node bodies and six config JSON controls. All current semantic read claims are source-only and operation-specific. Independent reviewer must perform its own entire read; raw custody never substitutes for semantic review. Native API return bounds, original creator authority, whole source compilation, linked source association, full arena/resource fit, qualification and all useful installed routes are explicitly outside this bounded packet's claimed completeness.

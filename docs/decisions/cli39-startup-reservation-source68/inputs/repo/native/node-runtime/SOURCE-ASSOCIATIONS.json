@@ -1,0 +1,61 @@
+{
+  "fullOriginalCommit": "aa4c77582be995286fc6e00aaf530dc7ade102a9",
+  "records": [
+    {
+      "path": "src/node_main.cc",
+      "originalOID": "f66099a55703dff1d0ca292d33eae34918b777f3",
+      "originalBytes": 4005,
+      "originalSHA256": "0e4ebb1f528c275a4e1605a7661370a72bce29e30f8d04a6ad142001b9fa502e",
+      "overlaySHA256": "4e3f2bf2fe8a72c26f439db4fc11b0662a8842e2618b37b166963b2e44b799ad",
+      "state": "SOURCE-UNRUN; partial connected hooks, full preentry/CRT/V8/thread/builtin/caller integration pending"
+    },
+    {
+      "path": "src/node.cc",
+      "originalOID": "db0011b429f25cab296ca425564effe87383f506",
+      "originalBytes": 58177,
+      "originalSHA256": "878553644444ef00f8d3c2a144b5b6ff542c9235cff774f23dd4e9ddb364a73a",
+      "overlaySHA256": "e9df6860a3655de143aec2fba26e40d786521ccfc1197191b53407a8164021f7",
+      "state": "SOURCE-UNRUN; partial connected hooks, full preentry/CRT/V8/thread/builtin/caller integration pending"
+    },
+    {
+      "path": "deps/uv/src/uv-common.c",
+      "originalOID": "60ff56b9dd7391b850f41acc3ad020b9a9aa4a16",
+      "originalBytes": 23928,
+      "originalSHA256": "c311e17ae0f891c9eba52626adf9ea33a91b7459654eb1c20e56c24d30d6b446",
+      "overlaySHA256": "79727dfdfd80794fc9b1ea6a0d4db2c11e98f373aac5152ac1fcfe53b2e1b51b",
+      "state": "SOURCE-UNRUN; partial connected hooks, full preentry/CRT/V8/thread/builtin/caller integration pending"
+    },
+    {
+      "path": "deps/openssl/openssl/crypto/mem.c",
+      "originalOID": "2ae2b8c8c7583369ab6e9e50c0253786d853935d",
+      "originalBytes": 10987,
+      "originalSHA256": "77138b674aaf42d77b5ba90e2c2e2baaac24dbb7cf72a3416ece7e391f13053d",
+      "overlaySHA256": "d581c022dd33e207eb4b22864810c79f8e83d07b2b3085c0315591576d0b3985",
+      "state": "SOURCE-UNRUN; partial connected hooks, full preentry/CRT/V8/thread/builtin/caller integration pending"
+    },
+    {
+      "path": "deps/icu-small/source/common/cmemory.cpp",
+      "originalOID": "e59d4b0efe3813489419f89be2a8c73c19b1a206",
+      "originalBytes": 3540,
+      "originalSHA256": "9a0ffa21c47a2a590b7a7be52a10e503d360dc43303fe61cf1271fc0d3de32bc",
+      "overlaySHA256": "76c871e4edc902a9d59b587a4d127839e3716fb894376da81ab82c9eae84e94b",
+      "state": "SOURCE-UNRUN; partial connected hooks, full preentry/CRT/V8/thread/builtin/caller integration pending"
+    },
+    {
+      "path": "node.gyp",
+      "originalOID": "f9ee71dd9a395fa1de99a6f62ba60acdf8be12a1",
+      "originalBytes": 46926,
+      "originalSHA256": "b7f1544d40de42a76c8c6c88a8615db560db43d05dbfeb3bcfca72e9f35d9aac",
+      "overlaySHA256": "417866a319ccbad0f925ff91596372091a606df23b655062cfe9ad70b787e402",
+      "state": "SOURCE-UNRUN; intended nonshared Windows executable explicitly links complete owned static CRT families; authentic member/archive/preentry/tool/host-generator closure and measured full build remain unfinished"
+    },
+    {
+      "path": "deps/uv/src/win/thread.c",
+      "originalOID": "753cb6a34a5b9a6d332511596fb139fe071c2de3",
+      "originalBytes": 13356,
+      "originalSHA256": "d674e3a3484034d2b97f892bf6acf6f7ac734df0f340b3aaa63c7edd53358129",
+      "overlaySHA256": "140390a2711634a344c4e5fc5cf5cd0c0014997e1adcc6763620c1bbe20203ab",
+      "state": "SOURCE-UNRUN; actual suspended child and finite original-row native join/close caller; full classified native lifetime/preentry/default threads/fit unfinished"
+    }
+  ]
+}

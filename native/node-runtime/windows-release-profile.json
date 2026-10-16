@@ -1,0 +1,101 @@
+{
+  "schema": "service-lasso.cli39.windows-source-profile.v1",
+  "state": "OWNER_SELECTED_FINITE_WHOLE_BINDING_RESOURCE_BUDGET_DERIVATION_IN_PROGRESS",
+  "node": {
+    "version": "22.23.2",
+    "originalCommit": "aa4c77582be995286fc6e00aaf530dc7ade102a9",
+    "platform": "win32",
+    "architecture": "x64",
+    "configuration": "Release",
+    "shared": false,
+    "forceDynamicCRT": 0,
+    "runtimeLibrary": "MultiThreaded",
+    "runtimeSwitch": "/MT",
+    "icu": "full-icu",
+    "v8": "full-default",
+    "jit": true,
+    "defaultWorkers": true,
+    "reducedRuntime": false
+  },
+  "crt": {
+    "ucrtSourceVersion": "10.0.26100.0",
+    "vcruntimeSourceVersion": "14.44.35207",
+    "linkage": "static",
+    "enclave": false,
+    "fullOriginalSourceClosureRequired": true,
+    "archiveUnitFlagsAndExports": "UNFINISHED_REQUIRES_AUTHENTIC_CURRENT_SOURCE",
+    "preentryBeforeCRTAllocation": "UNFINISHED_REQUIRED",
+    "eventualArchiveAndImageProvenance": "UNQUALIFIED"
+  },
+  "images": [
+    "facade82-image79",
+    "SEA80-image35"
+  ],
+  "simultaneousOwnership": {
+    "domain": "B0",
+    "capacityRows": null,
+    "ordinaryCompletedStartupCheckedGlobalLocksPerProcess": 15,
+    "ordinaryCompletedStartupLowIOInitAttemptsPerProcess": 64,
+    "conditionalRowsPerProcess": 79,
+    "conditionalTwoProcessRows": 158,
+    "conditionalExcessRows": 30,
+    "nativeBirthSuccess": "UNQUALIFIED",
+    "completeOtherResourceExpansion": "UNFINISHED",
+    "scope": "Exact intended ordinary nonenclave UCRT profile; failure may stop before79; backing extents do not collapse distinct synchronization objects",
+    "ordinaryStaticVcrtGlobalLockReservationsPerProcess": 1,
+    "ordinaryStaticVcrtFlsOrTlsReservationsPerProcess": 1,
+    "conservativeOrdinaryStaticPrefixRowsPerProcess": 85,
+    "conservativeTwoProcessPrefixRows": 170,
+    "conservativeTwoProcessExcessRows": 42,
+    "sourceOnlyFeasibility": "Legacy128 cannot support required ordinary full-runtime useful overlap. Owner selected finite whole-binding resource budget R preserving APIs/CRT/overlap; R remains UNQUALIFIED pending complete source and native useful/failure expansion.",
+    "legacyRuntimeCapacityRows": 128,
+    "ordinaryStaticStdioLocksPerProcess": 3,
+    "ordinaryUcrtFlsReservationsPerProcess": 1,
+    "dynamicLowioMaximumLocksPerProcess": 8192,
+    "ordinaryDefaultStdioStreamCapacity": 512,
+    "dynamicStdioMaximumStreamsPerProcess": 8192,
+    "dynamicStdioBoundSource": "current-originals33/stdio/setmaxf.cpp: _setmaxstdio validates new_maximum <= _NHANDLE_; corecrt_internal_lowio.h computes128*64. stream.cpp allocates one distinct stream/critical section for each previously empty __piob slot; free_stream clears occupancy without destroying that lock. Simultaneous public caller/constructor, shrink/recalloc, failure custody and overlap remain unqualified.",
+    "dynamicStdioConstructorSource": "current-originals33/stdio/stream.cpp find_or_allocate_unused_stream_nolock; complete-originals33 stdio/fopen.cpp common_fsopen calls __acrt_stdio_allocate_stream before open_file",
+    "dynamicFullApiLowerBoundQualification": "NOT_SELECTED_NUMERIC_R: lowIO8192 plus stdio8192 are source capacity inputs per process; accepted caller domain and simultaneous distinct lifetime must be joined before asserting whole binding lower bound or Service fit conflict"
+  },
+  "generator": {
+    "fixedCommonGypi": "https://raw.githubusercontent.com/nodejs/node/aa4c77582be995286fc6e00aaf530dc7ade102a9/common.gypi",
+    "defaultReleaseRuntimeType": 0,
+    "expectedOriginalCaller": [
+      "vcbuild.bat",
+      "configure.py",
+      "tools/gyp/pylib/gyp/MSVSSettings.py"
+    ],
+    "overridePolicy": "No shared/dynamic/enclave/reduced/default-worker override",
+    "admission": "SOURCE_ONLY_NO_EXECUTION"
+  },
+  "packaging": {
+    "runtimeInput": "Genuine full source-built same-owner qualified image",
+    "processExecPathCopyAllowed": false,
+    "currentLegacyProducer": "scripts/package-native.mjs",
+    "replacement": "UNFINISHED"
+  },
+  "currentSource": {
+    "nodeGyp": "native/node-runtime/overlay/node.gyp",
+    "nodeGypSha256": "c6fd0087e0c818207b5f08717fe20106885fa1ae00caebb544e02ebdacdac3a4",
+    "crtOverlayAssociations": "native/crt-runtime/SOURCE-ASSOCIATIONS.json",
+    "crtOverlayAssociationsSha256": "b869c29bcee8b7d5ade3b89842c5150d5df30890e53fe3f5db55af52ca7ea29e"
+  },
+  "gates": {
+    "capacityChangeAllowed": true,
+    "wholeSourceGO": false,
+    "nativeInputAdmitted": false,
+    "targetExecutionAllowed": false,
+    "publicationAllowed": false,
+    "numericCapacitySelected": false,
+    "runtimeCapacityContract": "Finite verified whole-binding R; no guessed number, unbounded growth or lost retained rows"
+  },
+  "threadObserverSource33": {
+    "state": "SOURCE_UNRUN_NOT_NATIVE_QUALIFIED",
+    "capture": "Each actual created thread retains original plus query-limited/synchronize duplicate before phase2",
+    "nativeOperations": "10 DuplicateHandle;7 finite WaitForSingleObject;11 GetExitCodeThread",
+    "storage": "Exact sizeof birth included in complete one-use T schedule and SAME arena; source-derived numeric T/E/R UNKNOWN",
+    "detach": "Public original close does not close observer alias",
+    "unresolved": "Whole binding classified rows, installed observer caller, parent-side process-loss custody, identity/capture digests, TLS/module/stack/capture last borrowers and independent observer close"
+  }
+}

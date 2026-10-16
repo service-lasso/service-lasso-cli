@@ -179,3 +179,14 @@ before deriving block addresses. Unexecuted negative vectors use a genuine live
 extent and separately charged scratch to retain and compare the complete owner
 through rejected descriptor aliases. Actual native constructor/hook integration
 and whole product qualification remain unfinished.
+
+The ordinary PA1 native input reader now has a connected one-use consumption
+readback: precharged separate full raw copy, all actual short-read/zero-byte EOF
+and before/after native capture rows, complete byte equality and original rights/
+identity comparison. Typed P/G/Q/C consumers call this original held readback
+before their exact existing grammar. Failure retains both bodies and every row;
+there is no close/free/reset or keyPath operation. A positive original-native tuple
+vector and output-alias denials call the actual consumers, SOURCE-UNRUN. These
+methods are supporting ordinary source, not an admitted provider, owning runtime,
+whole production engine, complete TC/CA fixture set or final source GO. Native
+entry/authority/archive and early full Node callers remain unfinished.

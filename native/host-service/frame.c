@@ -7,7 +7,8 @@ static const struct domain domains[] = {
   DOMAIN("SLCLI-HOST-LAUNCH-3\x00"),
   DOMAIN("SLCLI-INSPECTION-SEA-1\x00"),
   DOMAIN("SLCLI-INSPECTION-PRIMARY-1\x00"),
-  DOMAIN("SLCLI-INSPECTION-LIBRARY-1\x00")
+  DOMAIN("SLCLI-INSPECTION-LIBRARY-1\x00"),
+  DOMAIN("SLCLI-HOST-SNAPSHOT-FRAGMENT-3\x00")
 };
 static int nonzero(const unsigned char value[32]) {
   unsigned char result = 0;

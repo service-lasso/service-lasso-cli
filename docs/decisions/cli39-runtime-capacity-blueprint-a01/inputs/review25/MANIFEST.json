@@ -1,0 +1,27 @@
+{
+  "schema": "cli39.independent-bounded-review25.manifest.v1",
+  "members": [
+    {
+      "path": "REPORT.md",
+      "bytes": 6286,
+      "sha256": "6D41D40DDB3F9E0C31CC0D0BD26F1401E601679B727490A35A5CA3FABBE8E952"
+    },
+    {
+      "path": "COVERAGE.json",
+      "bytes": 19615,
+      "sha256": "C3C1DCE4B10A9B626E57DB16E4260D9F01BAB844CD4C6561029F7D4AADE8DDF2"
+    },
+    {
+      "path": "INPUT-VERIFICATION.json",
+      "bytes": 11616,
+      "sha256": "1348F7FA49BF08201BB87D06DBD39411CA0D3C0FB85BB5D36E78F836C7F26A2C"
+    },
+    {
+      "path": "PROTECTED-STATE.json",
+      "bytes": 612,
+      "sha256": "201B19C5414E35A68A436F5CE640B17EFCC3CA3B57B45F04CCABA5DCB801C5A0"
+    }
+  ],
+  "selfExcluded": true,
+  "finalExcluded": true
+}

@@ -1,0 +1,12 @@
+{
+  "head": "67acacbed6465fbb529b2661ae8c409b17468cd2",
+  "headMatchesBaseline": true,
+  "indexSHA256": "DC4FD88CA2CFED012DF04641C5E79590A017F79457E1BC096322EFF98B3E4FD5",
+  "indexMatchesBaseline": true,
+  "reviewerWritesOnly": "D:/projects/service-lasso/service-lasso/audit-evidence/continuation-20260930-1520/cli39-startup68-review25",
+  "liveAuthor": "CLI24 retained sole writer",
+  "inheritedState": "All staged/untracked/private state preserved by zero reviewer checkout writes; live author allowed to continue",
+  "targetExecution": "NONE",
+  "stagingCommits": "NONE",
+  "mainAccess": "NONE"
+}

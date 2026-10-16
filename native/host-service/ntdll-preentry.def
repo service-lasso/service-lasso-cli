@@ -1,0 +1,7 @@
+LIBRARY ntdll.dll
+EXPORTS
+  NtCreateFile
+  NtMapViewOfSection
+  NtQueryInformationProcess
+  LdrLockLoaderLock
+  LdrUnlockLoaderLock

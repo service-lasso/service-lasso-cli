@@ -1,0 +1,21 @@
+{
+  "schema": "service-lasso.cli39.current-vcrt-internal-inputs.v1",
+  "historicalRestoration": false,
+  "completeTransitiveClosure": false,
+  "rows": [
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\vcruntime_internal.h",
+      "bytes": 14980,
+      "sha256": "aba823d00907cba448115f45609a26583daff84a2800d142fe56805c8305c967",
+      "semanticRead": "ENTIRE_EOF_CURRENT",
+      "execution": "NONE"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\vcstartup_internal.h",
+      "bytes": 18015,
+      "sha256": "a613679d05289005bcae868ac4ea0a1123b4fa45ae7c3edd9f4dce2215010c22",
+      "semanticRead": "ENTIRE_EOF_CURRENT",
+      "execution": "NONE"
+    }
+  ]
+}

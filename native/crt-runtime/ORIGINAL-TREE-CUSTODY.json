@@ -1,0 +1,31 @@
+{
+  "schema": "cli39-original-crt-source-custody.v1",
+  "originalManifest": "D:/projects/service-lasso/_audit/cli39-n1-stack-crt-supplement-precode-oct05-01/FULL-ORIGINAL-WINDOWS-CRT-SOURCE-ASSOCIATIONS.json",
+  "originalManifestSHA256": "5eac0d40421884809e31e5e4f5371791687c8e3d4b7cd4201ae14909fac73c5f",
+  "rawReadbackReceipt": "D:/projects/service-lasso/_audit/cli39-complete-reviewed-source-author-oct08-22/CRT-ORIGINAL-RAW-READBACK56/RECEIPT.json",
+  "rawReadbackReceiptSHA256": "e9cf7100ff7c6de1b24aeea0c8001d0a012819c24abaad752a1e1d54b24e539d",
+  "rawReadbackRows": "D:/projects/service-lasso/_audit/cli39-complete-reviewed-source-author-oct08-22/CRT-ORIGINAL-RAW-READBACK56/ROWS.json",
+  "rawReadbackRowsSHA256": "abdc22873556e62db44b8f1f39a70bbbed2396881392da0254f7a40dbaa493d2",
+  "originalMembers": 991,
+  "originalBytes": 7332180,
+  "originalTrees": [
+    {
+      "name": "ucrt-10.0.26100.0",
+      "members": 511
+    },
+    {
+      "name": "msvc-crt-14.44.35207",
+      "members": 480
+    }
+  ],
+  "overlayControl": "SOURCE-ASSOCIATIONS.json",
+  "completeOriginalTreeRequired": true,
+  "rawAllEOF": true,
+  "semanticEntireCRTReview": false,
+  "archiveBuilt": false,
+  "compilerInputAdmitted": false,
+  "sourceGO": false,
+  "inputAdmission": false,
+  "runtimeFit": "UNKNOWN",
+  "execution": "NONE"
+}

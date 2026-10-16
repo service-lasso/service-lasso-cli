@@ -1,0 +1,30 @@
+{
+  "abiQualified": false,
+  "sourceGO": false,
+  "rows": [
+    {
+      "read": "ENTIRE_EOF_CURRENT_RAW_SOURCE",
+      "bytes": 2425,
+      "source": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\tlssup.cpp",
+      "copy": "tlssup.cpp",
+      "execution": "NONE",
+      "copySHA256": "9DA99F37299CEBF3C4685AE16F3F5DC997BF2DD1F08034FB5A9DDF18EDA43D8F",
+      "sha256": "9DA99F37299CEBF3C4685AE16F3F5DC997BF2DD1F08034FB5A9DDF18EDA43D8F"
+    },
+    {
+      "read": "ENTIRE_EOF_CURRENT_RAW_SOURCE",
+      "bytes": 5380,
+      "source": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\tlsdyn.cpp",
+      "copy": "tlsdyn.cpp",
+      "execution": "NONE",
+      "copySHA256": "FF55EF3BEA7C74CEC3BBC14E573622D41D7A94351E462461FABB6D0871C1F395",
+      "sha256": "FF55EF3BEA7C74CEC3BBC14E573622D41D7A94351E462461FABB6D0871C1F395"
+    }
+  ],
+  "state": "Fresh current source input observations only; OS callbacks and actual entry ownership still unresolved",
+  "historicalRestoration": false,
+  "schema": "cli39-current-vcrt-tls-source33.v1",
+  "staticTLSVectorAddressQualified": false,
+  "moduleLifetimeQualified": false,
+  "inputAdmission": false
+}

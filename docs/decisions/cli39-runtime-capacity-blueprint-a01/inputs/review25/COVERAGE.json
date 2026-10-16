@@ -1,0 +1,436 @@
+{
+  "scope": "ENTIRE_BOUNDED_DERIVATION",
+  "inputCount": 42,
+  "controlCount": 6,
+  "inputs": [
+    {
+      "ordinal": 1,
+      "path": "inputs/repo/docs/decisions/cli39-selected19/DESIGN.md",
+      "bytes": 40032,
+      "sha256": "9aec48592c0d583b4f1723bcfee22a35e166b109bee5e6a5ccaf25dc3d8b7084",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Full actor/profile roles and terminal route; distinct facade/SEA SAME B0; historical header governed by adoption."
+    },
+    {
+      "ordinal": 2,
+      "path": "inputs/repo/docs/decisions/cli39-selected19/PROCESS-AND-RUNTIME-CONTRACT19.md",
+      "bytes": 17645,
+      "sha256": "200928baed73982e82d92554b98dc2f7b29c4a68818b22bfd7f9eba59005cf6a",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Full resource classes, preeffect reservations, native variants, both routes and lifetime ordering support join."
+    },
+    {
+      "ordinal": 3,
+      "path": "inputs/repo/docs/decisions/cli39-selected19/IMPLEMENTATION-AND-ACCEPTANCE19.md",
+      "bytes": 12418,
+      "sha256": "f635dbac78e0ab452052506e6786aeafa38e2c46b0cf39758645ab9c8946cab3",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Full implementation/native acceptance remains required; no bounded arithmetic substitutes for full delivery."
+    },
+    {
+      "ordinal": 4,
+      "path": "inputs/repo/docs/decisions/cli39-selected19/README.md",
+      "bytes": 5384,
+      "sha256": "22aa507d3df99e4bfaae2b8328bd61c1acfb9447aaa24943cf5e95b3d1f2bc9e",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Operative selected19 adoption control; historical UNSELECTED headings preserved as context."
+    },
+    {
+      "ordinal": 5,
+      "path": "inputs/repo/docs/decisions/cli39-selected67/DESIGN.md",
+      "bytes": 47869,
+      "sha256": "13f1325e4be0506232b06463fa6acb0037ebba1140791d0d70560c4be20b0bb1",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "One128 table, distinct native rows, no reuse and membership terminal semantics support conditional excess."
+    },
+    {
+      "ordinal": 6,
+      "path": "inputs/repo/docs/decisions/cli39-selected67/WIRE.json",
+      "bytes": 4473,
+      "sha256": "7be3f91cdefbac8fb63f959a172a6148788eb9ef48eca83a117d82919acb5545",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Wire metadata reviewed with README adoption; historical selected false does not reverse operative contract."
+    },
+    {
+      "ordinal": 7,
+      "path": "inputs/repo/docs/decisions/cli39-selected67/README.md",
+      "bytes": 462,
+      "sha256": "27e7132c2a94a4bff11dcc97a2d8d072093fc76dca2b7ed87871ae31195478bc",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Operative selected67 adoption after DESIGN_GO68 controls historical status."
+    },
+    {
+      "ordinal": 8,
+      "path": "inputs/repo/native/node-runtime/windows-release-profile.json",
+      "bytes": 2860,
+      "sha256": "11ed3bf95da079c097395654c59c7014ee302275998818253bcdfef280d5e890",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Intended full Windows static profile; narrower79 UCRT contribution consistent with81 total."
+    },
+    {
+      "ordinal": 9,
+      "path": "inputs/repo/native/node-runtime/overlay/node.gyp",
+      "bytes": 48891,
+      "sha256": "417866a319ccbad0f925ff91596372091a606df23b655062cfe9ad70b787e402",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Complete overlay read; x64 nonshared RuntimeLibrary0 and four complete owned archives planned, not qualified."
+    },
+    {
+      "ordinal": 10,
+      "path": "inputs/repo/native/node-runtime/WINDOWS-SOURCE-BUILD-RECIPE68.md",
+      "bytes": 9026,
+      "sha256": "2924762baa6f6d9ddb036d58c8e03dbe106eac05f1d2afd1747f100cc1597865",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Exact ordinary static recipe and incomplete archive/preentry/native gates retained."
+    },
+    {
+      "ordinal": 11,
+      "path": "inputs/repo/native/node-runtime/SOURCE-ASSOCIATIONS.json",
+      "bytes": 3464,
+      "sha256": "990a015393e01a9c6078c912bb6beb1afb5d68c894cceda82fa8050df126ab3b",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Current source associations and unresolved provenance read; no linked ABI evidence inferred."
+    },
+    {
+      "ordinal": 12,
+      "path": "inputs/config/common.gypi",
+      "bytes": 26973,
+      "sha256": "276374a2a16ea6a31fda5e702383061e9ad622d5179d3b3edd2d5c393623e27b",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Release runtimeType0 static mapping; full defaults and conditional alternatives inspected."
+    },
+    {
+      "ordinal": 13,
+      "path": "inputs/config/configure.py",
+      "bytes": 87247,
+      "sha256": "9ae98ce309ca866955c4860cc2e0f664d15ac326e9401523973ee4ee1c012984",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Nonshared force_dynamic_crt0, full ICU/default V8/platform; options not silently selected."
+    },
+    {
+      "ordinal": 14,
+      "path": "inputs/config/CURRENT-CRT-HEADER-INPUTS.json",
+      "bytes": 1246,
+      "sha256": "504ae63c5f12525bc277b596bc844d01b6375fdae9428377d4bab2938093e823",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Header source metadata pins read; provenance observations not execution qualification."
+    },
+    {
+      "ordinal": 15,
+      "path": "inputs/config/CURRENT-INPUTS.json",
+      "bytes": 2376,
+      "sha256": "18053fcdd8f6211dc07905dd817907840db2156546a8ac53c596b776705fa461",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Fixed Node configuration ancestry read; current frozen bytes govern review."
+    },
+    {
+      "ordinal": 16,
+      "path": "inputs/config/CURRENT-TOOL-ARCHIVE-OBSERVATIONS.json",
+      "bytes": 2553,
+      "sha256": "e4977f8a0683c0bbd4e101cacfb2e6dfd4e7cae04d5ea2ac328207f4e50733f0",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Tool/archive observations are hashes only; no source-to-linked ABI proof."
+    },
+    {
+      "ordinal": 17,
+      "path": "inputs/config/CURRENT-VCRT-INTERNAL-INPUTS.json",
+      "bytes": 871,
+      "sha256": "86916b3201df7d250fa5772ffded0e33549eaa78d778b750eb655a362fa1e2a5",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "VCRT internal header source pin and scope read."
+    },
+    {
+      "ordinal": 18,
+      "path": "inputs/config/CURRENT-VCRT-RESOURCE-INPUTS.json",
+      "bytes": 1883,
+      "sha256": "aeda56766be5e60a847dd87f65841cb63691e834a964d19ec310d2140a232660",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "VCRT lock/PTD/wrapper resource source associations read."
+    },
+    {
+      "ordinal": 19,
+      "path": "inputs/config/CURRENT-VCRT-STARTUP-INPUTS.json",
+      "bytes": 2588,
+      "sha256": "8bb60305f37d9908ee4e53f19de8a52613bc00536eb50754431a545e7f48654c",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "VCRT startup/source-control associations read; no complete archive qualification inferred."
+    },
+    {
+      "ordinal": 20,
+      "path": "inputs/config/vcbuild.bat",
+      "bytes": 35998,
+      "sha256": "0c7952600f3890d1539db8f39f796da1de4a17087d7e65e2264af4519a890997",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Release x64 full-icu vs2022 command, LTCG/cctest construction and optional test/override paths inspected."
+    },
+    {
+      "ordinal": 21,
+      "path": "inputs/config/tools/gyp/pylib/gyp/MSVSSettings.py",
+      "bytes": 45747,
+      "sha256": "13c9006c1af1bf40389eadbb1f303221544a37bcb4615be8e3d227856c40280c",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "RuntimeLibrary enumeration0 maps MultiThreaded; full conversion code read without execution."
+    },
+    {
+      "ordinal": 22,
+      "path": "inputs/ucrt/internal/locks.cpp",
+      "bytes": 1882,
+      "sha256": "1623c1fe8eeea737b47980bac7b45ab42bd698aaccc80c9d7ab0d015738e1eff",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Fifteen-entry critical-section loop checked; failure prefix and teardown inspected."
+    },
+    {
+      "ordinal": 23,
+      "path": "inputs/ucrt/lowio/ioinit.cpp",
+      "bytes": 9378,
+      "sha256": "9cc35f857e078d59ce764e57d0f881a3e317042d0cecad2e38650330957dddf2",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "_nhandle0 startup ensures first descriptor before inherited/std handle initialization."
+    },
+    {
+      "ordinal": 24,
+      "path": "inputs/ucrt/lowio/osfinfo.cpp",
+      "bytes": 11163,
+      "sha256": "f424d71aa9cbfe005eeb0384ca9b1b9e7f5e9df3b2a0adf378e3f135d1826de2",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "First-array64 distinct constructors; ignored BOOL means attempts not success births; expansion retained outside lowerbound."
+    },
+    {
+      "ordinal": 25,
+      "path": "inputs/ucrt/inc/corecrt_internal_lowio.h",
+      "bytes": 11985,
+      "sha256": "1465b3388c22524a779c19dcd709eeff116993d21a0068e639281181ddb2a751",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "IOINFO_L2E6/ARRAY_ELTS64 and per-object lock establish distinct64 identities."
+    },
+    {
+      "ordinal": 26,
+      "path": "inputs/ucrt/internal/initialization.cpp",
+      "bytes": 10501,
+      "sha256": "c86a17451507ab55f89d60fff3d9713fcb6a0467e62b5a8d0982bf094dc81ab3",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Ordered initializer table includes locks/lowio on non-enclave ordinary path; early failure/termination distinctions inspected."
+    },
+    {
+      "ordinal": 27,
+      "path": "inputs/ucrt/internal/shared_initialization.cpp",
+      "bytes": 1870,
+      "sha256": "9fd1c607efdaf492f1254379f0a7a7e18b806cb32ce3748b9d868c04dc821520",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Forward initializer and completed-prefix unwind establish conditional completed startup semantics."
+    },
+    {
+      "ordinal": 28,
+      "path": "inputs/ucrt/inc/corecrt_internal.h",
+      "bytes": 74158,
+      "sha256": "bad095a8a91e6cb55d7e28083ccb9db5ffbfa53d18668b9448acff284985e936",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Full header read in disjoint chunks; fifteen actual enum IDs, thunk signatures and resource declarations confirmed."
+    },
+    {
+      "ordinal": 29,
+      "path": "inputs/ucrt/internal/winapi_thunks.cpp",
+      "bytes": 37607,
+      "sha256": "64d965d1989f1a5f8fe82932b5f90df78d29470dba287089ef5677ce9452df66",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Concrete UCRT InitializeCriticalSectionEx wrapper; earlier thunk failure and other API obligations inspected."
+    },
+    {
+      "ordinal": 30,
+      "path": "inputs/vcrt/exe_wmain.cpp",
+      "bytes": 338,
+      "sha256": "ace98a84788519eff3533e09d740ef7eea0cb291e1c972bc26b5d568638139c8",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Actual WMAIN startup source includes common implementation."
+    },
+    {
+      "ordinal": 31,
+      "path": "inputs/vcrt/exe_common.inl",
+      "bytes": 10371,
+      "sha256": "06302037b260f066fed492d8bb29ef08d9906fd3afb9dd34a71b9c4c537a9dbc",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Real startup calls CRT initialize before argv/main; security cookie and failure/termination paths inspected."
+    },
+    {
+      "ordinal": 32,
+      "path": "inputs/vcrt/utility.cpp",
+      "bytes": 14981,
+      "sha256": "d026b2cea944160fb05098366f717aca4418d1f54cc489fac0a6cf1f01561ef1",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Actual static utility invokes VCRT then UCRT; static/DLL distinctions inspected."
+    },
+    {
+      "ordinal": 33,
+      "path": "inputs/vcrt/ucrt_stubs.cpp",
+      "bytes": 882,
+      "sha256": "51290c6b70ef63f0bb9054f3e415a773351eec53b834d79553a51a439c73d8e7",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Alternate DLL stubs are not real static initialization selected by intended profile."
+    },
+    {
+      "ordinal": 34,
+      "path": "inputs/vcrt/ucrt_detection.c",
+      "bytes": 1008,
+      "sha256": "9137fc2cad2f335b50a9cb4e7365f2914ed3300decdd3fd925e6d2eac2805df5",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "DLL detection alternative inspected; not proof of linked real archive selection."
+    },
+    {
+      "ordinal": 35,
+      "path": "inputs/vcrt/initialization.cpp",
+      "bytes": 4779,
+      "sha256": "a50137fa02906436c1b9a87bc7c666b1279da8d452db4239e49c0d7fb4ed6dc7",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "VCRT checked locks then PTD initialization and unwind/thread attach paths inspected."
+    },
+    {
+      "ordinal": 36,
+      "path": "inputs/vcrt/initializers.cpp",
+      "bytes": 6338,
+      "sha256": "14807cf50bd44e3b0c10ac453057678e40cb2a97c998612d9748d32ce9819e6b",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Static-vs-DLL initializers and initialization symbol selection inspected."
+    },
+    {
+      "ordinal": 37,
+      "path": "inputs/vcrt/vcruntime_internal.h",
+      "bytes": 14980,
+      "sha256": "aba823d00907cba448115f45609a26583daff84a2800d142fe56805c8305c967",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Sole undname lock count1 and uplevel/downlevel API declarations confirmed."
+    },
+    {
+      "ordinal": 38,
+      "path": "inputs/vcrt/vcstartup_internal.h",
+      "bytes": 18015,
+      "sha256": "a613679d05289005bcae868ac4ea0a1123b4fa45ae7c3edd9f4dce2215010c22",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Startup policy/header declarations and static-vs-DLL semantics inspected through EOF."
+    },
+    {
+      "ordinal": 39,
+      "path": "inputs/vcrt/locks.cpp",
+      "bytes": 1622,
+      "sha256": "0273b7b5d4c335839e26d5ae6e86ebf067d312136c1f1e43a6a56f06b371dff0",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "One checked native CS constructor, prefix tracking and teardown confirmed."
+    },
+    {
+      "ordinal": 40,
+      "path": "inputs/vcrt/per_thread_data.cpp",
+      "bytes": 6843,
+      "sha256": "0dfd47d380fcae83f9e95b5723de737411ee5c5b93bb9477cfb9c8f79867076c",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "One checked FLS index allocation, static startup PTD, dynamic later-thread allocations inspected."
+    },
+    {
+      "ordinal": 41,
+      "path": "inputs/vcrt/winapi_downlevel.cpp",
+      "bytes": 11795,
+      "sha256": "dde4c80ae0ed774f5aa4e45985c01688515db421cac8de4c49ad05df9a86275e",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "Downlevel FlsAlloc resolution or TlsAlloc and CS fallback variants confirmed."
+    },
+    {
+      "ordinal": 42,
+      "path": "inputs/vcrt/winapi_thunks.cpp",
+      "bytes": 2354,
+      "sha256": "e36c4855428f6fd3c74e1c03185f5bf9989e4387155f437b4a593300d55ecf12",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_SOURCE_RELEVANCE",
+      "finding": "VCRT thunk module/initialize source inspected; extra obligations omitted conservatively."
+    }
+  ],
+  "controls": [
+    {
+      "path": "INPUTS.json",
+      "bytes": 21007,
+      "sha256": "A2149C44CAA26E14845EE34D9EE51107F6B6F4C9EEBAF9C7573BA428F1385B66",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_CONTROL",
+      "finding": "All42 roster identities and pins read; producer read assertions not inherited."
+    },
+    {
+      "path": "REPORT.md",
+      "bytes": 9973,
+      "sha256": "A1438D94915933729AE8EB86362FB410B4873BF8E081467B1ECF2DE57FCA8BD4",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_CONTROL",
+      "finding": "Conditional81/162 derivation independently established; unknown native/whole-source scope retained."
+    },
+    {
+      "path": "COVERAGE.md",
+      "bytes": 2908,
+      "sha256": "68481466A4B194D0EFA1EC71243183F9CD5DD30EDE6FF4B46DF7C16FDF38798A",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_CONTROL",
+      "finding": "Producer scope and roster reconciled to own42 EOF reads."
+    },
+    {
+      "path": "FINAL.json",
+      "bytes": 823,
+      "sha256": "82EA8AFD9DB6023B3F100F5948AE9AC94E13A794E262B313CD45E9233156FFC6",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_CONTROL",
+      "finding": "81/162/128/34 and explicit unqualified boundaries consistent."
+    },
+    {
+      "path": "MANIFEST.json",
+      "bytes": 8273,
+      "sha256": "DFDBABDC829A5C0315BE5E9EB5FE1733FBA55B4CA5C3AE9CADE2A126B8DDCB77",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_CONTROL",
+      "finding": "All46 paths/bytes/hashes read and independently raw-verified."
+    },
+    {
+      "path": "ROOT.json",
+      "bytes": 1015,
+      "sha256": "7C9FA354293D5E6EE1515788E37D22AD139CDAA14FEAFE6983319D09986F5657",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_CONTROL",
+      "finding": "42 inputs/46 manifest members/control pins and bounded scope independently checked."
+    }
+  ],
+  "execution": "NONE"
+}

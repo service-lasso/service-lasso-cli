@@ -1,0 +1,56 @@
+{
+  "schema": "service-lasso.cli39.current-static-startup-inputs.v1",
+  "historicalRestoration": false,
+  "completeArchiveRecipe": false,
+  "rows": [
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\exe_wmain.cpp",
+      "bytes": 338,
+      "sha256": "ace98a84788519eff3533e09d740ef7eea0cb291e1c972bc26b5d568638139c8",
+      "semanticRead": "ENTIRE_EOF_CURRENT",
+      "execution": "NONE"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\exe_common.inl",
+      "bytes": 10371,
+      "sha256": "06302037b260f066fed492d8bb29ef08d9906fd3afb9dd34a71b9c4c537a9dbc",
+      "semanticRead": "ENTIRE_EOF_CURRENT",
+      "execution": "NONE"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\utility.cpp",
+      "bytes": 14981,
+      "sha256": "d026b2cea944160fb05098366f717aca4418d1f54cc489fac0a6cf1f01561ef1",
+      "semanticRead": "ENTIRE_EOF_CURRENT",
+      "execution": "NONE"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\ucrt_stubs.cpp",
+      "bytes": 882,
+      "sha256": "51290c6b70ef63f0bb9054f3e415a773351eec53b834d79553a51a439c73d8e7",
+      "semanticRead": "ENTIRE_EOF_CURRENT",
+      "execution": "NONE"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\ucrt_detection.c",
+      "bytes": 1008,
+      "sha256": "9137fc2cad2f335b50a9cb4e7365f2914ed3300decdd3fd925e6d2eac2805df5",
+      "semanticRead": "ENTIRE_EOF_CURRENT",
+      "execution": "NONE"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\initialization.cpp",
+      "bytes": 4779,
+      "sha256": "a50137fa02906436c1b9a87bc7c666b1279da8d452db4239e49c0d7fb4ed6dc7",
+      "semanticRead": "ENTIRE_EOF_CURRENT",
+      "execution": "NONE"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\initializers.cpp",
+      "bytes": 6338,
+      "sha256": "14807cf50bd44e3b0c10ac453057678e40cb2a97c998612d9748d32ce9819e6b",
+      "semanticRead": "ENTIRE_EOF_CURRENT",
+      "execution": "NONE"
+    }
+  ]
+}

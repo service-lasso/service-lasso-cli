@@ -1,0 +1,191 @@
+{
+  "originalManifestSHA256": "5eac0d40421884809e31e5e4f5371791687c8e3d4b7cd4201ae14909fac73c5f",
+  "records": [
+    {
+      "originalPath": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\heap\\malloc_base.cpp",
+      "originalBytes": 1635,
+      "preservedOriginalPath": "D:\\projects\\service-lasso\\_audit\\cli39-n1-stack-crt-supplement-precode-oct05-01\\original-windows-crt\\ucrt-10.0.26100.0\\heap\\malloc_base.cpp",
+      "path": "overlay/ucrt-10.0.26100.0/heap/malloc_base.cpp",
+      "overlayBytes": 1680,
+      "overlaySHA256": "3552b13f62f7851d920b838f9fc15668cec28c1bf1ca0e02aa2776dce665e953",
+      "state": "SOURCE-UNRUN; selected heap overlay only; full original CRT/tool/preentry/thread/API qualification unfinished",
+      "originalSHA256": "5e8799cca0bf2bb47e14f77f11fc1275db51d27c34c013ff1d929e2f1793d62b"
+    },
+    {
+      "originalPath": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\heap\\calloc_base.cpp",
+      "originalBytes": 1792,
+      "preservedOriginalPath": "D:\\projects\\service-lasso\\_audit\\cli39-n1-stack-crt-supplement-precode-oct05-01\\original-windows-crt\\ucrt-10.0.26100.0\\heap\\calloc_base.cpp",
+      "path": "overlay/ucrt-10.0.26100.0/heap/calloc_base.cpp",
+      "overlayBytes": 1825,
+      "overlaySHA256": "925de67a0ed29b640e385ddcd2a0ae7bc62ba8e4e5611d6e68e3b1a17d065193",
+      "state": "SOURCE-UNRUN; selected heap overlay only; full original CRT/tool/preentry/thread/API qualification unfinished",
+      "originalSHA256": "9498b0da2249f83d8ae629106cde79722e7519756f8ae97fff538253e2e50541"
+    },
+    {
+      "originalPath": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\heap\\realloc_base.cpp",
+      "originalBytes": 1864,
+      "preservedOriginalPath": "D:\\projects\\service-lasso\\_audit\\cli39-n1-stack-crt-supplement-precode-oct05-01\\original-windows-crt\\ucrt-10.0.26100.0\\heap\\realloc_base.cpp",
+      "path": "overlay/ucrt-10.0.26100.0/heap/realloc_base.cpp",
+      "overlayBytes": 1908,
+      "overlaySHA256": "d4d731bf6a763108873d3bbc5064d47fd442b402e6c641b99ac9f63f5ddfa4fe",
+      "state": "SOURCE-UNRUN; selected heap overlay only; full original CRT/tool/preentry/thread/API qualification unfinished",
+      "originalSHA256": "1eec0bae401ffb74972ef936e09131906ee427a0c40e6b229bce2fc6f2dc7eb7"
+    },
+    {
+      "originalPath": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\heap\\free_base.cpp",
+      "originalBytes": 3656,
+      "preservedOriginalPath": "D:\\projects\\service-lasso\\_audit\\cli39-n1-stack-crt-supplement-precode-oct05-01\\original-windows-crt\\ucrt-10.0.26100.0\\heap\\free_base.cpp",
+      "path": "overlay/ucrt-10.0.26100.0/heap/free_base.cpp",
+      "overlayBytes": 3764,
+      "overlaySHA256": "722a8d0b88227879c8bd033378fc9b94be513b4f2a4bab412fde41d1885020cc",
+      "state": "SOURCE-UNRUN; selected heap overlay only; full original CRT/tool/preentry/thread/API qualification unfinished",
+      "originalSHA256": "fdd31fc5aa5d34dec658d7b293f559ad623f978c777b17f214ca60cfcdd54fb6"
+    },
+    {
+      "originalPath": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\heap\\msize.cpp",
+      "originalBytes": 1524,
+      "preservedOriginalPath": "D:\\projects\\service-lasso\\_audit\\cli39-n1-stack-crt-supplement-precode-oct05-01\\original-windows-crt\\ucrt-10.0.26100.0\\heap\\msize.cpp",
+      "path": "overlay/ucrt-10.0.26100.0/heap/msize.cpp",
+      "overlayBytes": 1548,
+      "overlaySHA256": "c28a9493388969e42724b64d72f1c862264a46a0a102e47a4f4c3ffc5c79fcdf",
+      "state": "SOURCE-UNRUN; selected heap overlay only; full original CRT/tool/preentry/thread/API qualification unfinished",
+      "originalSHA256": "a5b659be4948364b5bbd825f96f8390487f90ce2463102610efca1966333796b"
+    },
+    {
+      "originalPath": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\heap\\expand.cpp",
+      "originalBytes": 3441,
+      "preservedOriginalPath": "D:\\projects\\service-lasso\\_audit\\cli39-n1-stack-crt-supplement-precode-oct05-01\\original-windows-crt\\ucrt-10.0.26100.0\\heap\\expand.cpp",
+      "path": "overlay/ucrt-10.0.26100.0/heap/expand.cpp",
+      "overlayBytes": 3393,
+      "overlaySHA256": "aa3b688dbba8e3e4c29d5f7509bcb54ac770227dd4a9dff8af43cb84d03218d0",
+      "state": "SOURCE-UNRUN; selected heap overlay only; full original CRT/tool/preentry/thread/API qualification unfinished",
+      "originalSHA256": "da1f2c54892ce8370c39803153fee39dc89143b87be5e3e10ce6a304d75e6515"
+    },
+    {
+      "originalPath": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\heap\\recalloc.cpp",
+      "originalBytes": 2579,
+      "preservedOriginalPath": "D:\\projects\\service-lasso\\_audit\\cli39-n1-stack-crt-supplement-precode-oct05-01\\original-windows-crt\\ucrt-10.0.26100.0\\heap\\recalloc.cpp",
+      "path": "overlay/ucrt-10.0.26100.0/heap/recalloc.cpp",
+      "overlayBytes": 2579,
+      "overlaySHA256": "3fb250d0dd64f2dc88bf4a8d28b0fa257f550822042b63d62608e02664ccfd8f",
+      "state": "SOURCE-UNRUN; selected heap overlay only; full original CRT/tool/preentry/thread/API qualification unfinished",
+      "originalSHA256": "3fb250d0dd64f2dc88bf4a8d28b0fa257f550822042b63d62608e02664ccfd8f"
+    },
+    {
+      "originalPath": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\heap\\new_handler.cpp",
+      "originalBytes": 2262,
+      "preservedOriginalPath": "D:\\projects\\service-lasso\\_audit\\cli39-n1-stack-crt-supplement-precode-oct05-01\\original-windows-crt\\ucrt-10.0.26100.0\\heap\\new_handler.cpp",
+      "path": "overlay/ucrt-10.0.26100.0/heap/new_handler.cpp",
+      "overlayBytes": 2760,
+      "overlaySHA256": "1a363eb60dd8af5778551343b5bef65e7629f67d89a3264bdc25fc50edb9db59",
+      "state": "SOURCE-UNRUN; selected heap handler overlay only; full original CRT/tool/preentry/thread/API qualification unfinished",
+      "originalSHA256": "ed7bcd6a7e5e29213a5464d2e79cab69bdcd2c52e63e50d965a7106c325c18be"
+    },
+    {
+      "originalPath": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\heap\\align.cpp",
+      "originalBytes": 20859,
+      "preservedOriginalPath": "D:\\projects\\service-lasso\\_audit\\cli39-n1-stack-crt-supplement-precode-oct05-01\\original-windows-crt\\ucrt-10.0.26100.0\\heap\\align.cpp",
+      "path": "overlay/ucrt-10.0.26100.0/heap/align.cpp",
+      "overlayBytes": 20859,
+      "overlaySHA256": "a7141046fb47711a320f50fd94b6cfeef1ec5cc86c076f98aff8412be2dcd8b9",
+      "originalSHA256": "a7141046fb47711a320f50fd94b6cfeef1ec5cc86c076f98aff8412be2dcd8b9",
+      "state": "SOURCE-UNRUN; exact original full aligned-family source; same complete original CRT archive/export binding unfinished"
+    },
+    {
+      "originalPath": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\heap\\malloc.cpp",
+      "originalBytes": 812,
+      "preservedOriginalPath": "D:\\projects\\service-lasso\\_audit\\cli39-n1-stack-crt-supplement-precode-oct05-01\\original-windows-crt\\ucrt-10.0.26100.0\\heap\\malloc.cpp",
+      "path": "overlay/ucrt-10.0.26100.0/heap/malloc.cpp",
+      "overlayBytes": 812,
+      "overlaySHA256": "8aa3eb7b260b2071532eea271ff5c05538e486a0bd85c2829c637e2c387697cc",
+      "originalSHA256": "8aa3eb7b260b2071532eea271ff5c05538e486a0bd85c2829c637e2c387697cc",
+      "state": "SOURCE-UNRUN; exact original public CRT heap entry body; complete archive/export/native source qualification unfinished"
+    },
+    {
+      "originalPath": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\heap\\free.cpp",
+      "originalBytes": 1723,
+      "preservedOriginalPath": "D:\\projects\\service-lasso\\_audit\\cli39-n1-stack-crt-supplement-precode-oct05-01\\original-windows-crt\\ucrt-10.0.26100.0\\heap\\free.cpp",
+      "path": "overlay/ucrt-10.0.26100.0/heap/free.cpp",
+      "overlayBytes": 1723,
+      "overlaySHA256": "728fb1d774506edb5b8b69ae21af85809585e31b72890edcb79b25877ee44b48",
+      "originalSHA256": "728fb1d774506edb5b8b69ae21af85809585e31b72890edcb79b25877ee44b48",
+      "state": "SOURCE-UNRUN; exact original public CRT heap entry body; complete archive/export/native source qualification unfinished"
+    },
+    {
+      "originalPath": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\heap\\calloc.cpp",
+      "originalBytes": 1015,
+      "preservedOriginalPath": "D:\\projects\\service-lasso\\_audit\\cli39-n1-stack-crt-supplement-precode-oct05-01\\original-windows-crt\\ucrt-10.0.26100.0\\heap\\calloc.cpp",
+      "path": "overlay/ucrt-10.0.26100.0/heap/calloc.cpp",
+      "overlayBytes": 1015,
+      "overlaySHA256": "550f83954cf0a562ab101162929e22d5fe1ef1bffbba31ea6e14f6280d6f08eb",
+      "originalSHA256": "550f83954cf0a562ab101162929e22d5fe1ef1bffbba31ea6e14f6280d6f08eb",
+      "state": "SOURCE-UNRUN; exact original public CRT heap entry body; complete archive/export/native source qualification unfinished"
+    },
+    {
+      "originalPath": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\heap\\realloc.cpp",
+      "originalBytes": 1498,
+      "preservedOriginalPath": "D:\\projects\\service-lasso\\_audit\\cli39-n1-stack-crt-supplement-precode-oct05-01\\original-windows-crt\\ucrt-10.0.26100.0\\heap\\realloc.cpp",
+      "path": "overlay/ucrt-10.0.26100.0/heap/realloc.cpp",
+      "overlayBytes": 1498,
+      "overlaySHA256": "d088f83c1f6e466c496e992c76f5ea824d4aa2f75403e4cd69e886259f17b78c",
+      "originalSHA256": "d088f83c1f6e466c496e992c76f5ea824d4aa2f75403e4cd69e886259f17b78c",
+      "state": "SOURCE-UNRUN; exact original public CRT heap entry body; complete archive/export/native source qualification unfinished"
+    },
+    {
+      "originalPath": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\heap\\new_mode.cpp",
+      "originalBytes": 877,
+      "preservedOriginalPath": "D:\\projects\\service-lasso\\_audit\\cli39-n1-stack-crt-supplement-precode-oct05-01\\original-windows-crt\\ucrt-10.0.26100.0\\heap\\new_mode.cpp",
+      "path": "overlay/ucrt-10.0.26100.0/heap/new_mode.cpp",
+      "overlayBytes": 877,
+      "overlaySHA256": "620e7ef11b05f001f9f3ec7da24fe43450797a424952d8f51e92c405bc4512db",
+      "originalSHA256": "620e7ef11b05f001f9f3ec7da24fe43450797a424952d8f51e92c405bc4512db",
+      "state": "SOURCE-UNRUN; exact original public CRT heap entry body; complete archive/export/native source qualification unfinished"
+    },
+    {
+      "originalPath": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\internal\\locks.cpp",
+      "originalBytes": 1882,
+      "preservedOriginalPath": "D:\\projects\\service-lasso\\_audit\\cli39-n1-stack-crt-supplement-precode-oct05-01\\original-windows-crt\\ucrt-10.0.26100.0\\internal\\locks.cpp",
+      "path": "overlay/ucrt-10.0.26100.0/internal/locks.cpp",
+      "overlayBytes": 5830,
+      "overlaySHA256": "60be523cfb37d4ade57854bb22c90b95fc5d1ef4db089d9f0e196f3341c62892",
+      "originalSHA256": "1623c1fe8eeea737b47980bac7b45ab42bd698aaccc80c9d7ab0d015738e1eff",
+      "state": "SOURCE-UNRUN; actual original CRT lock create/try/release/delete prefix and arguments; preentry/ABI/native helper/fatal exit/full lifetime qualification unfinished"
+    },
+    {
+      "originalPath": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\startup\\thread.cpp",
+      "originalBytes": 8642,
+      "preservedOriginalPath": "D:\\projects\\service-lasso\\_audit\\cli39-n1-stack-crt-supplement-precode-oct05-01\\original-windows-crt\\ucrt-10.0.26100.0\\startup\\thread.cpp",
+      "path": "overlay/ucrt-10.0.26100.0/startup/thread.cpp",
+      "overlayBytes": 10882,
+      "overlaySHA256": "2e6860b55c7bede7e7b14c634c3446f5cb0059fc1307518dc9a350e888399c00",
+      "state": "SOURCE-UNRUN; actual original child birth/pre-PTD and terminal close/exit source boundaries; full preentry/native classification/CRT lifetime/fit unfinished",
+      "originalSHA256": "3cff42d063e539a8e786f5365161231ca3dc7381c544cdae4aaa99111002c441"
+    },
+    {
+      "preservedOriginalPath": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\crt-runtime\\current-originals33\\lowio\\osfinfo.cpp",
+      "originalPath": "C:/Program Files (x86)/Windows Kits/10/Source/10.0.26100.0/ucrt/lowio/osfinfo.cpp",
+      "overlaySHA256": "7f89cf866cc435d4666754fdfc5f3965572467a229b4cbe3b2cf26461da3d3b6",
+      "overlayBytes": 13412,
+      "state": "SOURCE-UNRUN; actual lowIO distinct constructor/destructor raw native capture source; fresh current raw original; full preentry/ABI/member/lifetime/binding budget/native qualification unfinished",
+      "originalBytes": 11163,
+      "path": "overlay/ucrt-10.0.26100.0/lowio/osfinfo.cpp",
+      "originalSHA256": "f424d71aa9cbfe005eeb0384ca9b1b9e7f5e9df3b2a0adf378e3f135d1826de2"
+    },
+    {
+      "originalPath": "C:/Program Files (x86)/Windows Kits/10/Source/10.0.26100.0/ucrt/lowio/ioinit.cpp",
+      "originalBytes": 9378,
+      "preservedOriginalPath": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\crt-runtime\\current-originals33\\lowio\\ioinit.cpp",
+      "path": "overlay/ucrt-10.0.26100.0/lowio/ioinit.cpp",
+      "overlayBytes": 10167,
+      "overlaySHA256": "ba8a46e0ee2ad9c6207bc206203a85cf512c88353c53bdcc9435432a372f542d",
+      "originalSHA256": "9cc35f857e078d59ce764e57d0f881a3e317042d0cecad2e38650330957dddf2",
+      "state": "SOURCE-UNRUN; original teardown pointer preserved after incomplete native destruction; external custody and allocation disposition unfinished"
+    }
+  ],
+  "source": "actual preserved Microsoft UCRT10.0.26100.0 source leaves",
+  "sourceGO": false,
+  "originalManifest": "D:\\projects\\service-lasso\\_audit\\cli39-n1-stack-crt-supplement-precode-oct05-01\\FULL-ORIGINAL-WINDOWS-CRT-SOURCE-ASSOCIATIONS.json",
+  "semanticEntireCRTReview": false,
+  "inputAdmission": false,
+  "runtimeFit": "UNKNOWN"
+}

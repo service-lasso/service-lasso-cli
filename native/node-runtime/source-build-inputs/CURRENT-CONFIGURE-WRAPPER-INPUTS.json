@@ -1,0 +1,40 @@
+{
+  "schema": "service-lasso.cli39.current-configure-wrapper-inputs.v1",
+  "historicalRestoration": false,
+  "inputAdmission": false,
+  "rows": [
+    {
+      "path": "configure",
+      "sourceUrl": "https://raw.githubusercontent.com/nodejs/node/aa4c77582be995286fc6e00aaf530dc7ade102a9/configure",
+      "fixedCommit": "aa4c77582be995286fc6e00aaf530dc7ade102a9",
+      "bytes": 1502,
+      "sha256": "d06bfb3f2be55c2a148df748d96c4ad65561697832cf14c6e431596d5c9a9281",
+      "framedGitBlobOID": "789a87c5377f35640fa7396907ee98d37d86b65a",
+      "independentExpectedBlobPin": "UNSUPPLIED_NEW_FIXED_COMMIT_ACQUISITION",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT",
+      "execution": "NONE"
+    },
+    {
+      "path": "node.gypi",
+      "sourceUrl": "https://raw.githubusercontent.com/nodejs/node/aa4c77582be995286fc6e00aaf530dc7ade102a9/node.gypi",
+      "fixedCommit": "aa4c77582be995286fc6e00aaf530dc7ade102a9",
+      "bytes": 13067,
+      "sha256": "52426ab9d4988a91d20289557d591806d8d594b48ff0fdebb599a43034b04047",
+      "framedGitBlobOID": "bb002412b3952ad74ec4948690f7d77de6122120",
+      "independentExpectedBlobPin": "UNSUPPLIED_NEW_FIXED_COMMIT_ACQUISITION",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT",
+      "execution": "NONE"
+    },
+    {
+      "path": "common_node.gypi",
+      "sourceUrl": "https://raw.githubusercontent.com/nodejs/node/aa4c77582be995286fc6e00aaf530dc7ade102a9/common_node.gypi",
+      "fixedCommit": "aa4c77582be995286fc6e00aaf530dc7ade102a9",
+      "bytes": 449,
+      "sha256": "59667562aa93700856d8158c0d8aea98de5bb383b45bcd347f1b012055048889",
+      "framedGitBlobOID": "0bfbf7283c0f5768e2584d25aa18475f4abedee0",
+      "independentExpectedBlobPin": "UNSUPPLIED_NEW_FIXED_COMMIT_ACQUISITION",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT",
+      "execution": "NONE"
+    }
+  ]
+}

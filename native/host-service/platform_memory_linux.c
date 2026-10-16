@@ -22,20 +22,21 @@ static int tick(struct slcli_memory_capture *c) {
   struct __kernel_timespec t;
   long status;
   zero(&t, sizeof(t));
+  c->tick_calls = 1;
   status = slcli_kernel_call(__NR_clock_gettime, CLOCK_MONOTONIC,
                        (long)&t, 0, 0, 0, 0);
   c->tick_raw[0] = (uint64_t)t.tv_sec;
   c->tick_raw[1] = (uint64_t)t.tv_nsec;
   c->tick_status[0] = (uint64_t)status;
-  c->tick_calls = 1;
+  c->tick_returns = 1;
   if (status || t.tv_sec < 0 || t.tv_nsec < 0 || t.tv_nsec >= 1000000000 ||
       (uint64_t)t.tv_sec > (UINT64_MAX - (uint64_t)t.tv_nsec) / 1000000000)
     return 0;
   c->tick = (uint64_t)t.tv_sec * 1000000000 + (uint64_t)t.tv_nsec;
   return c->tick != 0;
 }
-int slcli_platform_acquire(struct slcli_memory_owner *o, uint32_t category,
-                           uint64_t bytes, struct slcli_memory_capture *c) {
+static int acquire(struct slcli_memory_owner *o,uint32_t category,
+                   uint64_t bytes,struct slcli_memory_capture *c,uint32_t shared) {
   uint64_t page, rounded, remainder;
   long result;
   if (!slcli_memory_capture_fresh(o, c)) return 0;
@@ -58,7 +59,7 @@ int slcli_platform_acquire(struct slcli_memory_owner *o, uint32_t category,
   c->page_bytes = (uint32_t)page;
   c->bytes = rounded;
   c->operation = 9; /* exact linux.mmap producer operation */
-  c->flags = MAP_PRIVATE | MAP_ANONYMOUS;
+  c->flags = (shared ? MAP_SHARED : MAP_PRIVATE) | MAP_ANONYMOUS;
   c->protection = PROT_READ | PROT_WRITE;
   c->request_args[0] = 0;
   c->request_args[1] = rounded;
@@ -72,7 +73,16 @@ int slcli_platform_acquire(struct slcli_memory_owner *o, uint32_t category,
   c->result = (uintptr_t)result;
   c->native_status = (uint64_t)result;
   c->observed = 1;
-  if ((result < 0 && result >= -4095) || !result) {
+  if (result < 0 && result >= -4095) {
+    slcli_memory_unobserved(o, &c->request);
+    return 0;
+  }
+  c->native_acquired=1;
+  if (!result) {
+    /* Linux address zero is successful acquisition, not an errno. Existing
+     * owner/arena nonzero-address policy cannot publish it LIVE; preserve the
+     * successful original and entire prepared charge rather than retrying. */
+    c->zero_address_retained=1;c->reserved=rounded;
     slcli_memory_unobserved(o, &c->request);
     return 0;
   }
@@ -87,6 +97,17 @@ int slcli_platform_acquire(struct slcli_memory_owner *o, uint32_t category,
   c->backed = 0;
   c->backed_observed = 0;
   return slcli_memory_acquired(o, &c->request, (uintptr_t)result, rounded, 0, 0);
+}
+int slcli_platform_acquire(struct slcli_memory_owner *o,uint32_t category,
+                           uint64_t bytes,struct slcli_memory_capture *c) {
+  return acquire(o,category,bytes,c,0);
+}
+/* Genuine anonymous shared backing for native parent/child original results.
+ * This is charged in the SAME owner before mmap; no physical backing, process
+ * actor, cross-process source authority or native-table admission is inferred. */
+int slcli_platform_acquire_shared(struct slcli_memory_owner *o,uint32_t category,
+                                  uint64_t bytes,struct slcli_memory_capture *c) {
+  return acquire(o,category,bytes,c,1);
 }
 int slcli_platform_release(struct slcli_memory_owner *o, uint32_t index,
                            struct slcli_memory_capture *c) {

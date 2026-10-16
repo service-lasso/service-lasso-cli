@@ -79,6 +79,41 @@ int slcli_qualification_parse(const unsigned char *raw,size_t bytes,
   result.domain=(uint32_t)domain; result.objects=(uint32_t)objects;
   *out=result; return 1;
 }
+int slcli_ha2_service_qualification_parse(const unsigned char *raw,size_t bytes,
+                                          const unsigned char profile[32],
+                                          struct slcli_qualification *out) {
+  static const char *const keys[]={"schema","profileDigest","sourceDigest","imageSha256",
+    "platform","domain","maximumBytes","physicalPageBytes","maximumObjects",
+    "caseSetDigest","capacityPlanDigest","entrySourceDigest"};
+  struct slcli_json_span root,fields[12];struct slcli_qualification result={0};
+  uint64_t domain,objects;
+  if(!out||!disjoint(out,sizeof(*out),raw,bytes)||
+     !disjoint(out,sizeof(*out),profile,32))return 0;
+  slcli_erase(out,sizeof(*out));
+  if(!nonzero(profile,32)||!slcli_json_validate(raw,bytes,16384,&root)||
+     !slcli_json_object(raw,bytes,root,keys,12,fields)||
+     !text_equal(raw,bytes,fields[0],"service-lasso-ha2-service-qualification.v1")||
+     !slcli_json_canonical_ascii_object(raw,bytes,root,keys,fields,12,1)||
+     !digest(raw,bytes,fields[1],result.profile)||!slcli_equal(profile,result.profile,32)||
+     !digest(raw,bytes,fields[2],result.source)||!nonzero(result.source,32)||
+     !digest(raw,bytes,fields[3],result.image)||!nonzero(result.image,32)||
+     !integer(raw,bytes,fields[5],1,0,&domain)||domain!=1||
+     !integer(raw,bytes,fields[6],1048576,0,&result.maximum)||result.maximum!=1048576||
+     !integer(raw,bytes,fields[7],result.maximum,0,&result.page)||
+     (result.page&(result.page-1))||result.maximum%result.page||
+     !integer(raw,bytes,fields[8],256,0,&objects)||objects!=256||
+     !digest(raw,bytes,fields[9],result.cases)||!nonzero(result.cases,32)||
+     !digest(raw,bytes,fields[10],result.capacity)||!nonzero(result.capacity,32)||
+     !digest(raw,bytes,fields[11],result.entry)||!nonzero(result.entry,32))return 0;
+#if defined(__linux__)
+  if(!text_equal(raw,bytes,fields[4],"linux"))return 0;
+#elif defined(_WIN32)
+  if(!text_equal(raw,bytes,fields[4],"win32"))return 0;
+#else
+  return 0;
+#endif
+  result.domain=1;result.objects=256;*out=result;return 1;
+}
 int slcli_calibration_parse(const unsigned char *raw,size_t bytes,
                              const unsigned char profile[32],struct slcli_calibration *out) {
   static const char *const keys[]={"schema","profileDigest","sourceDigest","domain",
@@ -100,6 +135,7 @@ int slcli_calibration_parse(const unsigned char *raw,size_t bytes,
      !integer(raw,bytes,fields[3],4,1,&domain)||domain==3||
      !integer(raw,bytes,fields[4],UINT64_C(9007199254740991),0,&out->maximum)||
      (domain==1&&out->maximum!=1048576)||
+
      !integer(raw,bytes,fields[5],out->maximum,0,&out->metadata)||
      !integer(raw,bytes,fields[6],out->maximum,0,&out->runtime)||
      !integer(raw,bytes,fields[7],out->maximum,0,&out->stack)||
