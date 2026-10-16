@@ -51,3 +51,45 @@ changed source/phase/original, wrong object/alias, partial read/write, late resu
 pending duplicate and premature close. No fabricated positive native fixture or
 opaque success file substitutes for the actual occurrence. No execution follows
 from this source recipe; final whole-source review and new exact admission remain.
+
+## Actual retained native source body
+
+product_route_parent_windows.h/.c now consumes the SAME completed native public
+birth through its full fixed-row matcher. The source descriptor, cost/failure
+rows and scan/native buffers have separately retained LIVE arena allocations;
+the scan source designation is an actual INITIAL graph member. These checks are
+pure correspondence, not the genuine nativecase/source/reservation constructor.
+The owning source sequence permits allocations only between birth and route:
+the birth's complete FREE-write exclusion therefore continues to cover every
+later allocator header/padding/split region. No free/realloc/foreign writer is
+allowed; source descriptors/cost rows are LIVE before allocation and INITIAL
+graph originals already exclude all arena writes. Failed allocations retain all
+earlier blocks and source/physical obligations.
+
+The body performs the complete bounded native scan, unique source-header match,
+route geometry/initial-zero read, two child-table DuplicateHandle acquisitions,
+actual noninheritance observations and CompareObjectHandles against the SAME
+parent section/process originals, then fixed32-byte write and full independent
+readback. All partial aliases and possibly-written bytes are retained BEFORE
+post-call clock validation. CompareObjectHandles needs the selected Windows10+
+provider/SDK KernelBase.lib import closure, which remains a real qualified source/
+tool/native-case operand; this source does not qualify that installed tuple.
+
+For N actual scan rows and H actual header reads, H<=3N, fixed ordinary native
+calls are N+H+10. Each has two actual C clock observations; preallocation/entry/
+finish add three observations. With two QPC/QPF calls per observation, the full
+ordinary success schedule is5N+5H+56, at most20N+56; conditional native errors and
+all pure matcher/parser/copy work are additional finite source costs.
+Before the first effect, the actual source constructor must finance the full
+source-capacity bound C (including20C+56 and retained per-row source-header
+buffers), not returned N/H or an observed exhaustion. No counter/cost pointer
+or successful allocation supplies that semantic source derivation. The two
+actual duplicate references and their kernel costs are separate retained
+borrowers, not a second charge of the section's backing RAM. No alias is closed
+by this body: subsequent genuine source/child/family borrowers and actual once-
+close rows still must be implemented. No successful disposition is inferred.
+
+route_captured means this stopped-parent capture only. Actual source/nativecase/
+finance/loaded/helper/family construction, local child admission cut and consumer
+activation remain incomplete; producerComplete stays false. Native cases are
+UNRUN, with no fake positive source/native fixture or execution admission.

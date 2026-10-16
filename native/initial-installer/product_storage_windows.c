@@ -1,5 +1,6 @@
 #include "product_storage_windows.h"
 #include "product_birth_windows.h"
+#include "product_route_parent_windows.h"
 #include "product_deadline_windows.h"
 #include "product_deadline_child_windows.h"
 #if defined(_WIN32)
@@ -152,6 +153,7 @@ int slcli_product_storage_windows_prefix_output_away_original(
  apart(out,n,c->deadline_publication_original,sizeof(*c->deadline_publication_original)))&&
  (!c->deadline_acquisition_original||
  apart(out,n,c->deadline_acquisition_original,sizeof(*c->deadline_acquisition_original)))&&
- (!c->birth_original||slcli_product_windows_birth_output_away_original(c->birth_original,out,n));
+ (!c->birth_original||slcli_product_windows_birth_output_away_original(c->birth_original,out,n))&&
+ (!c->route_parent_original||slcli_product_windows_route_parent_output_away_original(c->route_parent_original,out,n));
 }
 #endif

@@ -8,6 +8,7 @@ struct slcli_product_section_windows;
 struct slcli_product_windows_deadline_publication;
 struct slcli_product_windows_deadline_acquisition;
 struct slcli_product_windows_birth;
+struct slcli_product_windows_route_parent;
 struct slcli_product_windows_operation_caller {
  const struct slcli_product_storage_windows_source *initial_source_original;
  struct slcli_memory_owner *memory_original;
@@ -30,6 +31,7 @@ struct slcli_product_storage_windows {
  struct slcli_native_clock deadline_publication_entry_original;
  struct slcli_native_clock deadline_acquisition_entry_original;
  struct slcli_native_clock birth_entry_original;
+ struct slcli_native_clock route_parent_entry_original;
  struct slcli_product_windows_operation_caller *caller_original;
  struct slcli_native_clock *operation_origin_original;
  struct slcli_source_deadline_original *deadline_original;
@@ -39,6 +41,7 @@ struct slcli_product_storage_windows {
  struct slcli_product_windows_deadline_publication *deadline_publication_original;
  struct slcli_product_windows_deadline_acquisition *deadline_acquisition_original;
  struct slcli_product_windows_birth *birth_original;
+ struct slcli_product_windows_route_parent *route_parent_original;
  uint64_t prior_tick;
  uint32_t started,failed,origin_attempted,origin_returned,storage_constructed,section_attempted,prefix_prepared;
 };
