@@ -7,6 +7,7 @@
 #include "remote_image_windows.h"
 #include "node_abi_windows.h"
 #include "node_loaded_windows.h"
+#include "streams_windows.h"
 #if defined(_WIN32)
 /* Private fixed first seed compile, not argv/callback/public registration.
  * The fixed caller's whole source/SDK/header/include closure is held before
@@ -18,6 +19,7 @@ struct slcli_build_seed_compile_windows_source {
  size_t object_units,environment_units,cwd_units;
  const struct slcli_build_windows_path *includes_original;
  size_t include_count,command_capacity,attribute_capacity;
+ size_t stream_poll_capacity,stream_byte_capacity;
  DWORD pipe_capacity;
 };
 struct slcli_build_seed_compile_windows {
@@ -35,6 +37,7 @@ struct slcli_build_seed_compile_windows {
  struct slcli_build_remote_image_windows *mapping_original;
  struct slcli_build_node_abi_windows *node_tuple_original;
  struct slcli_build_node_loaded_windows *node_loaded_original;
+ struct slcli_build_streams_windows *streams_original;
  uint32_t started,failed,stopped_prefix_captured;
 };
 /* Consumes the actual held compiler in bootstrap_original and issues its real

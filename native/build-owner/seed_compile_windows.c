@@ -49,6 +49,7 @@ int slcli_build_seed_compile_windows_birth_original(struct slcli_build_seed_comp
  !s->environment_original||s->environment_units<2||s->environment_units>SIZE_MAX/sizeof(WCHAR)||
  !s->includes_original||!s->include_count||s->include_count>SIZE_MAX/sizeof(*s->includes_original)||
  !s->command_capacity||s->command_capacity>32767||!s->attribute_capacity||!s->pipe_capacity||
+ !s->stream_poll_capacity||!s->stream_byte_capacity||
  !apart(c,sizeof(*c),s->object_original,s->object_units*sizeof(WCHAR))||
  !apart(c,sizeof(*c),s->cwd_original,s->cwd_units*sizeof(WCHAR))||
  !apart(c,sizeof(*c),s->environment_original,s->environment_units*sizeof(WCHAR))||
@@ -71,8 +72,10 @@ int slcli_build_seed_compile_windows_birth_original(struct slcli_build_seed_comp
  c->mapping_original=slcli_arena_calloc(a,1,sizeof(*c->mapping_original));
  c->node_tuple_original=slcli_arena_calloc(a,1,sizeof(*c->node_tuple_original));
  c->node_loaded_original=slcli_arena_calloc(a,1,sizeof(*c->node_loaded_original));
+ c->streams_original=slcli_arena_calloc(a,1,sizeof(*c->streams_original));
  if(!c->command_original_bytes||!c->command_mutable_original||!c->attributes_original||
- !c->image_reads_original||!c->image_clocks_original||!c->image_body_original||!c->mapping_original||!c->node_tuple_original||!c->node_loaded_original||
+ !c->image_reads_original||!c->image_clocks_original||!c->image_body_original||!c->mapping_original||!c->node_tuple_original||!c->node_loaded_original||!c->streams_original||
+ !slcli_build_streams_windows_prepare_original(c->streams_original,a,s->stream_poll_capacity,s->stream_byte_capacity)||
  !slcli_build_remote_image_windows_prepare_original(c->mapping_original,a,b->compiler_original,
  b->pages_original.dwPageSize))return deny(c,b);
  if(!quote(c->command_original_bytes,s->command_capacity,&used,compiler->leaf.original,compiler->leaf.units)||
@@ -98,7 +101,10 @@ int slcli_build_seed_compile_windows_birth_original(struct slcli_build_seed_comp
  !slcli_build_loaded_file_windows_capture_original(&c->image_original,&c->child_original,
  c->image_reads_original,c->image_clocks_original,c->image_body_original)||
  !slcli_build_remote_image_windows_observe_original(c->mapping_original,&c->image_original)||
- !slcli_build_remote_image_windows_initial_bytes_original(c->mapping_original))return deny(c,b);
+ !slcli_build_remote_image_windows_initial_bytes_original(c->mapping_original)||
+ !slcli_build_streams_windows_begin_original(c->streams_original,&c->command_original,&c->mapping_original->bytes_after)||
+ !slcli_build_streams_windows_poll_original(c->streams_original))return deny(c,b);
+ b->prior_tick=c->streams_original->prior_tick;
  c->stopped_prefix_captured=1;c->failed=0;return 1;
 }
 #endif
