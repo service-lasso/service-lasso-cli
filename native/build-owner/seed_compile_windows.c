@@ -67,8 +67,11 @@ int slcli_build_seed_compile_windows_birth_original(struct slcli_build_seed_comp
  c->image_reads_original=slcli_arena_calloc(a,compiler->read_capacity,sizeof(*c->image_reads_original));
  c->image_clocks_original=slcli_arena_calloc(a,compiler->read_capacity,sizeof(*c->image_clocks_original));
  c->image_body_original=slcli_arena_calloc(a,(size_t)compiler->bytes,1);
+ c->mapping_original=slcli_arena_calloc(a,1,sizeof(*c->mapping_original));
  if(!c->command_original_bytes||!c->command_mutable_original||!c->attributes_original||
- !c->image_reads_original||!c->image_clocks_original||!c->image_body_original)return deny(c,b);
+ !c->image_reads_original||!c->image_clocks_original||!c->image_body_original||!c->mapping_original||
+ !slcli_build_remote_image_windows_prepare_original(c->mapping_original,a,b->compiler_original,
+ b->pages_original.dwPageSize))return deny(c,b);
  if(!quote(c->command_original_bytes,s->command_capacity,&used,compiler->leaf.original,compiler->leaf.units)||
  !add(c->command_original_bytes,s->command_capacity,&used,flags,sizeof(flags)/sizeof(flags[0])-1)||
  !quote(c->command_original_bytes,s->command_capacity,&used,s->translation_unit_original->member_original->leaf.original,
@@ -87,7 +90,8 @@ int slcli_build_seed_compile_windows_birth_original(struct slcli_build_seed_comp
  c->command_mutable_original,c->attributes_original)||
  !slcli_build_child_principal_windows_capture_original(&c->child_original,&c->command_original)||
  !slcli_build_loaded_file_windows_capture_original(&c->image_original,&c->child_original,
- c->image_reads_original,c->image_clocks_original,c->image_body_original))return deny(c,b);
- c->stopped_inputs_joined=1;c->failed=0;return 1;
+ c->image_reads_original,c->image_clocks_original,c->image_body_original)||
+ !slcli_build_remote_image_windows_observe_original(c->mapping_original,&c->image_original))return deny(c,b);
+ c->stopped_prefix_captured=1;c->failed=0;return 1;
 }
 #endif
