@@ -323,3 +323,5 @@ reduced runtime route is accepted.
 
 
 Issue39 private native build-owner constructor/effect/cost/alias/last-borrower contract is native/build-owner/CONTRACT.md. CLI owns the real factory; current Core types are not a supplied authority. Entire fixed descendant graph and Windows/Linux actual source/loaded/principal/reservation/stream/native terminal conjunction remain mandatory. No new public six-action slot or JSON issuer. Source-only UNRUN; producer guard remains pending complete coherent implementation and fresh whole review/ROOT admission.
+
+CLI39 private source-builder bridge pre-code selection is docs/decisions/CLI39-FIXED-SOURCE-BUILDER-BRIDGE-OCT16.md: proposed fixed Node-API build-plane addon, complete source-owned import/CRT/Node schedule and genuine private native constructor; no public command callback/JSON issuer. New ABI/loading selection awaits parent intent review before adapter implementation. Both OS factories, loaded/stream/financing/ROOT joins remain incomplete; source guard unchanged and all target execution UNRUN.
