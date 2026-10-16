@@ -5,6 +5,7 @@
 #include "../node-owner/transport_windows.h"
 #if defined(_WIN32)
 struct slcli_product_section_windows;
+struct slcli_product_windows_deadline_publication;
 struct slcli_product_windows_operation_caller {
  const struct slcli_product_storage_windows_source *initial_source_original;
  struct slcli_memory_owner *memory_original;
@@ -24,12 +25,14 @@ struct slcli_product_storage_windows {
  struct slcli_memory_capture arena_acquisition_original;
  struct slcli_native_clock arena_before,arena_after,finish;
  struct slcli_native_clock section_entry_original;
+ struct slcli_native_clock deadline_publication_entry_original;
  struct slcli_product_windows_operation_caller *caller_original;
  struct slcli_native_clock *operation_origin_original;
  struct slcli_source_deadline_original *deadline_original;
  struct slcli_node_transport_windows *transport_original;
  struct slcli_build_principal_windows *effective_original,*primary_original;
  struct slcli_product_section_windows *section_original;
+ struct slcli_product_windows_deadline_publication *deadline_publication_original;
  uint64_t prior_tick;
  uint32_t started,failed,origin_attempted,origin_returned,storage_constructed,section_attempted;
 };

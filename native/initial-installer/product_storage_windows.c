@@ -1,4 +1,5 @@
 #include "product_storage_windows.h"
+#include "product_deadline_windows.h"
 #if defined(_WIN32)
 /* Region adoption follows the existing bootstrap native-custody pattern; this
  * distinct product preparation never invokes that build/compiler factory. */
@@ -134,6 +135,8 @@ int slcli_product_storage_windows_output_away_original(
  apart(out,n,c->operation_origin_original,sizeof(*c->operation_origin_original))&&
  apart(out,n,c->transport_original,sizeof(*c->transport_original))&&
  apart(out,n,c->effective_original,sizeof(*c->effective_original))&&
- apart(out,n,c->primary_original,sizeof(*c->primary_original));
+ apart(out,n,c->primary_original,sizeof(*c->primary_original))&&
+ (!c->deadline_publication_original||
+ apart(out,n,c->deadline_publication_original,sizeof(*c->deadline_publication_original)));
 }
 #endif

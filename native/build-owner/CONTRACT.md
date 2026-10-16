@@ -321,3 +321,24 @@ CLI39 actual initial product storage source: native/initial-installer/product_st
 Product private-section descriptor construction contract (source implementation, 2026-10-16): the actual prepared initial product owner supplies its SAME arena/caller/deadline and separate native effective/primary token originals. A fixed private constructor creates an unnamed-section descriptor, never accepts JSON/SDDL/callback/caller ACL bytes. Owner is the actual effective SID; exactly two noninherited allow ACEs select effective read/write/query+READ_CONTROL and process-primary read+READ_CONTROL. These masks create no execute rights or host/persistent ACL changes. Native SD/ACL initialization, owner/DACL/protected-control setting, conversion to a source-bounded self-relative buffer and independent native validity/owner/DACL observations retain all raw operands/results/clocks. Finite bounds derive from two already captured native SID lengths, SDK structure geometry and alignment BEFORE any SD native call. No grow/retry or size-probe funding. Exact relative-byte/source SID/ACE/control joins remain correspondence under authentic initial source/native/profile qualification, not an issuer. The descriptor's separate exact arena output and all token/SID/ACL/control/relative buffers remain retained through actual section constructor and later proof borrowers. Existing transport constructor receives this source-created self-relative span with unchanged live_block/deadline/exclusion rules. Complete Source/loaded/funding/child/family conjunction remains mandatory; descriptor success does not grant it. All new calls, controls, aliases, kernel costs and failed overlap belong to the full initial preparation/product profile before effects. This is a private object under existing admitted native owner, no new public action, permission request or provider control.
 
 CLI39/TUI whole84 exclusion repair: actual product_source_windows.h/.c exports slcli_product_windows_initial_source_excludes_output with the complete existing known nested span walk; native storage uses SAME API, retaining its richer actual output/control exclusion separately. Standalone source makes no native calls and issues no source/graph/funding/clock/family authority. Added export-only null/region-multiplication guards; all prior provider/principal/source/actor/occurrence checks remain. Exact held header/implementation/nested closure is a required TUI source operand. Labelled synthetic exclusion geometry/denial vectors are UNRUN and deliberately lack genuine native clocks/profiles. docs/decisions/CLI39-PURE-INITIAL-SOURCE-EXCLUSION-OCT16.md records ABI and boundaries. Fresh cumulative whole review/new admission still precedes execution; full product/Node/Linux work remains active.
+
+Selected b52 product deadline publication body contract: the fixed private parent
+caller consumes actual prepared product storage/SD/transport and its retained
+active phase deadline, never caller-provided duration/ACL/callback. Distinct paid
+publication control is retained by storage before writes. The64-byte BE closed
+product codec carries absolute enclosing/active-phase expiration, phase1..4,
+parent process/birth and frequency correspondence scalars, no pointer/native
+clock/authority. It occupies the existing product-owned transport's logical
+backing with all remaining bytes explicitly zero; this is NOT the Node bootstrap
+grammar and never calls/changes its encoder. Whole exact encoded/readback bodies
+and original clocks bracket publication. Existing once-use writer disposal owns
+actual unmap/release-metadata and independent writable-handle close; readonly
+aliases/backing stay charged through all native handoff/child/family borrowers.
+The actual SAME parent original is retained; phase/origin/expiry snapshots must
+still match at every useful cut. All control, existing section-rounded physical
+bytes, copies, source/helper/native-clock/cleanup/API/kernel/failed overlap costs
+must already fit the genuine whole profile. Successful metadata/disposal is not
+source membership/reservation/child binding. Pending/late effects retain all raw
+rows and once-close state, without retry. Complete native child object/rights/
+birth/source acquisition, paid local admission cuts and genuine entry/family
+connection remain required before any consumer permission.
