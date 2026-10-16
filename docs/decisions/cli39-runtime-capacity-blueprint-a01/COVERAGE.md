@@ -1,0 +1,7 @@
+# Author-owned bounded input semantic coverage
+
+All30 repo inputs in INPUTS-WORKING.json have cumulative OWN_ENTIRE_EOF semantic reads. Selected19 DESIGN/IMPLEMENTATION and README earlier full reads remain cumulative; exact selected19/67 contract copies are preserved. Current selected67 DESIGN first/full output clipped in middle, recovered independently lines81..130; full169-line body cumulatively read. Current proposal full initial body plus both complete append scopes read. All other included product files were read through EOF in this continuation. No locator/hash/control assertions substitute for semantic EOF.
+
+Review25 REPORT/FINAL/MANIFEST/PROTECTED-STATE/COVERAGE/INPUT-VERIFICATION each received own current full EOF. Three adoption byte excerpts each received own exact copied EOF. The whole unrelated append-only checkpoint was not claimed read. Missing standalone adoption locators remain absent, not reconstructed.
+
+Native runtime inventory, complete numeric Nprofile, native IO-attempt geometry, actual B0/B2/service/store/physical fit, actual source/tool/profile/SDK/CRT/native linkage and useful installed outcomes remain UNQUALIFIED. Coverage concerns this bounded blueprint, not whole product source or execution. REPORT and proposal delimit exact scope and open parameters.

@@ -1,12 +1,11 @@
-import { build } from "esbuild";
-import { copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { spawnSync } from "node:child_process";
+import { copyFile, mkdir, open, readFile, readdir, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
-import { basename, dirname, join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { stagePrimaryGate } from "./stage-primary-gate.mjs";
 import { nativeLifecycleDiagnostics } from "./native-lifecycle-diagnostics.mjs";
+import { buildSourceRuntime, preparePackageToolOwnerOriginal, runRetainedSourceToolOriginal } from "./build-source-runtime.mjs";
 
 const observe = nativeLifecycleDiagnostics(process.argv.includes("--diagnose-native-lifecycle"));
 async function stage(label, operation) {
@@ -19,6 +18,99 @@ const postjectVersion = "1.0.0-alpha.6";
 const esbuildVersion = "0.28.2";
 const fuse = "NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+// This occurrence remains reachable on a producer failure. SAME-handle read
+// association is byte custody only, not held namespace or build-tool admission.
+const sourcePackageOriginal = { manifest: null, build: null, producer: null, toolOwner: null,
+  toolManifest: null, commands: [], imageWrite: null };
+async function writeSourceImageOriginal(path, image) {
+  const row = { path, image, body: image.body, handle: null, writes: [], written: 0,
+    openAttempted: false, openReturned: false, syncAttempted: false, syncReturned: false,
+    closeAttempted: false, closeReturned: false, error: null, closeError: null };
+  sourcePackageOriginal.imageWrite = row;
+  try {
+    if (!Buffer.isBuffer(row.body) || !Number.isSafeInteger(row.body.length) || row.body.length <= 0)
+      throw new Error("Missing retained source image bytes");
+    // At least one byte advances each successful attempt. One failed attempt
+    // is absorbing; this finite source bound is not a qualified capture budget.
+    row.writeAttemptMaximum = row.body.length;
+    row.openAttempted = true;
+    row.handle = await open(path, "wx"); row.openReturned = true;
+    while (row.written < row.body.length) {
+      if (row.writes.length >= row.writeAttemptMaximum)
+        throw new Error("Source image write schedule exhausted");
+      const write = { offset: row.written, requested: row.body.length - row.written,
+        result: null, returned: false, error: null };
+      row.writes.push(write);
+      try {
+        write.result = await row.handle.write(row.body, write.offset, write.requested, write.offset);
+        write.returned = true;
+      } catch (error) { write.error = error; throw error; }
+      if (write.result.buffer !== row.body || !Number.isSafeInteger(write.result.bytesWritten) ||
+          write.result.bytesWritten <= 0 || write.result.bytesWritten > write.requested)
+        throw new Error("Invalid source-image write occurrence");
+      row.written += write.result.bytesWritten;
+    }
+    row.syncAttempted = true;
+    await row.handle.sync(); row.syncReturned = true;
+  } catch (error) { row.error = error; }
+  if (row.handle) {
+    row.closeAttempted = true;
+    try { await row.handle.close(); row.closeReturned = true; }
+    catch (error) { row.closeError = error; }
+  }
+  if (row.error || row.closeError) {
+    const failure = new Error("Source image output retained failure", { cause: row.error ?? row.closeError });
+    failure.sourcePackageOriginal = sourcePackageOriginal;
+    throw failure;
+  }
+  return row;
+}
+async function sourcePackageProducer() {
+  const row = { path: resolve(argument("--source-runtime-manifest")), handle: null,
+    before: null, body: null, after: null, closeAttempted: false, closeReturned: false,
+    error: null, closeError: null };
+  sourcePackageOriginal.manifest = row;
+  try {
+    try {
+      row.handle = await open(row.path, "r");
+      row.before = await row.handle.stat({ bigint: true });
+      row.body = await row.handle.readFile();
+      row.after = await row.handle.stat({ bigint: true });
+      if (!row.before.isFile() || !row.after.isFile() ||
+          row.before.dev !== row.after.dev || row.before.ino !== row.after.ino ||
+          row.before.size !== BigInt(row.body.length) || row.after.size !== row.before.size ||
+          row.before.mtimeNs !== row.after.mtimeNs || row.before.ctimeNs !== row.after.ctimeNs)
+        throw new Error("Source-runtime manifest read occurrence changed");
+    } catch (error) { row.error = error; }
+    if (row.handle) {
+      row.closeAttempted = true;
+      try { await row.handle.close(); row.closeReturned = true; }
+      catch (error) { row.closeError = error; }
+    }
+    if (row.error) throw row.error;
+    if (row.closeError) throw row.closeError;
+    // Manifest arguments route the independently admitted build input. They
+    // cannot turn bytes/hash/path equality into executable authority.
+    sourcePackageOriginal.build = await buildSourceRuntime(row.body,
+      argument("--source-runtime-manifest-sha256"), join(output, ".source-runtime-build"));
+    const producer = sourcePackageOriginal.build?.packageProducerOriginals;
+    if (!producer || producer.buildOriginal !== sourcePackageOriginal.build ||
+        producer.productionImage !== sourcePackageOriginal.build.builtOutputs?.find(
+          item => item.recipe.target === "node-core" && item.recipe.kind === "image") ||
+        producer.buildToolNode !== sourcePackageOriginal.build.packageToolInputs?.node ||
+        producer.esbuild !== sourcePackageOriginal.build.packageToolInputs?.esbuild ||
+        producer.postject !== sourcePackageOriginal.build.packageToolInputs?.postject)
+      throw new Error("Missing SAME source-build package producer originals");
+    sourcePackageOriginal.producer = producer;
+    return producer;
+  } catch (error) {
+    sourcePackageOriginal.failure = error;
+    const failure = new Error("Source package producer failed", { cause: error });
+    failure.sourcePackageOriginal = sourcePackageOriginal;
+    throw failure;
+  }
+}
 
 function argument(name) {
   const index = process.argv.indexOf(name);
@@ -33,11 +125,57 @@ function currentTarget() {
   return target;
 }
 
-function command(stage, file, args, cwd = root) {
-  observe(stage, "start");
-  const result = spawnSync(file, args, { cwd, encoding: "utf8" });
-  observe(stage, result.status === 0 && !result.error ? "complete" : "failed", result.status, result.signal);
-  if (result.status !== 0 || result.error) throw new Error(`${basename(file)} failed: ${result.error?.message ?? result.stderr ?? result.stdout}`);
+async function command(stage, file, args, cwd = root, inputOriginal = null) {
+  const owner = sourcePackageOriginal.toolOwner;
+  if (!owner || owner.unresolved || owner.next >= owner.invocations.length ||
+      owner.invocations[owner.next].stage !== stage) throw new Error("Package tool schedule denied");
+  const ordinal = owner.next++, row = owner.invocations[ordinal];
+  row.attempted = true; row.executable = file; row.args = args; row.cwd = cwd; row.inputOriginal = inputOriginal;
+  sourcePackageOriginal.commands.push(row);
+  const expires = owner.deadline, origin = owner.origin;
+  row.before = process.hrtime.bigint();
+  try {
+    if (row.before < owner.previousTick || row.before >= expires)
+      throw new Error("Original package tool deadline denied");
+    await runRetainedSourceToolOriginal(owner, file, args, cwd, ordinal);
+    row.returned = true;
+    row.after = process.hrtime.bigint();
+    if (owner.deadline !== expires || owner.origin !== origin || row.after < row.before || row.after >= expires)
+      throw new Error("Original package tool final clock denied");
+    owner.previousTick = row.after;
+  } catch (error) {
+    row.error = error; owner.unresolved = true;
+    error.sourcePackageOriginal = sourcePackageOriginal;
+    throw error;
+  }
+}
+
+async function packageToolOwner() {
+  const row = { path: resolve(argument("--package-tool-manifest")), handle: null,
+    before: null, after: null, body: null, error: null, closeError: null, closeAttempted: false, closeReturned: false };
+  sourcePackageOriginal.toolManifest = row;
+  try {
+    row.handle = await open(row.path, "r"); row.before = await row.handle.stat({ bigint: true });
+    row.body = await row.handle.readFile(); row.after = await row.handle.stat({ bigint: true });
+    if (!row.before.isFile() || !row.after.isFile() || row.before.dev !== row.after.dev ||
+        row.before.ino !== row.after.ino || row.before.size !== BigInt(row.body.length) ||
+        row.before.size !== row.after.size || row.before.mtimeNs !== row.after.mtimeNs ||
+        row.before.ctimeNs !== row.after.ctimeNs) throw new Error("Package tool manifest occurrence changed");
+  } catch (error) { row.error = error; }
+  if (row.handle) {
+    row.closeAttempted = true;
+    try { await row.handle.close(); row.closeReturned = true; } catch (error) { row.closeError = error; }
+  }
+  if (row.error || row.closeError) {
+    const failure = new Error("Package tool plan read failed", { cause: row.error ?? row.closeError });
+    failure.sourcePackageOriginal = sourcePackageOriginal; throw failure;
+  }
+  try {
+    return await preparePackageToolOwnerOriginal(row.body, argument("--package-tool-manifest-sha256"),
+      output, process.platform, sourcePackageOriginal);
+  } catch (error) {
+    error.sourcePackageOriginal = sourcePackageOriginal; throw error;
+  }
 }
 
 function sha256(bytes) {
@@ -94,13 +232,30 @@ const darwinHelper = join(output, darwinHelperName);
 const embeddedSea = join(output, embeddedSeaName);
 const seaConfig = join(output, "sea-config.json");
 
-await rm(output, { recursive: true, force: true });
-await mkdir(output, { recursive: true });
-command("writer-build", "go", ["build", "-trimpath", "-o", confinedWriter, "."], join(root, "native", "confined-scaffold"));
+// A failed or previous attempt remains owned evidence. Never erase it to make
+// the next attempt appear fresh.
+await mkdir(output, { recursive: false });
+// Both source-build denials remain absorbing. No ambient image/tool fallback
+// runs after a failed or unfinished source producer.
+const sourceProducerOriginal = await stage("source-runtime-build", sourcePackageProducer);
+const buildToolNodeOriginal = sourceProducerOriginal.buildToolNode.image;
+const sourceRuntimeImageOriginal = sourceProducerOriginal.productionImage;
+const esbuildNativeOriginal = sourceProducerOriginal.esbuild.nativeImage;
+const postjectCLIOriginal = sourceProducerOriginal.postject.cli;
+// Loaded module/tool/source/namespace ancestry must be qualified by the real
+// build owner before this route is executable; these object joins do not grant it.
+const packageTools = await packageToolOwner();
+if (packageTools.environment.NODE_PATH !== join(root, "node_modules")) {
+  packageTools.unresolved = true;
+  const failure = new Error("Package tool environment must retain the original bundle nodePaths relation");
+  failure.sourcePackageOriginal = sourcePackageOriginal; throw failure;
+}
+const goOriginal = packageTools.toolInputs.go;
+await command("writer-build", goOriginal.input.path, ["build", "-trimpath", "-o", confinedWriter, "."], join(root, "native", "confined-scaffold"), goOriginal);
 const confinedWriterSha256 = sha256(await readFile(confinedWriter));
 let darwinHelperSha256 = null;
 if (process.platform === "darwin") {
-  command("darwin-helper-build", "go", ["build", "-trimpath", "-o", darwinHelper, "."], join(root, "native", "darwin-immutable-helper"));
+  await command("darwin-helper-build", goOriginal.input.path, ["build", "-trimpath", "-o", darwinHelper, "."], join(root, "native", "darwin-immutable-helper"), goOriginal);
   darwinHelperSha256 = sha256(await readFile(darwinHelper));
 }
 // This fixed tuple is solely an executable integration fixture. It is never
@@ -119,34 +274,32 @@ const controlledAdmissions = controlledTestAdmission ? [{
   archiveSha256: sha256(controlledArchive),
   catalogIdentity: "controlled-source-test-fixture",
 }] : [];
-await stage("bundle", () => build({
-  bundle: true,
-  entryPoints: [join(root, "dist", "sea-entry.js")],
-  format: "cjs",
-  outfile: bundle,
-  platform: "node",
-  target: "node22",
-  nodePaths: [join(root, "node_modules")],
-  alias: { commander: join(root, "node_modules", "commander", "index.js") },
-  define: {
+const bundleDefines = {
     "process.env.SERVICE_LASSO_CANDIDATE_VERSION": JSON.stringify(version),
     "process.env.SERVICE_LASSO_CANDIDATE_SOURCE_SHA": JSON.stringify(sourceSha),
     __SERVICE_LASSO_CANDIDATE_VERSION__: JSON.stringify(version),
     __SERVICE_LASSO_CANDIDATE_SOURCE_SHA__: JSON.stringify(sourceSha),
     __SERVICE_LASSO_CONFINED_HELPER_SHA256__: JSON.stringify(confinedWriterSha256),
     __SERVICE_LASSO_CONTROLLED_TEST_ADMISSIONS__: JSON.stringify(controlledAdmissions),
-  },
-  legalComments: "none",
-}));
+};
+await command("bundle", esbuildNativeOriginal.input.path,
+  [join(root, "dist", "sea-entry.js"), "--bundle", "--format=cjs", `--outfile=${bundle}`,
+    "--platform=node", "--target=node22", "--legal-comments=none",
+    `--alias:commander=${join(root, "node_modules", "commander", "index.js")}`,
+    ...Object.entries(bundleDefines).map(([name, value]) => `--define:${name}=${value}`)], root, esbuildNativeOriginal);
 await writeFile(seaConfig, `${JSON.stringify({ main: bundle, output: blob, disableExperimentalSEAWarning: true, useCodeCache: false, execArgvExtension: "none" }, null, 2)}\n`);
-command("sea-blob", process.execPath, ["--experimental-sea-config", seaConfig]);
-await copyFile(process.execPath, executable);
-if (process.platform === "darwin") command("signature-remove", "codesign", ["--remove-signature", executable]);
-const postject = join(root, "node_modules", "postject", "dist", "cli.js");
+await command("sea-blob", buildToolNodeOriginal.input.path, ["--experimental-sea-config", seaConfig], root, buildToolNodeOriginal);
+// Consume the retained source-producer bytes, rather than reopening its path.
+// Fresh output/write/native identity and derivative ancestry still require the
+// actual build owner; write success alone supplies no executable admission.
+await writeSourceImageOriginal(executable, sourceRuntimeImageOriginal);
+if (process.platform === "darwin") await command("signature-remove", packageTools.toolInputs.codesign.input.path, ["--remove-signature", executable], root, packageTools.toolInputs.codesign);
+const postject = postjectCLIOriginal.input.path;
 const postjectArgs = [executable, "NODE_SEA_BLOB", blob, "--sentinel-fuse", fuse];
 if (process.platform === "darwin") postjectArgs.push("--macho-segment-name", "NODE_SEA");
-command("postject", process.execPath, [postject, ...postjectArgs]);
-if (process.platform === "darwin") command("signature-add", "codesign", ["--sign", "-", executable]);
+await command("postject", buildToolNodeOriginal.input.path, [postject, ...postjectArgs], root,
+  { node: buildToolNodeOriginal, cli: postjectCLIOriginal });
+if (process.platform === "darwin") await command("signature-add", packageTools.toolInputs.codesign.input.path, ["--sign", "-", executable], root, packageTools.toolInputs.codesign);
 
 // The published command is a compiled resident primary.  It embeds both
 // target-host images, so a normal invocation never chooses a helper from a
@@ -155,10 +308,37 @@ if (process.platform === "darwin") command("signature-add", "codesign", ["--sign
 await copyFile(executable, embeddedSea);
 const gateSource = join(root, "native", "primary-gate");
 const gateBuild = join(output, ".primary-gate-build");
-await stage("primary-stage", () => stagePrimaryGate({ source: gateSource, build: gateBuild, sea: embeddedSea, writer: confinedWriter, platform: process.platform, darwinHelperSha256 }));
-command("primary-build", "go", ["build", "-trimpath", "-o", executable, "."], gateBuild);
-await rm(gateBuild, { recursive: true, force: true });
-await rm(embeddedSea, { force: true });
+const primaryStageOriginal = await stage("primary-stage", () => stagePrimaryGate({ source: gateSource, build: gateBuild, sea: embeddedSea, writer: confinedWriter, platform: process.platform, darwinHelperSha256 }));
+if (!primaryStageOriginal.complete || primaryStageOriginal.build !== gateBuild ||
+    primaryStageOriginal.sea !== embeddedSea || primaryStageOriginal.writer !== confinedWriter ||
+    primaryStageOriginal.files.some((file) => !file.complete))
+  throw new Error("Primary build requires the complete original staging occurrence");
+// Keep this exact occurrence through provenance. Its byte observations do not
+// supply held namespace, compiler/tool ancestry or executable authority.
+const primaryStagingEvidence = {
+  schema: "service-lasso.cli39.primary-staging-byte-observations.v1",
+  scope: "byte-lineage-only",
+  files: primaryStageOriginal.files.map((file) => ({
+    name: file.path.slice(gateBuild.length + 1).replaceAll("\\", "/"),
+    bytes: file.body.length, sha256: sha256(file.body),
+  })),
+};
+// Required producer evidence is outside the closed publication archive. The
+// schema1 candidate provenance below is not silently widened by this record.
+await writeFile(join(output, "primary-staging-original.json"), `${JSON.stringify(primaryStagingEvidence, null, 2)}\n`, { flag: "wx" });
+await command("primary-build", goOriginal.input.path, ["build", "-trimpath", "-ldflags", `-X main.nativeCandidateVersion=${version} -X main.nativeCandidateSourceSHA=${sourceSha}`, "-o", executable, "."], gateBuild, goOriginal);
+if (packageTools.next !== packageTools.invocations.length || packageTools.unresolved ||
+    packageTools.invocations.some(row => !row.returned)) {
+  packageTools.unresolved = true;
+  const failure = new Error("Incomplete original package tool schedule");
+  failure.sourcePackageOriginal = sourcePackageOriginal; throw failure;
+}
+packageTools.finish = process.hrtime.bigint();
+if (packageTools.finish < packageTools.previousTick || packageTools.finish >= packageTools.deadline) {
+  packageTools.unresolved = true;
+  const failure = new Error("Original package tool schedule expired");
+  failure.sourcePackageOriginal = sourcePackageOriginal; throw failure;
+}
 
 const provenance = {
   schemaVersion: 1,

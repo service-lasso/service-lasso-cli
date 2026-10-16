@@ -12,11 +12,13 @@ struct slcli_memory_capture {
   uint64_t bytes, reserved, backed, tick, native_status;
   uint64_t native_error;
   uint32_t native_error_observed;
+  uint32_t native_acquired,zero_address_retained;
   uint32_t operation, observed, geometry_bytes, page_bytes, backed_observed;
   uint32_t flags, protection, page_geometry_bytes;
-  uint64_t query_result;
+  uint64_t query_result,query_error;
+  uint32_t query_error_observed;
   uint64_t tick_raw[2], tick_status[2];
-  uint32_t tick_calls;
+  uint32_t tick_calls,tick_returns;
   uint64_t request_args[6], query_args[3];
   unsigned char geometry[128];
   unsigned char page_geometry[64];
@@ -29,16 +31,25 @@ struct slcli_memory_capture {
 static inline int slcli_memory_capture_fresh(
     const struct slcli_memory_owner *owner,
     const struct slcli_memory_capture *capture) {
-  uintptr_t o, c;
-  if (!owner || !capture) return 0;
+  uintptr_t o, c;size_t i;const unsigned char *raw;
+  if (!slcli_memory_owner_mutable(owner) || !capture) return 0;
   o = (uintptr_t)owner; c = (uintptr_t)capture;
   if (o > UINTPTR_MAX - sizeof(*owner) ||
       c > UINTPTR_MAX - sizeof(*capture) ||
       (o < c + sizeof(*capture) && c < o + sizeof(*owner))) return 0;
-  return capture->operation == 0 && !owner->failed;
+  if(owner->failed)return 0;
+  /* Complete source-owned fresh zeroed storage, including padding. Marker0
+   * does not authorize erasing a prior raw fact or partial constructor row. */
+  raw=(const unsigned char *)capture;
+  for(i=0;i<sizeof(*capture);i++)if(raw[i])return 0;
+  return 1;
 }
 int slcli_platform_acquire(struct slcli_memory_owner *, uint32_t, uint64_t,
                            struct slcli_memory_capture *);
+#if defined(__linux__)
+int slcli_platform_acquire_shared(struct slcli_memory_owner *,uint32_t,uint64_t,
+                                  struct slcli_memory_capture *);
+#endif
 int slcli_platform_release(struct slcli_memory_owner *, uint32_t,
                            struct slcli_memory_capture *);
 #endif

@@ -297,3 +297,28 @@ SP1/BQ/issuer/native/credential source or target execution before coherent whole
 DIFFERENT review AND exact human choice. Ordinary approved PA1/N2 source remains
 separate and unfinished. Final ENTIRE product SOURCE GO/new authentic input admission,
 native qualification/Core/operator/publication/release remain separate open gates.
+
+## Issue #39 October16 source continuation
+
+Sole delivery owner /root/cli39_release_delivery_oct16 works from current develop
+ df5c1b62d64061d3d8117aa998e96597fcd5834b in the policy-owned
+39-development-release-oct16 checkout. Retained legacy native/scripts/src/tests
+source is transferred under CLI39-RETAINED-SOURCE-TRANSFER-OCT16.sha256; the
+original mixed index and checkout remain untouched. This restores missing source
+dependencies; it does not qualify, freeze or complete the implementation.
+
+The selected prebirth slot3 method now has a once-only native F_GETFD observation
+and returning replay. Exact -EBADF permits absence only when no retained known
+source occurrence owns3; present3 must match the actual retained custody,
+self-pidfd or opened-file occurrence. Foreign3 is refused without close. Clone
+chronology consumes the actual probe afterclock. Parent maximum is3*(N0+N1)+14,
+and the child has ten distinct raw rows. All source remains UNRUN. Genuine
+initial ROOT/source/profile, clone/child-local acquisition, full Windows/Linux
+Node/default actions and the entire remaining sequence remain required.
+
+CI38563583179/job115850523828 fails the pinned Core9bef build at
+src/server/index.ts(9179,1), TS1005 '}' expected, before CLI acceptance. No repin
+is justified by latest HEAD alone. Complete independent source review and NEW
+exact authentic ROOT/input/command admission precede local product execution;
+natural new-push CI remains separately allowed. Protected Development publication
+and same-byte Core integration remain incomplete; macOS N/A, never PASS.

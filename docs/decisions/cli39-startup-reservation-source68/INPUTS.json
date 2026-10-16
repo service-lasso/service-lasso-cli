@@ -1,0 +1,386 @@
+{
+  "schema": "service-lasso.cli39.startup-reservation-inputs.v1",
+  "scope": "CURRENT_SOURCE_ONLY",
+  "historicalRestoration": false,
+  "binaryCopies": 0,
+  "rows": [
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\docs\\decisions\\cli39-selected19\\DESIGN.md",
+      "member": "inputs/repo/docs/decisions/cli39-selected19/DESIGN.md",
+      "bytes": 40032,
+      "sha256": "9aec48592c0d583b4f1723bcfee22a35e166b109bee5e6a5ccaf25dc3d8b7084",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\docs\\decisions\\cli39-selected19\\PROCESS-AND-RUNTIME-CONTRACT19.md",
+      "member": "inputs/repo/docs/decisions/cli39-selected19/PROCESS-AND-RUNTIME-CONTRACT19.md",
+      "bytes": 17645,
+      "sha256": "200928baed73982e82d92554b98dc2f7b29c4a68818b22bfd7f9eba59005cf6a",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\docs\\decisions\\cli39-selected19\\IMPLEMENTATION-AND-ACCEPTANCE19.md",
+      "member": "inputs/repo/docs/decisions/cli39-selected19/IMPLEMENTATION-AND-ACCEPTANCE19.md",
+      "bytes": 12418,
+      "sha256": "f635dbac78e0ab452052506e6786aeafa38e2c46b0cf39758645ab9c8946cab3",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\docs\\decisions\\cli39-selected19\\README.md",
+      "member": "inputs/repo/docs/decisions/cli39-selected19/README.md",
+      "bytes": 5384,
+      "sha256": "22aa507d3df99e4bfaae2b8328bd61c1acfb9447aaa24943cf5e95b3d1f2bc9e",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\docs\\decisions\\cli39-selected67\\DESIGN.md",
+      "member": "inputs/repo/docs/decisions/cli39-selected67/DESIGN.md",
+      "bytes": 47869,
+      "sha256": "13f1325e4be0506232b06463fa6acb0037ebba1140791d0d70560c4be20b0bb1",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\docs\\decisions\\cli39-selected67\\WIRE.json",
+      "member": "inputs/repo/docs/decisions/cli39-selected67/WIRE.json",
+      "bytes": 4473,
+      "sha256": "7be3f91cdefbac8fb63f959a172a6148788eb9ef48eca83a117d82919acb5545",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\docs\\decisions\\cli39-selected67\\README.md",
+      "member": "inputs/repo/docs/decisions/cli39-selected67/README.md",
+      "bytes": 462,
+      "sha256": "27e7132c2a94a4bff11dcc97a2d8d072093fc76dca2b7ed87871ae31195478bc",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\node-runtime\\windows-release-profile.json",
+      "member": "inputs/repo/native/node-runtime/windows-release-profile.json",
+      "bytes": 2860,
+      "sha256": "11ed3bf95da079c097395654c59c7014ee302275998818253bcdfef280d5e890",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\node-runtime\\overlay\\node.gyp",
+      "member": "inputs/repo/native/node-runtime/overlay/node.gyp",
+      "bytes": 48891,
+      "sha256": "417866a319ccbad0f925ff91596372091a606df23b655062cfe9ad70b787e402",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\node-runtime\\WINDOWS-SOURCE-BUILD-RECIPE68.md",
+      "member": "inputs/repo/native/node-runtime/WINDOWS-SOURCE-BUILD-RECIPE68.md",
+      "bytes": 9026,
+      "sha256": "2924762baa6f6d9ddb036d58c8e03dbe106eac05f1d2afd1747f100cc1597865",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\node-runtime\\SOURCE-ASSOCIATIONS.json",
+      "member": "inputs/repo/native/node-runtime/SOURCE-ASSOCIATIONS.json",
+      "bytes": 3464,
+      "sha256": "990a015393e01a9c6078c912bb6beb1afb5d68c894cceda82fa8050df126ab3b",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\node-runtime\\source-build-inputs\\common.gypi",
+      "member": "inputs/config/common.gypi",
+      "bytes": 26973,
+      "sha256": "276374a2a16ea6a31fda5e702383061e9ad622d5179d3b3edd2d5c393623e27b",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\node-runtime\\source-build-inputs\\configure.py",
+      "member": "inputs/config/configure.py",
+      "bytes": 87247,
+      "sha256": "9ae98ce309ca866955c4860cc2e0f664d15ac326e9401523973ee4ee1c012984",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\node-runtime\\source-build-inputs\\CURRENT-CRT-HEADER-INPUTS.json",
+      "member": "inputs/config/CURRENT-CRT-HEADER-INPUTS.json",
+      "bytes": 1246,
+      "sha256": "504ae63c5f12525bc277b596bc844d01b6375fdae9428377d4bab2938093e823",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\node-runtime\\source-build-inputs\\CURRENT-INPUTS.json",
+      "member": "inputs/config/CURRENT-INPUTS.json",
+      "bytes": 2376,
+      "sha256": "18053fcdd8f6211dc07905dd817907840db2156546a8ac53c596b776705fa461",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\node-runtime\\source-build-inputs\\CURRENT-TOOL-ARCHIVE-OBSERVATIONS.json",
+      "member": "inputs/config/CURRENT-TOOL-ARCHIVE-OBSERVATIONS.json",
+      "bytes": 2553,
+      "sha256": "e4977f8a0683c0bbd4e101cacfb2e6dfd4e7cae04d5ea2ac328207f4e50733f0",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\node-runtime\\source-build-inputs\\CURRENT-VCRT-INTERNAL-INPUTS.json",
+      "member": "inputs/config/CURRENT-VCRT-INTERNAL-INPUTS.json",
+      "bytes": 871,
+      "sha256": "86916b3201df7d250fa5772ffded0e33549eaa78d778b750eb655a362fa1e2a5",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\node-runtime\\source-build-inputs\\CURRENT-VCRT-RESOURCE-INPUTS.json",
+      "member": "inputs/config/CURRENT-VCRT-RESOURCE-INPUTS.json",
+      "bytes": 1883,
+      "sha256": "aeda56766be5e60a847dd87f65841cb63691e834a964d19ec310d2140a232660",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\node-runtime\\source-build-inputs\\CURRENT-VCRT-STARTUP-INPUTS.json",
+      "member": "inputs/config/CURRENT-VCRT-STARTUP-INPUTS.json",
+      "bytes": 2588,
+      "sha256": "8bb60305f37d9908ee4e53f19de8a52613bc00536eb50754431a545e7f48654c",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\node-runtime\\source-build-inputs\\vcbuild.bat",
+      "member": "inputs/config/vcbuild.bat",
+      "bytes": 35998,
+      "sha256": "0c7952600f3890d1539db8f39f796da1de4a17087d7e65e2264af4519a890997",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\node-runtime\\source-build-inputs\\tools\\gyp\\pylib\\gyp\\MSVSSettings.py",
+      "member": "inputs/config/tools/gyp/pylib/gyp/MSVSSettings.py",
+      "bytes": 45747,
+      "sha256": "13c9006c1af1bf40389eadbb1f303221544a37bcb4615be8e3d227856c40280c",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\internal\\locks.cpp",
+      "member": "inputs/ucrt/internal/locks.cpp",
+      "bytes": 1882,
+      "sha256": "1623c1fe8eeea737b47980bac7b45ab42bd698aaccc80c9d7ab0d015738e1eff",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\lowio\\ioinit.cpp",
+      "member": "inputs/ucrt/lowio/ioinit.cpp",
+      "bytes": 9378,
+      "sha256": "9cc35f857e078d59ce764e57d0f881a3e317042d0cecad2e38650330957dddf2",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\lowio\\osfinfo.cpp",
+      "member": "inputs/ucrt/lowio/osfinfo.cpp",
+      "bytes": 11163,
+      "sha256": "f424d71aa9cbfe005eeb0384ca9b1b9e7f5e9df3b2a0adf378e3f135d1826de2",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\inc\\corecrt_internal_lowio.h",
+      "member": "inputs/ucrt/inc/corecrt_internal_lowio.h",
+      "bytes": 11985,
+      "sha256": "1465b3388c22524a779c19dcd709eeff116993d21a0068e639281181ddb2a751",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\internal\\initialization.cpp",
+      "member": "inputs/ucrt/internal/initialization.cpp",
+      "bytes": 10501,
+      "sha256": "c86a17451507ab55f89d60fff3d9713fcb6a0467e62b5a8d0982bf094dc81ab3",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\internal\\shared_initialization.cpp",
+      "member": "inputs/ucrt/internal/shared_initialization.cpp",
+      "bytes": 1870,
+      "sha256": "9fd1c607efdaf492f1254379f0a7a7e18b806cb32ce3748b9d868c04dc821520",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\inc\\corecrt_internal.h",
+      "member": "inputs/ucrt/inc/corecrt_internal.h",
+      "bytes": 74158,
+      "sha256": "bad095a8a91e6cb55d7e28083ccb9db5ffbfa53d18668b9448acff284985e936",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\internal\\winapi_thunks.cpp",
+      "member": "inputs/ucrt/internal/winapi_thunks.cpp",
+      "bytes": 37607,
+      "sha256": "64d965d1989f1a5f8fe82932b5f90df78d29470dba287089ef5677ce9452df66",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\exe_wmain.cpp",
+      "member": "inputs/vcrt/exe_wmain.cpp",
+      "bytes": 338,
+      "sha256": "ace98a84788519eff3533e09d740ef7eea0cb291e1c972bc26b5d568638139c8",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\exe_common.inl",
+      "member": "inputs/vcrt/exe_common.inl",
+      "bytes": 10371,
+      "sha256": "06302037b260f066fed492d8bb29ef08d9906fd3afb9dd34a71b9c4c537a9dbc",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\utility.cpp",
+      "member": "inputs/vcrt/utility.cpp",
+      "bytes": 14981,
+      "sha256": "d026b2cea944160fb05098366f717aca4418d1f54cc489fac0a6cf1f01561ef1",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\ucrt_stubs.cpp",
+      "member": "inputs/vcrt/ucrt_stubs.cpp",
+      "bytes": 882,
+      "sha256": "51290c6b70ef63f0bb9054f3e415a773351eec53b834d79553a51a439c73d8e7",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\ucrt_detection.c",
+      "member": "inputs/vcrt/ucrt_detection.c",
+      "bytes": 1008,
+      "sha256": "9137fc2cad2f335b50a9cb4e7365f2914ed3300decdd3fd925e6d2eac2805df5",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\initialization.cpp",
+      "member": "inputs/vcrt/initialization.cpp",
+      "bytes": 4779,
+      "sha256": "a50137fa02906436c1b9a87bc7c666b1279da8d452db4239e49c0d7fb4ed6dc7",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\initializers.cpp",
+      "member": "inputs/vcrt/initializers.cpp",
+      "bytes": 6338,
+      "sha256": "14807cf50bd44e3b0c10ac453057678e40cb2a97c998612d9748d32ce9819e6b",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\vcruntime_internal.h",
+      "member": "inputs/vcrt/vcruntime_internal.h",
+      "bytes": 14980,
+      "sha256": "aba823d00907cba448115f45609a26583daff84a2800d142fe56805c8305c967",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\vcstartup_internal.h",
+      "member": "inputs/vcrt/vcstartup_internal.h",
+      "bytes": 18015,
+      "sha256": "a613679d05289005bcae868ac4ea0a1123b4fa45ae7c3edd9f4dce2215010c22",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\locks.cpp",
+      "member": "inputs/vcrt/locks.cpp",
+      "bytes": 1622,
+      "sha256": "0273b7b5d4c335839e26d5ae6e86ebf067d312136c1f1e43a6a56f06b371dff0",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\per_thread_data.cpp",
+      "member": "inputs/vcrt/per_thread_data.cpp",
+      "bytes": 6843,
+      "sha256": "0dfd47d380fcae83f9e95b5723de737411ee5c5b93bb9477cfb9c8f79867076c",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\winapi_downlevel.cpp",
+      "member": "inputs/vcrt/winapi_downlevel.cpp",
+      "bytes": 11795,
+      "sha256": "dde4c80ae0ed774f5aa4e45985c01688515db421cac8de4c49ad05df9a86275e",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    },
+    {
+      "source": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\winapi_thunks.cpp",
+      "member": "inputs/vcrt/winapi_thunks.cpp",
+      "bytes": 2354,
+      "sha256": "e36c4855428f6fd3c74e1c03185f5bf9989e4387155f437b4a593300d55ecf12",
+      "rawRead": "ENTIRE_BYTES",
+      "semanticRead": "ENTIRE_EOF_OWN_CURRENT_SOURCE; exact snapshot SHA join; no inherited reviewer credit",
+      "execution": "NONE"
+    }
+  ]
+}

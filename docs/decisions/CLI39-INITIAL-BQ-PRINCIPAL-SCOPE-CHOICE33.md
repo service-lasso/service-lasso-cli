@@ -1,0 +1,21 @@
+# CLI39 initial BQ principal/scope choice — proposed, not selected
+
+Owner CLI33, issue39/PR42, 2026-10-11. Retain source decision through governed delivery closure. No disposable output, authority or execution follows from this proposal.
+
+The selected NEW BQ engineering route is INPUT-AUTHORITY-ISSUER-ALTERNATIVES-PRECODE.md section4, lines125-156: independently select the real native principal and original caller/source/image/tool/ROOT tuple; the private entry then observes and checks that selected principal. Observing an arbitrary current user cannot select BQ. Current source has no such designation or original installer occurrence. This is a concrete missing designation, not an OS capability limitation or another resource-capacity choice.
+
+## Recommended minimal designation
+
+Designate the native principal of ONE exact independently admitted Development installer occurrence as the initial BQ principal for that occurrence's exact held tuple. Proposed principal value/source: its retained original effective Windows TokenUser SID, TokenId/AuthenticationId and process birth, or retained original Linux effective UID plus actual process/credential occurrence. These are obtained by that actual source-built installer/private entry and independently inspected as part of the existing new authentic complete-input ROOT/exact-command admission, before first BQ effect. A login name, environment, current process chosen by target, supplied JSON, path, digest, token equality or successful native constructor cannot designate the occurrence. No SID/UID is guessed from the checkout/user directory here.
+
+Proposed scope is precisely the admitted installer/provider/caller occurrence and source-built image/loaded source; held original source root and complete source/tool/SDK/CRT/image leases; original P117, Q125, case126 and capacity127/whole-input ROOT tuple and the source-defined Development qualification journey. No wildcard future installer, changed image/tool/root/profile/case, production signing credential, provider settings, publication, GA or deployment is covered. Every changed actual tuple needs its own existing admission, not a renewed deadline or copied selection bit. Initial Q32 availability remains the selected qualification ceiling, not a new budget or numeric production R.
+
+The designation is owner authorization of the specific native identity/occurrence/scope; actual source/native verification must still acquire and correlate those originals, complete prebirth reservations, held input identities/rights/currentness, own actor/handle/mapping lifetimes, raw source reads/EOF/readback and one-use admission before dependent effects. The private implementation returns owned original relations only after those checks; it has no public registration or serialized capability constructor. The compiled source never promotes whoever happens to run it.
+
+## Alternative
+
+The owner supplies independently known fixed native Windows SID and Linux UID/credential scope instead. The actual admitted installer must observe and match those exact identities and the same complete original tuple before BQ effects. This requires actual native values; none are currently provided or queried under source-only authority.
+
+## Decision boundary and independent implementation
+
+This proposal asks only how to designate the already selected NEW BQ principal/scope. It does not create another issuer mechanism or reduce the selected full Node/full14/two-runtime/resource/native source contract. It preserves genuine ordinary caller/installation paths and budgets. No target/native query, host/security mutation or credential acquisition has been performed. Continue actual private entry/source/native custody and installed caller construction with admission closed until the required actual designation and complete original inputs are present. Existing full SOURCE_GO, independent whole review, new ROOT/exact-command, direct Windows/Linux qualification and landing obligations remain.

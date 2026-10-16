@@ -1,0 +1,288 @@
+{
+  "schema": "cli39.capacity-a01.working-inputs.v1",
+  "state": "ASSEMBLY_NOT_FROZEN",
+  "members": [
+    {
+      "bytes": 17692,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\docs\\decisions\\CLI39-RUNTIME-CAPACITY-RECONCILIATION-PROPOSAL.md",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "67854BD0FAA07B7E3D487B1B262D620AD5EECFAA01AAA9B24C36C5C2CC92C4E3",
+      "path": "inputs/repo/docs/decisions/CLI39-RUNTIME-CAPACITY-RECONCILIATION-PROPOSAL.md",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 5384,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\docs\\decisions\\cli39-selected19\\README.md",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "22AA507D3DF99E4BFAAE2B8328BD61C1ACFB9447AAA24943CF5E95B3D1F2BC9E",
+      "path": "inputs/repo/docs/decisions/cli39-selected19/README.md",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 40032,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\docs\\decisions\\cli39-selected19\\DESIGN.md",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "9AEC48592C0D583B4F1723BCFEE22A35E166B109BEE5E6A5CCAF25DC3D8B7084",
+      "path": "inputs/repo/docs/decisions/cli39-selected19/DESIGN.md",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 17645,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\docs\\decisions\\cli39-selected19\\PROCESS-AND-RUNTIME-CONTRACT19.md",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "200928BAED73982E82D92554B98DC2F7B29C4A68818B22BFD7F9EBA59005CF6A",
+      "path": "inputs/repo/docs/decisions/cli39-selected19/PROCESS-AND-RUNTIME-CONTRACT19.md",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 12418,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\docs\\decisions\\cli39-selected19\\IMPLEMENTATION-AND-ACCEPTANCE19.md",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "F635DBAC78E0AB452052506E6786AEAFA38E2C46B0CF39758645AB9C8946CAB3",
+      "path": "inputs/repo/docs/decisions/cli39-selected19/IMPLEMENTATION-AND-ACCEPTANCE19.md",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 462,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\docs\\decisions\\cli39-selected67\\README.md",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "27E7132C2A94A4BFF11DCC97A2D8D072093FC76DCA2B7ED87871AE31195478BC",
+      "path": "inputs/repo/docs/decisions/cli39-selected67/README.md",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 47869,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\docs\\decisions\\cli39-selected67\\DESIGN.md",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "13F1325E4BE0506232B06463FA6ACB0037EBBA1140791D0D70560C4BE20B0BB1",
+      "path": "inputs/repo/docs/decisions/cli39-selected67/DESIGN.md",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 4473,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\docs\\decisions\\cli39-selected67\\WIRE.json",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "7BE3F91CDEFBAC8FB63F959A172A6148788EB9EF48ECA83A117D82919ACB5545",
+      "path": "inputs/repo/docs/decisions/cli39-selected67/WIRE.json",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 1469,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-service\\primary_wire.h",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "94CAA6FD95254F7397062833754D6ADD9A193883F6F913EF120D389C79DD8D37",
+      "path": "inputs/repo/native/host-service/primary_wire.h",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 5644,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-service\\primary_wire.c",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "D147ADE38FF5E0CF43006EF9AF5AD11D52D5BB3AE5AE6C52189C34B4089B2652",
+      "path": "inputs/repo/native/host-service/primary_wire.c",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 5350,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-service\\primary_engine.h",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "0FE37B7FB353D0D74ECC7E2958B27A70E3869655DB26A538C4F8E6E7577FE519",
+      "path": "inputs/repo/native/host-service/primary_engine.h",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 27177,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-service\\primary_engine.c",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "23DA46DD6723FE49C8A329D452504229D2AF213CF33D29ADC8EA460E9EA8338C",
+      "path": "inputs/repo/native/host-service/primary_engine.c",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 966,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-service\\frame.h",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "E8A1752810896B23C71804DFF51DF8156051B6625AC0E74FFB28683086C3935E",
+      "path": "inputs/repo/native/host-service/frame.h",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 2414,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-service\\ledger_state.h",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "665901013B8FCE980CC2FC493AD885BC620A41351AB5A9E89EE4295D97E85529",
+      "path": "inputs/repo/native/host-service/ledger_state.h",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 12489,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-service\\ledger_state.c",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "F5C9978FA3B9F85432EFB9E9231CA872EBEA4044268B93E614CAAB68E6EE2C13",
+      "path": "inputs/repo/native/host-service/ledger_state.c",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 2014,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-service\\ledger_commit.h",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "53EA7B9108C357A4B967002A01B2D0C1C068216D12201B9DFCE7C21AAFE093D9",
+      "path": "inputs/repo/native/host-service/ledger_commit.h",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 3758,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-service\\source_deadline.h",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "638570E8789EE70EF008300F23830F57568B0A0A22064FBB1441FABB57621C2A",
+      "path": "inputs/repo/native/host-service/source_deadline.h",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 5361,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-service\\service_channel.h",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "7D01CB2DEC9243935FF5932B1F6D4A336F3448AF1758318BBFD09B6540B20D59",
+      "path": "inputs/repo/native/host-service/service_channel.h",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 1745,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-service\\arena.h",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "FB4BC211E2443727FD65CDB95E7CF382AAADFA5E256ED198C0048F938EC7ECB7",
+      "path": "inputs/repo/native/host-service/arena.h",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 9676,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-service\\arena.c",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "A18A026A1272BDE76836829AF8845F5C3123C3C503B7A0D9D33BC2ED31D1630E",
+      "path": "inputs/repo/native/host-service/arena.c",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 2878,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-service\\owner_memory.h",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "62C95F87C13E9FEF2115D04790A46D6CD7D14A6A7D1720ED501006E393091439",
+      "path": "inputs/repo/native/host-service/owner_memory.h",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 7169,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-service\\owner_memory.c",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "548843C72917BF4D376F694519B0E9738A2C5C0E7B0D3462ABE0568F1EA43A50",
+      "path": "inputs/repo/native/host-service/owner_memory.c",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 6438,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-admission\\frontier.go",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "66DCAB99C31BCB9ACD261C682C59447CC834BE5DE1DB84E9676EBD7D947111B6",
+      "path": "inputs/repo/native/host-admission/frontier.go",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 7100,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-admission\\snapshot.go",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "70613B260D2871C21FE33B933871B8813B3AC39D66A14975D30436FAC0D0ECE4",
+      "path": "inputs/repo/native/host-admission/snapshot.go",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 9049,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-admission\\objects.go",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "BD49B3AAB2622E1CCE8287E4EB93DF6DDA7017C86372A8C16DA99A68DD754EF3",
+      "path": "inputs/repo/native/host-admission/objects.go",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 14212,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-admission\\profile.go",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "5E056F0B47A43413F945BDA76E21EC3F067C94B8F8CA827AA28492A5DD2AC709",
+      "path": "inputs/repo/native/host-admission/profile.go",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 12388,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-admission\\ledger.go",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "3CFC1068DF2AF16C6CADEFFD799A03E4EAFD1279F95D1F68EBF2BD2217B6A2BE",
+      "path": "inputs/repo/native/host-admission/ledger.go",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 25413,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-admission\\transactions.go",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "AB88CCF8F7946AD6827C56BF1158BE063DF126DBBFB0959A919EEEDE3CAE2B7F",
+      "path": "inputs/repo/native/host-admission/transactions.go",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 3824,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-admission\\observer_wire.go",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "D910B0483AE456D2E8A03C786E351289DB6B88F2B38338ED195C1F8516E36757",
+      "path": "inputs/repo/native/host-admission/observer_wire.go",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "bytes": 8567,
+      "original": "D:\\projects\\service-lasso\\cli39-actual-product-f4-oct04\\native\\host-admission\\client_copies.go",
+      "ownSemanticEOF": "CUMULATIVE_OWN_EOF",
+      "sha256": "63C8C9D28F0EA1FFB34FD98AA0D0EA29E19469875B7E965F1A56E119B8B606CE",
+      "path": "inputs/repo/native/host-admission/client_copies.go",
+      "beforeCopyAfterEqual": true
+    },
+    {
+      "original": "D:\\projects\\service-lasso\\service-lasso\\audit-evidence\\continuation-20260930-1520\\cli39-startup68-review25\\REPORT.md",
+      "sha256": "6D41D40DDB3F9E0C31CC0D0BD26F1401E601679B727490A35A5CA3FABBE8E952",
+      "bytes": 6286,
+      "path": "inputs/review25/REPORT.md",
+      "ownSemanticEOF": "OWN_ENTIRE_EOF"
+    },
+    {
+      "original": "D:\\projects\\service-lasso\\service-lasso\\audit-evidence\\continuation-20260930-1520\\cli39-startup68-review25\\FINAL.json",
+      "sha256": "07399479B05B942E6E4D8F9523FBE7619F13D8A5C5F9A020D1DB1B3FD157850D",
+      "bytes": 938,
+      "path": "inputs/review25/FINAL.json",
+      "ownSemanticEOF": "OWN_ENTIRE_EOF"
+    },
+    {
+      "original": "D:\\projects\\service-lasso\\service-lasso\\audit-evidence\\continuation-20260930-1520\\cli39-startup68-review25\\MANIFEST.json",
+      "sha256": "411F0F38C6EFA726C3BD930CB0F400EE1C5776BC739CA9E2A0978CB6F06DDB5F",
+      "bytes": 766,
+      "path": "inputs/review25/MANIFEST.json",
+      "ownSemanticEOF": "OWN_ENTIRE_EOF"
+    },
+    {
+      "original": "D:\\projects\\service-lasso\\service-lasso\\audit-evidence\\continuation-20260930-1520\\cli39-startup68-review25\\COVERAGE.json",
+      "sha256": "C3C1DCE4B10A9B626E57DB16E4260D9F01BAB844CD4C6561029F7D4AADE8DDF2",
+      "bytes": 19615,
+      "path": "inputs/review25/COVERAGE.json",
+      "ownSemanticEOF": "OWN_ENTIRE_EOF"
+    },
+    {
+      "original": "D:\\projects\\service-lasso\\service-lasso\\audit-evidence\\continuation-20260930-1520\\cli39-startup68-review25\\INPUT-VERIFICATION.json",
+      "sha256": "1348F7FA49BF08201BB87D06DBD39411CA0D3C0FB85BB5D36E78F836C7F26A2C",
+      "bytes": 11616,
+      "path": "inputs/review25/INPUT-VERIFICATION.json",
+      "ownSemanticEOF": "OWN_ENTIRE_EOF"
+    },
+    {
+      "original": "D:\\projects\\service-lasso\\service-lasso\\audit-evidence\\continuation-20260930-1520\\cli39-startup68-review25\\PROTECTED-STATE.json",
+      "sha256": "201B19C5414E35A68A436F5CE640B17EFCC3CA3B57B45F04CCABA5DCB801C5A0",
+      "bytes": 612,
+      "path": "inputs/review25/PROTECTED-STATE.json",
+      "ownSemanticEOF": "OWN_ENTIRE_EOF"
+    }
+  ]
+}

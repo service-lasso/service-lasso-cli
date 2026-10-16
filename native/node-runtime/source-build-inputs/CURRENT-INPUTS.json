@@ -1,0 +1,50 @@
+{
+  "schema": "service-lasso.cli39.fresh-source-build-inputs.v1",
+  "scope": "Four fresh upstream fixed-commit configuration sources only; not full runtime tree or admission",
+  "members": [
+    {
+      "path": "common.gypi",
+      "sourceUrl": "https://raw.githubusercontent.com/nodejs/node/aa4c77582be995286fc6e00aaf530dc7ade102a9/common.gypi",
+      "commit": "aa4c77582be995286fc6e00aaf530dc7ade102a9",
+      "blobOID": "0ffa5b137195157fa9b44205d5db45cff1b2e10c",
+      "bytes": 26973,
+      "sha256": "276374a2a16ea6a31fda5e702383061e9ad622d5179d3b3edd2d5c393623e27b",
+      "semanticRead": "OWN_CURRENT_UPSTREAM_FULL_763_LINES_JOINED_TO_FIXED_SAVED_BLOB",
+      "execution": "NONE",
+      "historicalRestoration": false
+    },
+    {
+      "path": "configure.py",
+      "sourceUrl": "https://raw.githubusercontent.com/nodejs/node/aa4c77582be995286fc6e00aaf530dc7ade102a9/configure.py",
+      "commit": "aa4c77582be995286fc6e00aaf530dc7ade102a9",
+      "blobOID": "77c87f5a9539714f68278d95ec79878cc52dc18b",
+      "bytes": 87247,
+      "sha256": "9ae98ce309ca866955c4860cc2e0f664d15ac326e9401523973ee4ee1c012984",
+      "semanticRead": "OWN_CURRENT_SAVED_SOURCE_FULL_EOF",
+      "execution": "NONE",
+      "historicalRestoration": false
+    },
+    {
+      "path": "vcbuild.bat",
+      "sourceUrl": "https://raw.githubusercontent.com/nodejs/node/aa4c77582be995286fc6e00aaf530dc7ade102a9/vcbuild.bat",
+      "commit": "aa4c77582be995286fc6e00aaf530dc7ade102a9",
+      "blobOID": "74f6dedb940320280a534cedf053884de7e7dc14",
+      "bytes": 35998,
+      "sha256": "0c7952600f3890d1539db8f39f796da1de4a17087d7e65e2264af4519a890997",
+      "semanticRead": "OWN_CURRENT_SAVED_SOURCE_FULL_EOF",
+      "execution": "NONE",
+      "historicalRestoration": false
+    },
+    {
+      "path": "tools/gyp/pylib/gyp/MSVSSettings.py",
+      "sourceUrl": "https://raw.githubusercontent.com/nodejs/node/aa4c77582be995286fc6e00aaf530dc7ade102a9/tools/gyp/pylib/gyp/MSVSSettings.py",
+      "commit": "aa4c77582be995286fc6e00aaf530dc7ade102a9",
+      "blobOID": "155fc3a1cbc693f650a8be250a490fe4ce0ccb65",
+      "bytes": 45747,
+      "sha256": "13c9006c1af1bf40389eadbb1f303221544a37bcb4615be8e3d227856c40280c",
+      "semanticRead": "OWN_CURRENT_SAVED_SOURCE_FULL_EOF",
+      "execution": "NONE",
+      "historicalRestoration": false
+    }
+  ]
+}

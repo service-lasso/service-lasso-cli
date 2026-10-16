@@ -9,7 +9,7 @@ struct slcli_initial_child_input_linux {
  uint64_t argc,envc;
 };
 struct slcli_initial_child_control_linux {
- struct slcli_initial_custody_call_linux child_calls[8];
+ struct slcli_initial_custody_call_linux child_calls[10];
  long clone_child_raw;
  uint32_t clone_child_returned,failed,exit_called,exit_returned,trap_attempted;
 };

@@ -1,0 +1,56 @@
+{
+  "schema": "service-lasso.cli39.current-tool-archive-observations.v1",
+  "binaryCopies": 0,
+  "admission": false,
+  "rows": [
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+      "bytes": 677736,
+      "sha256": "88c8344236a27a6e727e0a8edc49aaa2690bdc7a9464b9d18cc7abe70a9f1c0d",
+      "execution": "NONE",
+      "sourceAndArchiveABIQualification": "UNFINISHED"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\link.exe",
+      "bytes": 3252576,
+      "sha256": "ca11e6c45debd34bf652dfe984c5360a531a005ed78bf72852330c9c2590cf0d",
+      "execution": "NONE",
+      "sourceAndArchiveABIQualification": "UNFINISHED"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\lib.exe",
+      "bytes": 23376,
+      "sha256": "3d694c782f93e998fec5db0c2df78153565da23a028ee4618561fa0c33408489",
+      "execution": "NONE",
+      "sourceAndArchiveABIQualification": "UNFINISHED"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\lib\\x64\\libcmt.lib",
+      "bytes": 6534094,
+      "sha256": "8fe40dd342b90b35d62b8f5d55b4e92df7785c122976618365cfe3b014cc857a",
+      "execution": "NONE",
+      "sourceAndArchiveABIQualification": "UNFINISHED"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\lib\\x64\\libvcruntime.lib",
+      "bytes": 2087406,
+      "sha256": "e4f8daf356d63592ff6d6f7ad90c8c9da4c1230273ad113a9a2b56afd6bfcb04",
+      "execution": "NONE",
+      "sourceAndArchiveABIQualification": "UNFINISHED"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\lib\\x64\\libcpmt.lib",
+      "bytes": 21684758,
+      "sha256": "da86944db1497552c378e6252a7177fbefbdaeba4e69a6457de4db7fb2d235de",
+      "execution": "NONE",
+      "sourceAndArchiveABIQualification": "UNFINISHED"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\ucrt\\x64\\libucrt.lib",
+      "bytes": 43336396,
+      "sha256": "2b247d6a27c22c520c34134b8acf2da3366175a4690886927a51929f37725fdd",
+      "execution": "NONE",
+      "sourceAndArchiveABIQualification": "UNFINISHED"
+    }
+  ]
+}

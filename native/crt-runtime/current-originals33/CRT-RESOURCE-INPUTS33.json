@@ -1,0 +1,53 @@
+{
+  "state": "CURRENT_SOURCE_CUSTODY_ONLY_NO_EXECUTION_OR_AUTHORITY",
+  "records": [
+    {
+      "source": "C:/Program Files (x86)/Windows Kits/10/Source/10.0.26100.0/ucrt/stdio/_file.cpp",
+      "copy": "native/crt-runtime/current-originals33/stdio/_file.cpp",
+      "bytes": 4764,
+      "beforeSHA256": "F0C0A4C188BE0CA3319A3B2D5E60AE4BAA85D52CED7501E6BAAAE43AFD1D7574",
+      "afterSHA256": "F0C0A4C188BE0CA3319A3B2D5E60AE4BAA85D52CED7501E6BAAAE43AFD1D7574",
+      "copySHA256": "F0C0A4C188BE0CA3319A3B2D5E60AE4BAA85D52CED7501E6BAAAE43AFD1D7574"
+    },
+    {
+      "source": "C:/Program Files (x86)/Windows Kits/10/Source/10.0.26100.0/ucrt/stdio/stream.cpp",
+      "copy": "native/crt-runtime/current-originals33/stdio/stream.cpp",
+      "bytes": 3234,
+      "beforeSHA256": "1B5950DACAF769492911E0138682281663AE26FEBBA129D26DF96742E3FE3E02",
+      "afterSHA256": "1B5950DACAF769492911E0138682281663AE26FEBBA129D26DF96742E3FE3E02",
+      "copySHA256": "1B5950DACAF769492911E0138682281663AE26FEBBA129D26DF96742E3FE3E02"
+    },
+    {
+      "source": "C:/Program Files (x86)/Windows Kits/10/Source/10.0.26100.0/ucrt/internal/per_thread_data.cpp",
+      "copy": "native/crt-runtime/current-originals33/internal/per_thread_data.cpp",
+      "bytes": 10822,
+      "beforeSHA256": "8468964268FF34390EEB32807E55AB963B4BAE300C137C56C828A59CC8A5B164",
+      "afterSHA256": "8468964268FF34390EEB32807E55AB963B4BAE300C137C56C828A59CC8A5B164",
+      "copySHA256": "8468964268FF34390EEB32807E55AB963B4BAE300C137C56C828A59CC8A5B164"
+    },
+    {
+      "source": "C:/Program Files (x86)/Windows Kits/10/Source/10.0.26100.0/ucrt/internal/initialization.cpp",
+      "copy": "native/crt-runtime/current-originals33/internal/initialization.cpp",
+      "bytes": 10501,
+      "beforeSHA256": "C86A17451507AB55F89D60FFF3D9713FCB6A0467E62B5A8D0982BF094DC81AB3",
+      "afterSHA256": "C86A17451507AB55F89D60FFF3D9713FCB6A0467E62B5A8D0982BF094DC81AB3",
+      "copySHA256": "C86A17451507AB55F89D60FFF3D9713FCB6A0467E62B5A8D0982BF094DC81AB3"
+    },
+    {
+      "source": "C:/Program Files (x86)/Windows Kits/10/Source/10.0.26100.0/ucrt/inc/corecrt_internal_lowio.h",
+      "copy": "native/crt-runtime/current-originals33/inc/corecrt_internal_lowio.h",
+      "bytes": 11985,
+      "beforeSHA256": "1465B3388C22524A779C19DCD709EEFF116993D21A0068E639281181DDB2A751",
+      "afterSHA256": "1465B3388C22524A779C19DCD709EEFF116993D21A0068E639281181DDB2A751",
+      "copySHA256": "1465B3388C22524A779C19DCD709EEFF116993D21A0068E639281181DDB2A751"
+    },
+    {
+      "source": "C:/Program Files (x86)/Windows Kits/10/Source/10.0.26100.0/ucrt/stdio/setmaxf.cpp",
+      "copy": "native/crt-runtime/current-originals33/stdio/setmaxf.cpp",
+      "bytes": 2496,
+      "beforeSHA256": "6BFDB4DC37B49237A55B7DBD10A4CA84A45472F18F7A870C5CF141ACF5332C21",
+      "afterSHA256": "6BFDB4DC37B49237A55B7DBD10A4CA84A45472F18F7A870C5CF141ACF5332C21",
+      "copySHA256": "6BFDB4DC37B49237A55B7DBD10A4CA84A45472F18F7A870C5CF141ACF5332C21"
+    }
+  ]
+}

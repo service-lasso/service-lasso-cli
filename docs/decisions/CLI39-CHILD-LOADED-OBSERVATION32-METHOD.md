@@ -1,0 +1,23 @@
+# Fixed child-local loaded image observation connection
+
+Source proposal within the selected bounded OS-loader/file-backed-image method. No all-pages copying, PE loader, new process/module owner, callback or authority issuer. Parent source-owned own13 stays unchanged.
+
+Add a separate fixed borrowed-kernel32 binding for literal GetModuleFileNameW (UInt32(IntPtr,IntPtr,UInt32)) and GetSystemInfo (Void(IntPtr)), using the SAME resident shared module/export originals, supervised typed binding phases and actual host lifetime. Reuse SAME own13 VirtualQuery delegate. Constructor/type/IL/Thread partials must be enrolled under actual pre-NPH startup reservation and original deadline; no parsed profile funds its own earlier construction. All actual workers, buffers, pins, contexts, exception graphs, thread stacks and overlapping retained rows belong to a disjoint existing caller/host managed subdivision with genuine full profile; no guessed numeric allowance.
+
+After actual module snapshot and installed held member observations, issue one fixed GetSystemInfo worker with SDK26100 x64 SYSTEM_INFO48 backing. The source declaration gives pageSize DWORD at offset4. Retain raw return marker immediately after the void call; there is no Win32 success BOOL or last-error contract to invent. Compare positive page geometry with actual x64 architecture/source constraints. Query unknown/host loss retains its pin and partial original. Native ABI/layout authentication remains required by complete input review.
+
+For each actual snapshot module, select its existing expected installed held member from the closed loaded roster. Construct a GetModuleFileNameW buffer of expected full path length+1 WCHARs, retaining the rejection witness. Raw count before diagnostic capture, count0 failure, count>=capacity incomplete/truncated, exact expected extent and UTF16 bytes plus terminator required. This supplies an independent local complete path observation; it never changes raw Toolhelp pathCompletenessQualified=false.
+
+Precharge the full per-module VirtualQuery roster from actual module image extent and observed page size before constructing its rows/workers: ceil(imageBytes/pageSize), with any required representable alignment witness explicit. Each actual48byte MBI query must report the same module allocation base, MEM_IMAGE and committed/reserved region metadata with page-aligned positive forward progress; advance only to min(regionEnd,imageEnd). Retain every raw result/error/native return/pin cleanup/join and unknown. No page body, protection change or QueryWorkingSet request is introduced. MEM_IMAGE is metadata, not proof of unchanged bytes: modified copy-on-write pages may still report MEM_IMAGE.
+
+Local association joins actual process PID/creation, snapshot module base/extent, complete GetModuleFileNameW path, actual region roster and same held installed full24byte identity/digest/namespace original. The selected genuine Windows OS-loader/section/file-backed-image foundation supplies the semantics connecting those observations to the official installed image under the qualified exclusive namespace. This is the already selected external whole-input foundation precondition, not a new nonnull object or selector authenticating itself. It does not require reconstructing a PE loader or reading every mapped byte. Missing genuine OS/loader/source/namespace facts remain unqualified and deny seven-obligation admission.
+
+Callsites: pre-NPH fixed recipe initialization in both actual CLI host roles and explicit containing official-host recipe interface; after ObserveRootModules32, fixed loaded observer then child foundation binder. Root disposal/receiver predicates visit all issued bind/system/path/region worker partials independently; no module unload until actual external host exit. Source profile/schema and full source closure must be updated before dependent implementation.
+
+Official declarations read for this proposal:
+- https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulefilenamew
+- https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsysteminfo
+- https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/ns-sysinfoapi-system_info
+- https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualquery
+
+No target execution, final source/input admission, native layout qualification or measured fit.

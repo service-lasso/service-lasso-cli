@@ -1,0 +1,36 @@
+{
+  "schema": "cli39.capacity-a01.adoption-excerpts.v1",
+  "sections": [
+    {
+      "heading": "## 2026-10-08 ENTIRE CLIreview20 adopted; whole source developer21 dispatched",
+      "original": "D:/projects/service-lasso/service-lasso/audit-evidence/continuation-20260930-1520/delivery-checkpoint-20261001.md",
+      "scope": "EXACT_RAW_BOUNDED_SECTION_NOT_WHOLE_APPEND_ONLY_CHECKPOINT",
+      "ownSemanticEOF": "BOUNDED_SECTION_EOF",
+      "path": "inputs/adoption/selected19-technical-adoption.md",
+      "byteOffset": 675639,
+      "bytes": 3710,
+      "sha256": "977E9CCEF865E790EA0ACF0C3A24A11F344F329BBBDA1A46702B3DCCC1A6BDDC"
+    },
+    {
+      "heading": "## 2026-10-08 live source authors, CLI22 G1 adopted and CI source blocker diagnosed",
+      "original": "D:/projects/service-lasso/service-lasso/audit-evidence/continuation-20260930-1520/delivery-checkpoint-20261001.md",
+      "scope": "EXACT_RAW_BOUNDED_SECTION_NOT_WHOLE_APPEND_ONLY_CHECKPOINT",
+      "ownSemanticEOF": "BOUNDED_SECTION_EOF",
+      "path": "inputs/adoption/selected19-repository-adoption.md",
+      "byteOffset": 682975,
+      "bytes": 2404,
+      "sha256": "697CA4BF0FA5234A133F134235CAE320773729558DEF146A29F5896BD0DF14E5"
+    },
+    {
+      "heading": "## 2026-10-08 CLI67 selected after entire68; conditional69 active",
+      "original": "D:/projects/service-lasso/service-lasso/audit-evidence/continuation-20260930-1520/delivery-checkpoint-20261001.md",
+      "scope": "EXACT_RAW_BOUNDED_SECTION_NOT_WHOLE_APPEND_ONLY_CHECKPOINT",
+      "ownSemanticEOF": "BOUNDED_SECTION_EOF",
+      "path": "inputs/adoption/selected67-technical-adoption.md",
+      "byteOffset": 1047239,
+      "bytes": 2534,
+      "sha256": "BD5BCB0BF885E0EA1FADE9BE3F47D4B2D396BA45219020964FE7600EC8F87C38"
+    }
+  ],
+  "standaloneLocators": "ABSENT_NOT_RECONSTRUCTED"
+}

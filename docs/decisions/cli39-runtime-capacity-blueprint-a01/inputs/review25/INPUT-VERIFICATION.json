@@ -1,0 +1,334 @@
+{
+  "manifestMembers": [
+    {
+      "path": "COVERAGE.md",
+      "bytes": 2908,
+      "sha256": "68481466A4B194D0EFA1EC71243183F9CD5DD30EDE6FF4B46DF7C16FDF38798A",
+      "matches": true
+    },
+    {
+      "path": "FINAL.json",
+      "bytes": 823,
+      "sha256": "82EA8AFD9DB6023B3F100F5948AE9AC94E13A794E262B313CD45E9233156FFC6",
+      "matches": true
+    },
+    {
+      "path": "INPUTS.json",
+      "bytes": 21007,
+      "sha256": "A2149C44CAA26E14845EE34D9EE51107F6B6F4C9EEBAF9C7573BA428F1385B66",
+      "matches": true
+    },
+    {
+      "path": "inputs/config/common.gypi",
+      "bytes": 26973,
+      "sha256": "276374A2A16EA6A31FDA5E702383061E9AD622D5179D3B3EDD2D5C393623E27B",
+      "matches": true
+    },
+    {
+      "path": "inputs/config/configure.py",
+      "bytes": 87247,
+      "sha256": "9AE98CE309CA866955C4860CC2E0F664D15AC326E9401523973EE4EE1C012984",
+      "matches": true
+    },
+    {
+      "path": "inputs/config/CURRENT-CRT-HEADER-INPUTS.json",
+      "bytes": 1246,
+      "sha256": "504AE63C5F12525BC277B596BC844D01B6375FDAE9428377D4BAB2938093E823",
+      "matches": true
+    },
+    {
+      "path": "inputs/config/CURRENT-INPUTS.json",
+      "bytes": 2376,
+      "sha256": "18053FCDD8F6211DC07905DD817907840DB2156546A8AC53C596B776705FA461",
+      "matches": true
+    },
+    {
+      "path": "inputs/config/CURRENT-TOOL-ARCHIVE-OBSERVATIONS.json",
+      "bytes": 2553,
+      "sha256": "E4977F8A0683C0BBD4E101CACFB2E6DFD4E7CAE04D5EA2AC328207F4E50733F0",
+      "matches": true
+    },
+    {
+      "path": "inputs/config/CURRENT-VCRT-INTERNAL-INPUTS.json",
+      "bytes": 871,
+      "sha256": "86916B3201DF7D250FA5772FFDED0E33549EAA78D778B750EB655A362FA1E2A5",
+      "matches": true
+    },
+    {
+      "path": "inputs/config/CURRENT-VCRT-RESOURCE-INPUTS.json",
+      "bytes": 1883,
+      "sha256": "AEDA56766BE5E60A847DD87F65841CB63691E834A964D19EC310D2140A232660",
+      "matches": true
+    },
+    {
+      "path": "inputs/config/CURRENT-VCRT-STARTUP-INPUTS.json",
+      "bytes": 2588,
+      "sha256": "8BB60305F37D9908EE4E53F19DE8A52613BC00536EB50754431A545E7F48654C",
+      "matches": true
+    },
+    {
+      "path": "inputs/config/tools/gyp/pylib/gyp/MSVSSettings.py",
+      "bytes": 45747,
+      "sha256": "13C9006C1AF1BF40389EADBB1F303221544A37BCB4615BE8E3D227856C40280C",
+      "matches": true
+    },
+    {
+      "path": "inputs/config/vcbuild.bat",
+      "bytes": 35998,
+      "sha256": "0C7952600F3890D1539DB8F39F796DA1DE4A17087D7E65E2264AF4519A890997",
+      "matches": true
+    },
+    {
+      "path": "inputs/repo/docs/decisions/cli39-selected19/DESIGN.md",
+      "bytes": 40032,
+      "sha256": "9AEC48592C0D583B4F1723BCFEE22A35E166B109BEE5E6A5CCAF25DC3D8B7084",
+      "matches": true
+    },
+    {
+      "path": "inputs/repo/docs/decisions/cli39-selected19/IMPLEMENTATION-AND-ACCEPTANCE19.md",
+      "bytes": 12418,
+      "sha256": "F635DBAC78E0AB452052506E6786AEAFA38E2C46B0CF39758645AB9C8946CAB3",
+      "matches": true
+    },
+    {
+      "path": "inputs/repo/docs/decisions/cli39-selected19/PROCESS-AND-RUNTIME-CONTRACT19.md",
+      "bytes": 17645,
+      "sha256": "200928BAED73982E82D92554B98DC2F7B29C4A68818B22BFD7F9EBA59005CF6A",
+      "matches": true
+    },
+    {
+      "path": "inputs/repo/docs/decisions/cli39-selected19/README.md",
+      "bytes": 5384,
+      "sha256": "22AA507D3DF99E4BFAAE2B8328BD61C1ACFB9447AAA24943CF5E95B3D1F2BC9E",
+      "matches": true
+    },
+    {
+      "path": "inputs/repo/docs/decisions/cli39-selected67/DESIGN.md",
+      "bytes": 47869,
+      "sha256": "13F1325E4BE0506232B06463FA6ACB0037EBBA1140791D0D70560C4BE20B0BB1",
+      "matches": true
+    },
+    {
+      "path": "inputs/repo/docs/decisions/cli39-selected67/README.md",
+      "bytes": 462,
+      "sha256": "27E7132C2A94A4BFF11DCC97A2D8D072093FC76DCA2B7ED87871AE31195478BC",
+      "matches": true
+    },
+    {
+      "path": "inputs/repo/docs/decisions/cli39-selected67/WIRE.json",
+      "bytes": 4473,
+      "sha256": "7BE3F91CDEFBAC8FB63F959A172A6148788EB9EF48ECA83A117D82919ACB5545",
+      "matches": true
+    },
+    {
+      "path": "inputs/repo/native/node-runtime/overlay/node.gyp",
+      "bytes": 48891,
+      "sha256": "417866A319CCBAD0F925FF91596372091A606DF23B655062CFE9AD70B787E402",
+      "matches": true
+    },
+    {
+      "path": "inputs/repo/native/node-runtime/SOURCE-ASSOCIATIONS.json",
+      "bytes": 3464,
+      "sha256": "990A015393E01A9C6078C912BB6BEB1AFB5D68C894CCEDA82FA8050DF126AB3B",
+      "matches": true
+    },
+    {
+      "path": "inputs/repo/native/node-runtime/windows-release-profile.json",
+      "bytes": 2860,
+      "sha256": "11ED3BF95DA079C097395654C59C7014EE302275998818253BCDFEF280D5E890",
+      "matches": true
+    },
+    {
+      "path": "inputs/repo/native/node-runtime/WINDOWS-SOURCE-BUILD-RECIPE68.md",
+      "bytes": 9026,
+      "sha256": "2924762BAA6F6D9DDB036D58C8E03DBE106EAC05F1D2AFD1747F100CC1597865",
+      "matches": true
+    },
+    {
+      "path": "inputs/ucrt/inc/corecrt_internal_lowio.h",
+      "bytes": 11985,
+      "sha256": "1465B3388C22524A779C19DCD709EEFF116993D21A0068E639281181DDB2A751",
+      "matches": true
+    },
+    {
+      "path": "inputs/ucrt/inc/corecrt_internal.h",
+      "bytes": 74158,
+      "sha256": "BAD095A8A91E6CB55D7E28083CCB9DB5FFBFA53D18668B9448ACFF284985E936",
+      "matches": true
+    },
+    {
+      "path": "inputs/ucrt/internal/initialization.cpp",
+      "bytes": 10501,
+      "sha256": "C86A17451507AB55F89D60FFF3D9713FCB6A0467E62B5A8D0982BF094DC81AB3",
+      "matches": true
+    },
+    {
+      "path": "inputs/ucrt/internal/locks.cpp",
+      "bytes": 1882,
+      "sha256": "1623C1FE8EEEA737B47980BAC7B45AB42BD698AACCC80C9D7AB0D015738E1EFF",
+      "matches": true
+    },
+    {
+      "path": "inputs/ucrt/internal/shared_initialization.cpp",
+      "bytes": 1870,
+      "sha256": "9FD1C607EFDAF492F1254379F0A7A7E18B806CB32CE3748B9D868C04DC821520",
+      "matches": true
+    },
+    {
+      "path": "inputs/ucrt/internal/winapi_thunks.cpp",
+      "bytes": 37607,
+      "sha256": "64D965D1989F1A5F8FE82932B5F90DF78D29470DBA287089EF5677CE9452DF66",
+      "matches": true
+    },
+    {
+      "path": "inputs/ucrt/lowio/ioinit.cpp",
+      "bytes": 9378,
+      "sha256": "9CC35F857E078D59CE764E57D0F881A3E317042D0CECAD2E38650330957DDDF2",
+      "matches": true
+    },
+    {
+      "path": "inputs/ucrt/lowio/osfinfo.cpp",
+      "bytes": 11163,
+      "sha256": "F424D71AA9CBFE005EEB0384CA9B1B9E7F5E9DF3B2A0ADF378E3F135D1826DE2",
+      "matches": true
+    },
+    {
+      "path": "inputs/vcrt/exe_common.inl",
+      "bytes": 10371,
+      "sha256": "06302037B260F066FED492D8BB29EF08D9906FD3AFB9DD34A71B9C4C537A9DBC",
+      "matches": true
+    },
+    {
+      "path": "inputs/vcrt/exe_wmain.cpp",
+      "bytes": 338,
+      "sha256": "ACE98A84788519EFF3533E09D740EF7EEA0CB291E1C972BC26B5D568638139C8",
+      "matches": true
+    },
+    {
+      "path": "inputs/vcrt/initialization.cpp",
+      "bytes": 4779,
+      "sha256": "A50137FA02906436C1B9A87BC7C666B1279DA8D452DB4239E49C0D7FB4ED6DC7",
+      "matches": true
+    },
+    {
+      "path": "inputs/vcrt/initializers.cpp",
+      "bytes": 6338,
+      "sha256": "14807CF50BD44E3B0C10AC453057678E40CB2A97C998612D9748D32CE9819E6B",
+      "matches": true
+    },
+    {
+      "path": "inputs/vcrt/locks.cpp",
+      "bytes": 1622,
+      "sha256": "0273B7B5D4C335839E26D5AE6E86EBF067D312136C1F1E43A6A56F06B371DFF0",
+      "matches": true
+    },
+    {
+      "path": "inputs/vcrt/per_thread_data.cpp",
+      "bytes": 6843,
+      "sha256": "0DFD47D380FCAE83F9E95B5723DE737411EE5C5B93BB9477CFB9C8F79867076C",
+      "matches": true
+    },
+    {
+      "path": "inputs/vcrt/ucrt_detection.c",
+      "bytes": 1008,
+      "sha256": "9137FC2CAD2F335B50A9CB4E7365F2914ED3300DECDD3FD925E6D2EAC2805DF5",
+      "matches": true
+    },
+    {
+      "path": "inputs/vcrt/ucrt_stubs.cpp",
+      "bytes": 882,
+      "sha256": "51290C6B70EF63F0BB9054F3E415A773351EEC53B834D79553A51A439C73D8E7",
+      "matches": true
+    },
+    {
+      "path": "inputs/vcrt/utility.cpp",
+      "bytes": 14981,
+      "sha256": "D026B2CEA944160FB05098366F717ACA4418D1F54CC489FAC0A6CF1F01561EF1",
+      "matches": true
+    },
+    {
+      "path": "inputs/vcrt/vcruntime_internal.h",
+      "bytes": 14980,
+      "sha256": "ABA823D00907CBA448115F45609A26583DAFF84A2800D142FE56805C8305C967",
+      "matches": true
+    },
+    {
+      "path": "inputs/vcrt/vcstartup_internal.h",
+      "bytes": 18015,
+      "sha256": "A613679D05289005BCAE868AC4EA0A1123B4FA45AE7C3EDD9F4DCE2215010C22",
+      "matches": true
+    },
+    {
+      "path": "inputs/vcrt/winapi_downlevel.cpp",
+      "bytes": 11795,
+      "sha256": "DDE4C80AE0ED774F5AA4E45985C01688515DB421CAC8DE4C49AD05DF9A86275E",
+      "matches": true
+    },
+    {
+      "path": "inputs/vcrt/winapi_thunks.cpp",
+      "bytes": 2354,
+      "sha256": "E36C4855428F6FD3C74E1C03185F5BF9989E4387155F437B4A593300D55ECF12",
+      "matches": true
+    },
+    {
+      "path": "REPORT.md",
+      "bytes": 9973,
+      "sha256": "A1438D94915933729AE8EB86362FB410B4873BF8E081467B1ECF2DE57FCA8BD4",
+      "matches": true
+    }
+  ],
+  "driftCount": 0,
+  "rootSHA256": "7C9FA354293D5E6EE1515788E37D22AD139CDAA14FEAFE6983319D09986F5657",
+  "manifestSHA256": "DFDBABDC829A5C0315BE5E9EB5FE1733FBA55B4CA5C3AE9CADE2A126B8DDCB77",
+  "controls": [
+    {
+      "path": "INPUTS.json",
+      "bytes": 21007,
+      "sha256": "A2149C44CAA26E14845EE34D9EE51107F6B6F4C9EEBAF9C7573BA428F1385B66",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_CONTROL",
+      "finding": "All42 roster identities and pins read; producer read assertions not inherited."
+    },
+    {
+      "path": "REPORT.md",
+      "bytes": 9973,
+      "sha256": "A1438D94915933729AE8EB86362FB410B4873BF8E081467B1ECF2DE57FCA8BD4",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_CONTROL",
+      "finding": "Conditional81/162 derivation independently established; unknown native/whole-source scope retained."
+    },
+    {
+      "path": "COVERAGE.md",
+      "bytes": 2908,
+      "sha256": "68481466A4B194D0EFA1EC71243183F9CD5DD30EDE6FF4B46DF7C16FDF38798A",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_CONTROL",
+      "finding": "Producer scope and roster reconciled to own42 EOF reads."
+    },
+    {
+      "path": "FINAL.json",
+      "bytes": 823,
+      "sha256": "82EA8AFD9DB6023B3F100F5948AE9AC94E13A794E262B313CD45E9233156FFC6",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_CONTROL",
+      "finding": "81/162/128/34 and explicit unqualified boundaries consistent."
+    },
+    {
+      "path": "MANIFEST.json",
+      "bytes": 8273,
+      "sha256": "DFDBABDC829A5C0315BE5E9EB5FE1733FBA55B4CA5C3AE9CADE2A126B8DDCB77",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_CONTROL",
+      "finding": "All46 paths/bytes/hashes read and independently raw-verified."
+    },
+    {
+      "path": "ROOT.json",
+      "bytes": 1015,
+      "sha256": "7C9FA354293D5E6EE1515788E37D22AD139CDAA14FEAFE6983319D09986F5657",
+      "semanticRead": "OWN_ENTIRE_EOF",
+      "disposition": "VALIDATED_BOUNDED_CONTROL",
+      "finding": "42 inputs/46 manifest members/control pins and bounded scope independently checked."
+    }
+  ],
+  "verification": "OWN_FINAL_RAW_SHA256_AND_SIZE"
+}

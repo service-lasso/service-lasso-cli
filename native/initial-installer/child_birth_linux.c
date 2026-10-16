@@ -4,6 +4,8 @@
 #include <linux/wait.h>
 #include <linux/ptrace.h>
 #include <limits.h>
+#include <linux/fcntl.h>
+#include <errno.h>
 static int apart(const void *a,uint64_t n,const void *b,uint64_t m) {
  uintptr_t x=(uintptr_t)a,y=(uintptr_t)b;
  return a&&b&&n&&m&&n<=SIZE_MAX&&m<=SIZE_MAX&&x<=UINTPTR_MAX-n&&y<=UINTPTR_MAX-m&&
@@ -20,7 +22,7 @@ static int clocks(const struct slcli_initial_custody_call_linux *r,uint64_t prio
 static int plan(uint64_t a,uint64_t b,uint64_t *bytes,uint64_t *calls) {
  uint64_t count;
  if(!a||!b||a>UINT64_MAX-b)return 0;count=a+b;
- if(count>SIZE_MAX/sizeof(struct slcli_initial_child_wait_linux)||count>(UINT64_MAX-11)/3)return 0;
+ if(count>SIZE_MAX/sizeof(struct slcli_initial_child_wait_linux)||count>(UINT64_MAX-14)/3)return 0;
  *bytes=count*sizeof(struct slcli_initial_child_wait_linux);*calls=3*count+2;return 1;
 }
 int slcli_initial_child_birth_linux_prepare_wait_roster_original(
@@ -35,25 +37,17 @@ int slcli_initial_child_birth_linux_prepare_wait_roster_original(
  !apart(b,sizeof(*b),first,x)||!apart(b,sizeof(*b),second,y)||!apart(first,x,second,y)||
  !zero(b,sizeof(*b))||!zero(first,x)||!zero(second,y))return 0;
  b->map_original=m;b->pidfd_original=-1;b->wait_row_bytes=bytes;b->wait_native_attempts=calls;
- b->parent_native_attempts=calls+9;
+ b->parent_native_attempts=calls+12;
  b->stages[0].rows_original=first;b->stages[0].capacity=a;
  b->stages[1].rows_original=second;b->stages[1].capacity=n;return 1;
 }
-static int source(const struct slcli_initial_child_birth_linux *b,uint64_t *expiry) {
- const struct slcli_initial_custody_call_linux *r;uint64_t bytes[2],i,total,calls;
+static int enrollment(const struct slcli_initial_child_birth_linux *b,uint64_t *expiry) {
+ uint64_t bytes[2],i,total,calls;
  if(!b||!b->map_original||!slcli_initial_child_control_map_linux_output_away_original(
  b->map_original,b,sizeof(*b)))return 0;
  if(!plan(b->stages[0].capacity,b->stages[1].capacity,&total,&calls)||
- b->wait_row_bytes!=total||b->wait_native_attempts!=calls||b->parent_native_attempts!=calls+9)return 0;
- *expiry=b->map_original->expires;r=&b->clone_call;
- if(r->number!=__NR_clone3||r->args[0]!=(long)(uintptr_t)&b->clone_input||
- r->args[1]!=sizeof(b->clone_input)||r->args[2]||r->args[3]||r->args[4]||r->args[5]||
- r->raw<=0||r->raw>INT_MAX||b->pidfd_original<0||
- b->clone_input.flags!=CLONE_PIDFD||b->clone_input.exit_signal!=SIGCHLD||
- b->clone_input.pidfd!=(uintptr_t)&b->pidfd_original||b->clone_input.child_tid||
- b->clone_input.parent_tid||b->clone_input.stack||b->clone_input.stack_size||b->clone_input.tls||
- b->clone_input.set_tid||b->clone_input.set_tid_size||b->clone_input.cgroup||
- !clocks(r,b->map_original->finish.tick,*expiry))return 0;
+ b->wait_row_bytes!=total||b->wait_native_attempts!=calls||b->parent_native_attempts!=calls+12)return 0;
+ *expiry=b->map_original->expires;
  for(i=0;i<2;i++) {
  if(!b->stages[i].capacity||b->stages[i].capacity>SIZE_MAX/sizeof(*b->stages[i].rows_original))return 0;
  bytes[i]=b->stages[i].capacity*sizeof(*b->stages[i].rows_original);
@@ -62,6 +56,53 @@ static int source(const struct slcli_initial_child_birth_linux *b,uint64_t *expi
  b->stages[i].rows_original,bytes[i]))return 0;
  }
  return apart(b->stages[0].rows_original,bytes[0],b->stages[1].rows_original,bytes[1]);
+}
+static uint32_t slot3_kind(const struct slcli_initial_child_birth_linux *b,long raw) {
+ const struct slcli_initial_held_file_linux *e=b->map_original->executable_original;
+ const struct slcli_initial_custody_memfd_linux *c=e->custody_original;
+ /* A held source occurrence cannot coexist with an absent observation. */
+ if(c->descriptor_original==3)return raw==FD_CLOEXEC?SLCLI_INITIAL_SLOT3_CUSTODY:0;
+ if(c->launcher_original->identity.raw[7]==3)return raw==FD_CLOEXEC?SLCLI_INITIAL_SLOT3_SELF_PIDFD:0;
+ if(e->opened_descriptor_original==3)return raw==FD_CLOEXEC?SLCLI_INITIAL_SLOT3_OPENED_FILE:0;
+ return raw==-EBADF?SLCLI_INITIAL_SLOT3_ABSENT:0;
+}
+int slcli_initial_child_birth_linux_slot3_matches_original(const struct slcli_initial_child_birth_linux *b) {
+ const struct slcli_initial_custody_call_linux *r;uint64_t expiry;uint32_t kind;
+ if(!enrollment(b,&expiry)||b->slot3_started!=1||b->slot3_completed!=1||
+ b->slot3_failed||b->slot3_pending)return 0;r=&b->slot3_call;
+ kind=slot3_kind(b,r->raw);
+ return kind&&b->slot3_kind==kind&&r->number==__NR_fcntl&&r->args[0]==3&&
+ r->args[1]==F_GETFD&&!r->args[2]&&!r->args[3]&&!r->args[4]&&!r->args[5]&&
+ clocks(r,b->map_original->finish.tick,expiry);
+}
+int slcli_initial_child_birth_linux_probe_slot3_original(struct slcli_initial_child_birth_linux *b) {
+ struct slcli_initial_custody_call_linux *r;uint64_t expiry;
+ if(!enrollment(b,&expiry)||b->slot3_started||b->slot3_completed||b->slot3_failed||
+ b->slot3_pending||b->slot3_kind||!zero(&b->slot3_call,sizeof(b->slot3_call))||
+ !zero(&b->clone_call,sizeof(b->clone_call))||!zero(&b->clone_input,sizeof(b->clone_input))||
+ b->pidfd_original!=-1)return 0;
+ b->slot3_started=1;b->slot3_failed=1;r=&b->slot3_call;
+ r->number=__NR_fcntl;r->args[0]=3;r->args[1]=F_GETFD;
+ if(!slcli_native_clock_read(&r->before)||!slcli_native_clock_linux_matches_original(&r->before)||
+ r->before.tick<b->map_original->finish.tick||r->before.tick>=expiry){b->slot3_pending=1;return 0;}
+ r->called=1;r->raw=slcli_kernel_call(r->number,3,F_GETFD,0,0,0,0);r->returned=1;
+ if(!slcli_native_clock_read(&r->after)||!clocks(r,b->map_original->finish.tick,expiry)){
+ b->slot3_pending=1;return 0;}
+ b->slot3_kind=slot3_kind(b,r->raw);if(!b->slot3_kind)return 0;
+ b->slot3_completed=1;b->slot3_failed=0;return 1;
+}
+static int source(const struct slcli_initial_child_birth_linux *b,uint64_t *expiry) {
+ const struct slcli_initial_custody_call_linux *r;
+ if(!enrollment(b,expiry)||!slcli_initial_child_birth_linux_slot3_matches_original(b))return 0;
+ r=&b->clone_call;
+ return r->number==__NR_clone3&&r->args[0]==(long)(uintptr_t)&b->clone_input&&
+ r->args[1]==sizeof(b->clone_input)&&!r->args[2]&&!r->args[3]&&!r->args[4]&&!r->args[5]&&
+ r->raw>0&&r->raw<=INT_MAX&&b->pidfd_original>=0&&
+ b->clone_input.flags==CLONE_PIDFD&&b->clone_input.exit_signal==SIGCHLD&&
+ b->clone_input.pidfd==(uintptr_t)&b->pidfd_original&&!b->clone_input.child_tid&&
+ !b->clone_input.parent_tid&&!b->clone_input.stack&&!b->clone_input.stack_size&&!b->clone_input.tls&&
+ !b->clone_input.set_tid&&!b->clone_input.set_tid_size&&!b->clone_input.cgroup&&
+ clocks(r,b->slot3_call.after.tick,*expiry);
 }
 static int classify(const siginfo_t *s,long child) {
  if(!s->si_signo&&!s->si_pid&&!s->si_errno&&!s->si_code&&!s->si_uid&&!s->si_status)

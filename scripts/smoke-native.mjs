@@ -36,6 +36,7 @@ function run(executable, args, environment) {
     child.stderr.on("data", (chunk) => { stderr += chunk; });
     child.once("error", rejectRun);
     child.once("close", (status) => resolveRun({ status, stdout, stderr }));
+    child.stdin.end();
   });
 }
 
@@ -67,9 +68,13 @@ assert.equal(createHash("sha256").update(await readFile(confinedWriter)).digest(
 const withoutNode = nodeFreeEnvironment();
 const nodeLookup = spawnSync("node", ["--version"], { encoding: "utf8", env: withoutNode });
 assert.equal(nodeLookup.error?.code, "ENOENT", "native smoke must remove node from PATH");
-const helperSmoke = await run(confinedWriter, ["--self-test"], withoutNode);
-assert.equal(helperSmoke.status, 0, helperSmoke.stderr);
-assert.equal(helperSmoke.stdout.trim(), "ok");
+// A static self-test string cannot qualify the real writer. Empty original v3
+// stdin must deny before destination I/O; complete admitted native fixture
+// materialization/readback/closure remains a separate required gate.
+const helperSmoke = await run(confinedWriter, [], withoutNode);
+assert.equal(helperSmoke.status, 1);
+assert.equal(helperSmoke.stdout, "error\twrite_rejected\n");
+assert.equal(helperSmoke.stderr, "confined writer failed\n");
 const versionResult = await run(executable, ["--version"], withoutNode);
 assert.equal(versionResult.status, 0, versionResult.stderr);
 assert.equal(versionResult.stdout.trim(), expectedVersion, "native executable must report the exact frozen candidate version");

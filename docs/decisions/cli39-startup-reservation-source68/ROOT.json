@@ -1,0 +1,35 @@
+{
+  "schema": "service-lasso.cli39.bounded-current-root.v1",
+  "scope": "ENTIRE_BOUNDED_PLANNED_STATIC_STARTUP_RESERVATION_DERIVATION",
+  "manifestMembers": 46,
+  "inputMembers": 42,
+  "controls": [
+    {
+      "path": "INPUTS.json",
+      "bytes": 21007,
+      "sha256": "a2149c44caa26e14845ee34d9ee51107f6b6f4c9eebaf9c7573ba428f1385b66"
+    },
+    {
+      "path": "REPORT.md",
+      "bytes": 9973,
+      "sha256": "a1438d94915933729ae8eb86362fb410b4873bf8e081467b1ecf2de57fca8bd4"
+    },
+    {
+      "path": "COVERAGE.md",
+      "bytes": 2908,
+      "sha256": "68481466a4b194d0efa1ec71243183f9cd5dd30ede6ff4b46df7c16fdf38798a"
+    },
+    {
+      "path": "FINAL.json",
+      "bytes": 823,
+      "sha256": "82ea8afd9db6023b3f100f5948ae9ac94e13a794e262b313cd45e9233156ffc6"
+    },
+    {
+      "path": "MANIFEST.json",
+      "bytes": 8273,
+      "sha256": "dfdbabdc829a5c0315be5e9eb5fe1733fba55b4ca5c3ae9cade2a126b8ddcb77"
+    }
+  ],
+  "execution": "NONE",
+  "wholeSourceGO": false
+}

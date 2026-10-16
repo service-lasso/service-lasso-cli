@@ -1,0 +1,22 @@
+{
+  "schema": "service-lasso.cli39.bounded-startup-final.v1",
+  "state": "COMPLETE_BOUNDED_SUBUNIT_FOR_DIFFERENT_ENTIRE_REVIEW",
+  "classification": "PLANNED_PROFILE_CONDITIONAL_SOURCE_LOWER_BOUND",
+  "inputMembers": 42,
+  "reservationsPerCompletedOrdinaryStaticProcess": 81,
+  "overlappingFacadeAndSEAReservations": 162,
+  "unchangedRuntimeRows": 128,
+  "conditionalExcess": 34,
+  "linkedImageProvenance": "UNQUALIFIED",
+  "nativeBirths": "UNRUN_UNKNOWN",
+  "completeRecipe": false,
+  "wholeImplementation": false,
+  "wholeFit": "UNKNOWN",
+  "sourceGO": false,
+  "inputAdmission": false,
+  "targetExecution": "NONE",
+  "binaryCopies": 0,
+  "deletedHistoryRestoration": false,
+  "capChange": false,
+  "next": "DIFFERENT_INDEPENDENT_ENTIRE_BOUNDED_DERIVATION_REVIEW; parent contract decision separate"
+}

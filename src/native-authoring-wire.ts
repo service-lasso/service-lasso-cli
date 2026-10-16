@@ -68,14 +68,17 @@ export function inspectionBodies(binding: InspectionBinding, record: Buffer, fil
   bodies.push(Buffer.concat([u8(3), u32(bodies.length), binding.runIdentity, digest, u32(record.length), u32(files.length), u32(total)])); return bodies;
 }
 export class InspectionReceiver {
-  private sequence = 0; private offset = 0; private record?: Buffer; private announced?: { digest: Buffer; length: number; count: number; total: number }; private finished = false;
+  private sequence = 0; private offset = 0; private record?: Buffer; private announced?: { digest: Buffer; length: number; count: number; total: number }; private finished = false; private failed = false;
   constructor(private readonly binding: InspectionBinding, private readonly entry: TemplateAdmission, private readonly reserve: (bytes: number) => void) {}
   accept(body: Buffer): Buffer | undefined {
-    if (this.finished || body.length > FRAME_CAP) protocolDenied(); const c = new Cursor(body), operation = c.u8(); if (c.u32() !== this.sequence) protocolDenied();
+    try { return this.acceptOriginal(body); } catch (error) { this.failed = true; throw error; }
+  }
+  private acceptOriginal(body: Buffer): Buffer | undefined {
+    if (this.failed || this.finished || body.length > FRAME_CAP) protocolDenied(); const c = new Cursor(body), operation = c.u8(); if (c.u32() !== this.sequence) protocolDenied();
     if (operation === 1) {
       if (this.sequence !== 0 || this.record || !c.take(32).equals(this.binding.runIdentity) || !c.take(32).equals(this.binding.launchNonce) || !c.take(32).equals(this.binding.readReceipt) || !c.take(32).equals(this.binding.catalogTupleDigest)) protocolDenied();
       const digest = Buffer.from(c.take(32)), length = c.u32(), count = c.u32(), total = c.u32(); c.end();
-      if (length < 133 || length > RECORD_CAP || count !== this.entry.inventory.length + 2 || count > this.entry.quotas.maximumFiles || total > this.entry.quotas.maximumTotalBytes) protocolDenied();
+      if (length < 133 || length > RECORD_CAP || count < 1 || count > 128 || count !== this.entry.inventory.length + 2 || count > this.entry.quotas.maximumFiles || total > this.entry.quotas.maximumTotalBytes) protocolDenied();
       this.reserve(length); this.record = Buffer.alloc(length); this.announced = { digest, length, count, total };
     } else if (operation === 2) {
       if (!this.record || !this.announced || this.sequence > 1024 || !c.take(32).equals(this.binding.runIdentity) || !c.take(32).equals(this.announced.digest)) protocolDenied();
@@ -87,5 +90,5 @@ export class InspectionReceiver {
     } else protocolDenied();
     this.sequence++; return undefined;
   }
-  eof(): void { if (!this.finished) protocolDenied(); }
+  eof(): void { if (this.failed || !this.finished) { this.failed = true; protocolDenied(); } }
 }

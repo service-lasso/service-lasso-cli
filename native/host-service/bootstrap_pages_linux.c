@@ -21,7 +21,8 @@ int slcli_linux_bootstrap_pages(struct slcli_memory_owner *o, uint32_t stack,
   const struct slcli_extent *e;
   uintptr_t cursor = original_sp, argc, value, tag, pages = 0;
   uint64_t i, maximum_words;
-  if (!o || !pair || stack >= 256 || o->failed || o->native_page_size) return 0;
+  if (!slcli_memory_owner_writable(o) || !pair || stack >= 256 ||
+      o->failed || (o->native_page_size&&o->handoff_state!=SLCLI_OWNER_CHILD)) return 0;
   e = &o->extents[stack];
   maximum_words = e->reserved / sizeof(uintptr_t);
   if (e->state != SLCLI_EXTENT_LIVE || e->category != SLCLI_STACK ||
@@ -40,6 +41,9 @@ int slcli_linux_bootstrap_pages(struct slcli_memory_owner *o, uint32_t stack,
     if (tag == AT_NULL) {
       if (value || !pages || pages > UINT32_MAX || (pages & (pages - 1)))
         goto failed;
+      /* Imported geometry is only an expected original. Observe this child's
+       * actual initial-stack auxv and require equality before using it. */
+      if(o->native_page_size&&o->native_page_size!=pages)goto failed;
       pair[0] = AT_PAGESZ;
       pair[1] = pages;
       o->native_page_geometry[0] = pair[0];

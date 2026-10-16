@@ -1,0 +1,41 @@
+{
+  "schema": "service-lasso.cli39.current-vcrt-resource-inputs.v1",
+  "historicalRestoration": false,
+  "wholeRuntimeExpansion": false,
+  "additionalCompletedOrdinaryStaticStartupReservations": {
+    "criticalSections": 1,
+    "startupPTD": "STATIC_BACKED_DATA_NOT_AN_INDEPENDENT_HEAP_BIRTH",
+    "scope": "Requires real original static initialization and qualified native/source variant, not image or runtime admission",
+    "nativeFLSOrTLSIndices": 1
+  },
+  "rows": [
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\locks.cpp",
+      "bytes": 1622,
+      "sha256": "0273b7b5d4c335839e26d5ae6e86ebf067d312136c1f1e43a6a56f06b371dff0",
+      "semanticRead": "ENTIRE_EOF_CURRENT",
+      "execution": "NONE"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\per_thread_data.cpp",
+      "bytes": 6843,
+      "sha256": "0dfd47d380fcae83f9e95b5723de737411ee5c5b93bb9477cfb9c8f79867076c",
+      "semanticRead": "ENTIRE_EOF_CURRENT",
+      "execution": "NONE"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\winapi_downlevel.cpp",
+      "bytes": 11795,
+      "sha256": "dde4c80ae0ed774f5aa4e45985c01688515db421cac8de4c49ad05df9a86275e",
+      "semanticRead": "ENTIRE_EOF_CURRENT",
+      "execution": "NONE"
+    },
+    {
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\crt\\src\\vcruntime\\winapi_thunks.cpp",
+      "bytes": 2354,
+      "sha256": "e36c4855428f6fd3c74e1c03185f5bf9989e4387155f437b4a593300d55ecf12",
+      "semanticRead": "ENTIRE_EOF_CURRENT",
+      "execution": "NONE"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 #include "profile.h"
 #include "crypto.h"
+#include "primary_wire.h"
 static int text(const unsigned char *raw,size_t bytes,struct slcli_json_span span,
                   size_t maximum,unsigned char *decoded,size_t *count) {
   return slcli_json_text(raw,bytes,span,decoded,maximum,0,count)&&*count;
@@ -72,23 +73,24 @@ int slcli_profile_parse(const unsigned char *raw,size_t bytes,struct slcli_profi
   static const char *const endpoint_keys[]={"kind","name"};
   static const char *const owner_keys[]={"nativeId"};
   static const char *const store_keys[]={"provider","rootIdentity","keyVersion","maximumBytes"};
-  static const char *const images_keys[]={"primarySha256","observerSha256","launcherSha256","libraryFacadeSourceSha256"};
+  static const char *const images_keys[]={"primarySha256","observerSha256","launcherSha256","libraryFacadeSourceSha256","facadeSha256"};
   static const char *const control_keys[]={"maximumBindings","maximumReferencesPerBinding","maximumServiceBytes"};
   static const char *const retention_keys[]={"provider","rootIdentity","maximumBytes","maximumRecordBytes","minimumDays"};
-  static const char *const launch_keys[]={"endpoint","primaryImageBinding","observerImageBinding","launcherImageBinding","libraryTransportBinding","maximumRequestBytes","maximumResultBytes","maximumStdoutBytes","maximumStderrBytes","maximumAggregateCaptureBytes","clientCopies"};
+  static const char *const launch_keys[]={"endpoint","primaryImageBinding","observerImageBinding","launcherImageBinding","libraryTransportBinding","maximumRequestBytes","maximumResultBytes","maximumStdoutBytes","maximumStderrBytes","maximumAggregateCaptureBytes","clientCopies","facadeImageBinding"};
   static const char *const image_keys[]={"repository","commit","blob","rawSha256","imageSha256"};
   static const char *const library_keys[]={"repository","commit","blob","rawSha256","nodeImageSha256","packageSourceSha256","inheritedChannelKind"};
   static const char *const copies_keys[]={"maximumBytes","maximumCopySets","release"};
   struct slcli_json_span root; struct slcli_sha256 hash;
   uintptr_t a=(uintptr_t)out,b=(uintptr_t)raw;
   unsigned char owner[184],first[4096],second[4096]; size_t count,n,m,i;
-  uint64_t value;
+  uint64_t value,runtime_references;
+  struct slcli_runtime_wire_geometry runtime_geometry;
   if(!out||!raw||a>UINTPTR_MAX-sizeof(*out)||b>UINTPTR_MAX-bytes||
      (a<b+bytes&&b<a+sizeof(*out))) return 0;
   slcli_erase(out,sizeof(*out));
   if(!slcli_json_validate(raw,bytes,16384,&root)||
      !slcli_json_object(raw,bytes,root,root_keys,10,out->root)||
-     !equal_text(raw,bytes,out->root[0],"service-lasso.cli-host-profile.v3")) return 0;
+     !equal_text(raw,bytes,out->root[0],"service-lasso.cli-host-profile.v5")) return 0;
 #if defined(_WIN32)
   if(!equal_text(raw,bytes,out->root[1],"win32")) return 0;
 #elif defined(__linux__)
@@ -100,10 +102,10 @@ int slcli_profile_parse(const unsigned char *raw,size_t bytes,struct slcli_profi
      !slcli_json_object(raw,bytes,out->root[3],endpoint_keys,2,out->endpoint)||
      !slcli_json_object(raw,bytes,out->root[4],owner_keys,1,out->owner)||
      !slcli_json_object(raw,bytes,out->root[5],store_keys,4,out->store)||
-     !slcli_json_object(raw,bytes,out->root[6],images_keys,4,out->images)||
+     !slcli_json_object(raw,bytes,out->root[6],images_keys,5,out->images)||
      !slcli_json_object(raw,bytes,out->root[7],control_keys,3,out->control)||
      !slcli_json_object(raw,bytes,out->root[8],retention_keys,5,out->retention)||
-     !slcli_json_object(raw,bytes,out->root[9],launch_keys,11,out->launch)||
+     !slcli_json_object(raw,bytes,out->root[9],launch_keys,12,out->launch)||
      !bounded(raw,bytes,out->service[0],256)||!digest(raw,bytes,out->service[1],40)||
      !digest(raw,bytes,out->service[2],64)||!digest(raw,bytes,out->service[3],64)||
      !endpoint(raw,bytes,out->endpoint)||!text(raw,bytes,out->owner[0],184,owner,&count)) return 0;
@@ -119,7 +121,9 @@ int slcli_profile_parse(const unsigned char *raw,size_t bytes,struct slcli_profi
 #endif
   if(!bounded(raw,bytes,out->store[0],64)||!digest(raw,bytes,out->store[1],64)||
      !bounded(raw,bytes,out->store[2],64)||!exact_number(raw,bytes,out->store[3],4194304)||
-     !exact_number(raw,bytes,out->control[0],16)||!exact_number(raw,bytes,out->control[1],128)||
+     !exact_number(raw,bytes,out->control[0],16)||
+     !number(raw,bytes,out->control[1],UINT16_MAX-1u,&runtime_references)||!runtime_references||
+     !slcli_runtime_wire_geometry_derive((uint32_t)runtime_references,&runtime_geometry)||
      !exact_number(raw,bytes,out->control[2],1048576)||
      !bounded(raw,bytes,out->retention[0],64)||!digest(raw,bytes,out->retention[1],64)||
      !number(raw,bytes,out->retention[2],UINT64_C(9007199254740991),&out->retention_maximum)||
@@ -138,6 +142,21 @@ int slcli_profile_parse(const unsigned char *raw,size_t bytes,struct slcli_profi
        !digest(raw,bytes,out->image_bindings[i][3],64)||
        !equal_digest(raw,bytes,out->image_bindings[i][4],out->images[i])) return 0;
   }
+  /* Ordinal4 is the independently installed public facade79/82, never the
+   * installer/launcher ordinal3 or embedded/loaded library facade source. */
+  if(!slcli_json_object(raw,bytes,out->launch[11],image_keys,5,out->image_bindings[3])||
+     !bounded(raw,bytes,out->image_bindings[3][0],256)||
+     !digest(raw,bytes,out->image_bindings[3][1],40)||
+     !digest(raw,bytes,out->image_bindings[3][2],40)||
+     !digest(raw,bytes,out->image_bindings[3][3],64)||
+     !equal_digest(raw,bytes,out->image_bindings[3][4],out->images[4]))return 0;
+  {
+    unsigned char facade[64],source[64];unsigned char nz_image=0,nz_source=0;
+    if(!hex(raw,bytes,out->images[4],64,facade)||
+       !hex(raw,bytes,out->image_bindings[3][3],64,source))return 0;
+    for(i=0;i<64;i++){nz_image|=(unsigned char)(facade[i]!='0');nz_source|=(unsigned char)(source[i]!='0');}
+    if(!nz_image||!nz_source)return 0;
+  }
   if(!digest(raw,bytes,out->images[3],64)||
      !slcli_json_object(raw,bytes,out->launch[4],library_keys,7,out->library)||
      !bounded(raw,bytes,out->library[0],256)||!digest(raw,bytes,out->library[1],40)||
@@ -154,6 +173,7 @@ int slcli_profile_parse(const unsigned char *raw,size_t bytes,struct slcli_profi
      !number(raw,bytes,out->launch[8],out->capture_maximum,&out->stderr_maximum)) return 0;
   slcli_sha256_init(&hash);
   if(!slcli_sha256_update(&hash,raw,bytes)||!slcli_sha256_finish(&hash,out->digest)) return 0;
+  out->runtime_references=(uint32_t)runtime_references;
   out->raw=raw;out->raw_bytes=bytes;
   return 1;
 }
