@@ -32,8 +32,8 @@ late cleanup cannot relabel the attempt successful. Existing cleanup's pending/
 returned/closed states remain separate, no retry. Readonly aliases and backing
 remain held/charged for native handoff and later family borrowers.
 
-Source successful path owns10 native clock observations (each the existing four
-QPC/QPF operations) plus2 cleanup APIs, allocator/release metadata and complete
+Source successful path owns10 native clock observations (each the existing two
+QPC/QPF operations) plus2 cleanup APIs, thus22 ordinary API calls, allocator/release metadata and complete
 source work; conditional error observations are retained separately. Include the
 publication control/allocation header/alignment, existing full encoded/readback
 logical buffers, actual section page rounding, source/helper/stack/TLS/native
