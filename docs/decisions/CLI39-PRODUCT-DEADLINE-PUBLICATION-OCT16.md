@@ -47,3 +47,25 @@ rights/extent/birth/source joins, funded pre-cut preparation, conservative local
 clock/domain/rounding, genuine consumer entry/helper/cost/family constructor,
 private Go third handle, A/full Node/Linux and full natural closure remain owned
 implementation work. producerComplete remains false. No local target ran.
+
+## Pre-allocation source separation repair
+
+Parent0864 source audit identified that arena_alloc writes FREE block headers,
+padding/split metadata before a later payload-only output exclusion. The phase
+source descriptor now MUST itself be a distinct exact already-LIVE block in the
+SAME arena BEFORE any publication clock/allocation. Its only pointee, the phase
+deadline, and that deadline's origin must already be local LIVE ranges under
+unchanged deadline predicates. arena.c allocation walks validated blocks and
+writes only selected FREE block/split headers; it never rewrites LIVE blocks,
+including their headers/padding. SAME actual native serialization and immutable
+source/phase borrowers exclude intervening free/resize. Thus all source/reachable
+blocks are disjoint from the complete potential allocation write region BEFORE
+that effect. No external descriptor is silently assumed to belong to initial
+source_graph; native source membership/qualification remains independent.
+
+Required denial cases include descriptor in a FREE cell, split-tail/header,
+alignment padding, another arena, subobject or wrong requested extent; each must
+refuse before publication clock/allocation and preserve all source/arena bytes.
+After allocation, existing payload/source/phase/SD/output checks remain too.
+This is a stricter private source operand placement, never a weaker live_block
+predicate or new issuer. Native tests remain UNRUN pending whole review/admission.

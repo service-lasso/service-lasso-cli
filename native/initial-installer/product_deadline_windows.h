@@ -11,6 +11,9 @@ struct slcli_product_windows_deadline_values {
  uint32_t active_phase,parent_pid,parent_creation[2];
 };
 struct slcli_product_windows_deadline_source {
+ /* Exact distinct LIVE arena descriptor before publisher entry. Local phase
+  * deadline/origin are LIVE ranges. External/free/header/padding descriptors
+  * cannot reach the publisher's allocator or native clock writes. */
  const struct slcli_source_deadline_original *active_phase_original;
  uint32_t active_phase;
 };

@@ -98,7 +98,9 @@ int slcli_product_windows_deadline_publish_original(struct slcli_product_storage
  struct slcli_product_windows_deadline_publication *p;
  struct slcli_node_transport_windows *t;struct slcli_arena *a;size_t i;
  if(!s||s->failed||s->storage_constructed!=1||s->deadline_publication_original||
- s->deadline_publication_entry_original.started||!source||source->active_phase<1||source->active_phase>4||
+ s->deadline_publication_entry_original.started||!source||
+ !slcli_arena_live_block(&s->arena_original,source,sizeof(*source))||
+ source->active_phase<1||source->active_phase>4||
  !s->section_original||!s->section_original->descriptor_constructed||!s->section_original->transport_created||
  !slcli_memory_owner_mutable(&s->memory_original)||s->arena_original.owner!=&s->memory_original||
  !slcli_source_deadline_original_matches(&s->arena_original,s->deadline_original,s->caller_original)||
