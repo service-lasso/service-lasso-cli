@@ -152,3 +152,37 @@ before continuation. No CreateProcessAsUser/WithToken selection or new public
 flag, credential or principal/source/funding issuer is introduced.
 Mechanism reference:
 https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw
+
+Fixed command root birth (next body): the private caller supplies the already
+held executable occurrence, separate process-primary observation and complete
+source-selected UTF16 command/environment/cwd spans, plus precharged native
+attribute-list and mutable command-line storage. The constructor owns three
+actual anonymous pipes: child stdin gets an actual closed parent writer (EOF),
+and stdout/stderr each retain separate reader/writer handles. Only the three
+child ends enter the exact PROC_THREAD_ATTRIBUTE_HANDLE_LIST; parent readers
+are made noninheritable and every handle flag is read back before birth.
+CreateProcessW uses the held executable's exact canonical leaf, explicit complete
+environment, DEBUG_PROCESS, CREATE_NO_WINDOW, CREATE_UNICODE_ENVIRONMENT and
+EXTENDED_STARTUPINFO_PRESENT. No shell/PATH lookup is supplied by this body;
+the selected fixed batch phase explicitly names its admitted cmd executable.
+All ten birth operands and PROCESS_INFORMATION originals are retained before
+postclock. Actual issuing PID/TID is reread and must equal both principal cuts.
+The next actual debug event must be CREATE_PROCESS_DEBUG_EVENT with returned
+PID/TID; its image/process/thread originals remain stopped and held. No event is
+continued by this initial body: actual child token/loaded source, distinct alias
+ownership and complete descendant/stream/event replay must precede continuation.
+The issuing owner must remain alive on any failed/late/pending outcome. Parent
+writers/readers and event handles are not silently closed; planned closure before
+EOF and API-owned terminal-event release remain separate full-factory obligations.
+Every native row/output and transitive borrowed source span is disjoint before
+writes. Dynamic buffers and finite native/event/stream counts require independent
+physical build-plane admission; a supplied byte count is not that admission.
+
+This initial root body preowns 20 call rows (the stdin private-reader row stays
+unused), with 19 native operations on its complete path, 38 two-call Windows
+clock observations and one two-call finish clock. The expected attribute-size
+failure also records GetLastError. Complete body/tool/principal replays and the
+copied command span have finite source-derived input lengths. This is only the
+initial prefix cost: kernel pipe capacity is advisory, actual pipe/process/image/
+attribute allocations and descendant/stream/reserve costs remain unqualified and
+must enter the complete independently backed profile before any execution.

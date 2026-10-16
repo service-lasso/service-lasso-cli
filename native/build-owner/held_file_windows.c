@@ -140,6 +140,14 @@ int slcli_build_held_file_windows_matches_original(const struct slcli_build_held
  uint64_t prior;return contents(c,&prior)&&slcli_native_clock_windows_matches_original(&c->finish)&&
  c->finish.tick>=prior&&c->finish.tick<c->expires;
 }
+int slcli_build_held_file_windows_output_away_original(
+ const struct slcli_build_held_file_windows *c,const void *out,size_t bytes) {
+ return slcli_build_held_file_windows_matches_original(c)&&apart(out,bytes,c,sizeof(*c))&&
+ borrowed_away(out,bytes,c->principal_original,c->member_original)&&
+ apart(out,bytes,c->ancestors_original,c->member_original->ancestor_count*sizeof(*c->ancestors_original))&&
+ apart(out,bytes,c->reads_original,c->member_original->read_capacity*sizeof(*c->reads_original))&&
+ (!c->member_original->bytes||apart(out,bytes,c->body_original,(size_t)c->member_original->bytes));
+}
 int slcli_build_held_file_windows_capture_original(struct slcli_build_held_file_windows *c,
  const struct slcli_build_principal_windows *p,const struct slcli_build_windows_member *m,
  struct slcli_build_windows_open *ancestors,struct slcli_windows_file_capture *reads,unsigned char *body) {
