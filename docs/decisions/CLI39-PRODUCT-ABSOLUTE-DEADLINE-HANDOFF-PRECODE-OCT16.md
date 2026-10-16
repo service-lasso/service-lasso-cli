@@ -155,8 +155,12 @@ binding, missing startup coverage, nested Go second debugger, extra inherited
 handle, early owner close and post-expiry success. Pure scalar/geometry tests
 are labelled as such; genuine native positives require full actual qualification.
 
-Status: proposed interpretation and private mechanism require fresh DIFFERENT
-bounded intent review. No dependent source body, guard flip, native measurement,
+Selection: fresh DIFFERENT bounded review of exact b52cf30bc7186e9b9559ae151fceb8984539fa93
+completed INTENT_GO, accepted by parent for this private source implementation.
+This selects the enclosing unchanged parent bound and genuine child-local cuts;
+it does not qualify any supplied source/profile, constructor body or native case.
+Exact typed source/control/codec and connected acquisition bodies remain owed.
+No guard flip, native measurement,
 compiler/parser/test/load execution or publication follows from this document.
 Complete Windows A/B/full Node, Linux and product installer remain owned work;
 whole final source review and NEW exact initial ROOT admission remain mandatory.
