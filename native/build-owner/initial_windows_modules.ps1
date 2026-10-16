@@ -29,14 +29,18 @@ function New-SlcliInitialWindowsModuleSources {
     $members=$Owner.Source.ToolModuleMembers
     if ($null -ne $Owner.ModuleSources -or $members -isnot [object[]] -or $members.Length -le 0 -or
         $members.Length -gt $Owner.Rows.Length -or -not [Object]::ReferenceEquals($members[0],$Owner.Source.Compiler) -or
-        -not $Owner.Compiler.Complete) { throw 'Initial closed module source roster/actual compiler original absent.' }
+        -not $Owner.Compiler.Complete -or $Owner.Source.ImportCapacity -isnot [Int32] -or
+        $Owner.Source.ImportNameCapacity -isnot [Int32]) { throw 'Initial closed module source roster/actual compiler original absent.' }
     $original=[pscustomobject]@{ Members=$members; Rows=[object[]]::new($members.Length); Complete=$false }
     $Owner.ModuleSources=$original
     Register-SlcliInitialWindowsCapture -Owner $Owner -Original $original
     for ($index=0;$index -lt $members.Length;$index++) {
-        $row=[pscustomobject]@{ Member=$members[$index]; Held=$null; NativePath=$null }
+        $row=[pscustomobject]@{ Member=$members[$index]; Held=$null; NativePath=$null; Geometry=$null; Imports=$null }
         $original.Rows[$index]=$row
         $row.Held=if ($index -eq 0) {$Owner.Compiler} else {Read-SlcliInitialWindowsHeldFile -Owner $Owner -Member $row.Member}
+        $limit=if ($index -eq 0) {$Owner.Source.CompilerImageLimit} else {$Owner.Source.ToolModuleImageLimit}
+        $row.Geometry=Get-SlcliInitialWindowsPeGeometry -Bytes $row.Held.ManagedBody -PageBytes $Owner.InitialGeometry.PageBytes -ImageLimit $limit
+        $row.Imports=Read-SlcliInitialWindowsOrdinaryImports -Held $row.Held -Geometry $row.Geometry -Capacity $Owner.Source.ImportCapacity -NameCapacity $Owner.Source.ImportNameCapacity
         $row.NativePath=New-SlcliInitialWindowsModulePath -Owner $Owner
         $row.NativePath.Call=Invoke-SlcliInitialWindowsCall -Owner $Owner -Name 'GetFinalPathNameByHandleW' -Arguments @(
             $row.Held.Leaf.Handle,$row.NativePath.Buffer.Pointer,[UInt32]$row.NativePath.Units,[UInt32]2)
@@ -62,13 +66,13 @@ function New-SlcliInitialWindowsModuleWalk {
     $original=[pscustomobject]@{ Birth=$Birth; Sources=$Owner.ModuleSources; Thread=$null; Controls=$null;
         Rows=[object[]]::new($capacity); Used=0; Cursor=$Owner.InitialGeometry.Minimum;
         Images=[object[]]::new($Owner.ModuleSources.Rows.Length); ImagesUsed=0; Started=$false; Complete=$false;
-        SourceMappings=[object[]]::new($Owner.ModuleSources.Rows.Length); ImageBytesComplete=$false }
+        SourceMappings=[object[]]::new($Owner.ModuleSources.Rows.Length); ImageBytesComplete=$false; ImportBytesObserved=$false }
     $Birth.Modules=$original
     Register-SlcliInitialWindowsCapture -Owner $Owner -Original $original
     $original.Controls=Get-SlcliInitialWindowsBuffer -Owner $Owner -Bytes ($capacity*48) -Alignment 8
     for ($index=0;$index -lt $original.Images.Length;$index++) {
         $original.Images[$index]=[pscustomobject]@{ Region=$null; Base=[Int64]0; Path=(New-SlcliInitialWindowsModulePath -Owner $Owner);
-            Source=$null; Mapping=$null; Complete=$false }
+            Source=$null; Mapping=$null; ImportRows=[object[]]::new($Owner.Source.ImportCapacity); Complete=$false }
         $source=$Owner.ModuleSources.Rows[$index]
         $mapping=if ([Object]::ReferenceEquals($source.Held,$Owner.Compiler)) {$Birth.RemoteImage} else {
             New-SlcliInitialWindowsImageBacking -Owner $Owner -Birth $Birth -Held $source.Held -ImageLimit $Owner.Source.ToolModuleImageLimit
