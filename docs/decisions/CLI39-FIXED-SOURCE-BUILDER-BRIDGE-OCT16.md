@@ -75,7 +75,15 @@ The native owner and its source/command/event/stream/token/file/process/thread/
 image/attribute/readback buffers stay in a native rooted registry through actual
 whole command and failure/retention closure. A JS return, garbage collection or
 external-buffer finalizer cannot close a live original, free pending backing or
-retire resource costs. Returned JS summary/manifest bytes describe held results;
+retire resource costs. The synchronous native entry must not return or throw
+while any child/debug event/stream/native output remains pending. A rooted
+registry alone does not keep the required issuing thread alive. Absorbing failure
+must enter the existing selected cleanup/retention plane under the SAME genuine
+owner, retain the original private cause and prevent JS/process exit until actual
+native closure or independently owned quarantine disposition. This supplies no
+new useful deadline, retry, implicit detach/kill or bounded-latency guarantee;
+pending custody costs and owner-loss failure are part of the original profile.
+Returned JS summary/manifest bytes describe held results;
 they cannot reconstruct qualification or authority. Failure keeps all actual
 prefix effects and the original first cause privately; no private path/argument/
 source/error body is printed as a public diagnostic.
