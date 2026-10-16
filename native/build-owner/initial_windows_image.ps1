@@ -67,7 +67,8 @@ function Get-SlcliInitialWindowsPeGeometry {
             }
         }
         $name=[byte[]]::new(8);[Array]::Copy($Bytes,$row,$name,0,8)
-        $sections[$index]=[pscustomobject]@{ Va=[Int32]$va; Raw=[Int32]$raw; File=[Int32]$file; Span=[Int32]$span; Name=$name }
+        $sections[$index]=[pscustomobject]@{ Va=[Int32]$va; Raw=[Int32]$raw; File=[Int32]$file; Span=[Int32]$span;
+            Name=$name; Flags=[BitConverter]::ToUInt32($Bytes,$row+36) }
     }
     return [pscustomobject]@{ ImageBytes=[Int32]$image; HeadersBytes=[Int32]$headers; Sections=$sections;
         Optional=[Int32]$at; Directories=[Int32]$directories; Preferred=[BitConverter]::ToUInt64($Bytes,$at+24);
@@ -111,7 +112,8 @@ function New-SlcliInitialWindowsImageBacking {
         BindingSeen=[byte[]]::new([Int32][Math]::Floor(([Int64]$geometry.ImageBytes+7)/8));
         BindingEffects=[object[]]::new($Owner.Source.ImportCapacity); BindingEffectsUsed=0;
         RelocationCursor=0; Relocations=0; Compared=0; Thread=$null; BeforeCompare=$null; AfterCompare=$null;
-        BeforeExpected=$null; AfterExpected=$null; CapturedComplete=$false; ExpectedComplete=$false; Complete=$false }
+        BeforeExpected=$null; AfterExpected=$null; CookieOutput=$null;
+        CapturedComplete=$false; ExpectedComplete=$false; Complete=$false }
     Register-SlcliInitialWindowsCapture -Owner $Owner -Original $original
     $original.Body=Get-SlcliInitialWindowsBuffer -Owner $Owner -Bytes $geometry.ImageBytes
     $original.Controls=Get-SlcliInitialWindowsBuffer -Owner $Owner -Bytes ($geometry.Capacity*64) -Alignment 8
@@ -262,7 +264,12 @@ function Find-SlcliInitialWindowsImageDifference {
     if ($Original.Expected.Length -ne $Original.Geometry.ImageBytes -or $Original.Observed.Length -ne $Original.Geometry.ImageBytes) {
         throw 'Full image byte vectors differ from selected geometry.'
     }
+    if ($null -ne $Original.CookieOutput) { Assert-SlcliInitialWindowsCookieOutput -Mapping $Original }
     for ($Original.Compared=0;$Original.Compared -lt $Original.Geometry.ImageBytes;$Original.Compared++) {
+        if ($null -ne $Original.CookieOutput -and $Original.Compared -ge $Original.CookieOutput.Source.Rva -and
+            $Original.Compared-$Original.CookieOutput.Source.Rva -lt 8) {
+            continue
+        }
         if ($Original.Expected[$Original.Compared] -ne $Original.Observed[$Original.Compared]) {
             return $Original.Compared
         }

@@ -30,7 +30,9 @@ function New-SlcliInitialWindowsModuleSources {
     if ($null -ne $Owner.ModuleSources -or $members -isnot [object[]] -or $members.Length -le 0 -or
         $members.Length -gt $Owner.Rows.Length -or -not [Object]::ReferenceEquals($members[0],$Owner.Source.Compiler) -or
         -not $Owner.Compiler.Complete -or $Owner.Source.ImportCapacity -isnot [Int32] -or
-        $Owner.Source.ImportNameCapacity -isnot [Int32] -or $Owner.Source.ExportCapacity -isnot [Int32]) {
+        $Owner.Source.ImportNameCapacity -isnot [Int32] -or $Owner.Source.ExportCapacity -isnot [Int32] -or
+        $Owner.Source.TlsByteCapacity -isnot [Int32] -or $Owner.Source.TlsByteCapacity -le 0 -or
+        $Owner.Source.TlsCallbackCapacity -isnot [Int32] -or $Owner.Source.TlsCallbackCapacity -le 0) {
         throw 'Initial closed module source roster/actual compiler original absent.'
     }
     $original=[pscustomobject]@{ Members=$members; Rows=[object[]]::new($members.Length); Complete=$false }
@@ -38,7 +40,8 @@ function New-SlcliInitialWindowsModuleSources {
     Register-SlcliInitialWindowsCapture -Owner $Owner -Original $original
     for ($index=0;$index -lt $members.Length;$index++) {
         $row=[pscustomobject]@{ Member=$members[$index]; Held=$null; NativePath=$null; Geometry=$null;
-            Imports=$null; Exports=$null; BoundImports=$null; DelayImports=$null }
+            Imports=$null; Exports=$null; BoundImports=$null; DelayImports=$null;
+            Tls=$null; Cookie=$null; EffectBefore=$null; EffectAfter=$null }
         $original.Rows[$index]=$row
         $row.Held=if ($index -eq 0) {$Owner.Compiler} else {Read-SlcliInitialWindowsHeldFile -Owner $Owner -Member $row.Member}
         $limit=if ($index -eq 0) {$Owner.Source.CompilerImageLimit} else {$Owner.Source.ToolModuleImageLimit}
@@ -47,6 +50,12 @@ function New-SlcliInitialWindowsModuleSources {
         $row.Exports=Read-SlcliInitialWindowsExports -Held $row.Held -Geometry $row.Geometry -Capacity $Owner.Source.ExportCapacity -NameCapacity $Owner.Source.ImportNameCapacity
         $row.BoundImports=Read-SlcliInitialWindowsBoundImports -Imports $row.Imports
         $row.DelayImports=Read-SlcliInitialWindowsDelayImports -Imports $row.Imports
+        $row.EffectBefore=Read-SlcliInitialWindowsClock -Owner $Owner
+        $row.Tls=Read-SlcliInitialWindowsTlsSource -Held $row.Held -Geometry $row.Geometry -ByteCapacity $Owner.Source.TlsByteCapacity -CallbackCapacity $Owner.Source.TlsCallbackCapacity
+        $row.Cookie=Read-SlcliInitialWindowsCookieSource -Source $row
+        $row.EffectAfter=Read-SlcliInitialWindowsClock -Owner $Owner
+        if ($row.EffectAfter.Tick -lt $row.EffectBefore.Tick) { throw 'Initial TLS/cookie source processing clock regressed.' }
+        $Owner.PriorTick=$row.EffectAfter.Tick
         $row.NativePath=New-SlcliInitialWindowsModulePath -Owner $Owner
         $row.NativePath.Call=Invoke-SlcliInitialWindowsCall -Owner $Owner -Name 'GetFinalPathNameByHandleW' -Arguments @(
             $row.Held.Leaf.Handle,$row.NativePath.Buffer.Pointer,[UInt32]$row.NativePath.Units,[UInt32]2)
