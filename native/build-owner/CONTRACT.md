@@ -137,3 +137,18 @@ under the external independently qualified ROOT/tool/member occurrence, not
 signature validation, source authentication or loaded-module admission by hashes.
 The full fixed factory still owes loaded image/descendant/debug/stream/reservation/
 last-borrower and Linux construction before the producer guard can change.
+
+CreateProcessW principal connection: the fixed native owner separately captures
+its process-primary token immediately after the issuing effective-principal
+original. It does not reuse an impersonation token as the child's principal:
+CreateProcessW uses the calling process token even under thread impersonation.
+The separate named process-primary constructor owns independent token handle,
+TokenUser, TokenStatistics/recheck and call/clock output backing. It borrows the
+complete effective-principal occurrence through its finish clock and retains both
+handles/rosters without close or privilege-changing APIs. Fixed source expects a
+TokenPrimary result; failure preserves every obtained handle/output. The later
+actual root debug-event token observations must join this process-primary original
+before continuation. No CreateProcessAsUser/WithToken selection or new public
+flag, credential or principal/source/funding issuer is introduced.
+Mechanism reference:
+https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw

@@ -52,7 +52,20 @@ static int contents(const struct slcli_build_principal_windows *c,uint64_t *last
  uint64_t prior;size_t n,i;HANDLE token;
  if(!c||!shape(c,c->expected_original,c->origin_original,c->prior_original,c->expires)||
  c->origin_tick!=c->origin_original->tick||c->prior_tick!=c->prior_original->tick||
- c->started!=1||c->failed||c->completed!=1||c->process_token_selected>1)return 0;
+ c->started!=1||c->failed||c->completed!=1||c->process_token_selected>1||c->process_primary_only>1)return 0;
+ if(c->process_primary_only) {
+ const struct slcli_build_principal_windows *effective=c->issuing_effective_original;
+ if(!effective||effective->process_primary_only||
+ !slcli_build_principal_windows_output_away_original(effective,c,sizeof(*c))||
+ c->origin_original!=effective->origin_original||c->prior_original!=&effective->finish||
+ c->expires!=effective->expires||c->process_original!=effective->process_original||
+ c->thread_original!=effective->thread_original||
+ c->process_creation.dwLowDateTime!=effective->process_creation.dwLowDateTime||
+ c->process_creation.dwHighDateTime!=effective->process_creation.dwHighDateTime||
+ c->thread_creation.dwLowDateTime!=effective->thread_creation.dwLowDateTime||
+ c->thread_creation.dwHighDateTime!=effective->thread_creation.dwHighDateTime||
+ c->statistics_original.TokenType!=TokenPrimary)return 0;
+ }else if(c->issuing_effective_original)return 0;
  e=c->expected_original;prior=c->prior_tick;
  r=&c->calls[SLCLI_BUILD_SELF_PROCESS];
  if(!operands(r,0,0,0,0,0,&prior,c->expires)||!r->raw||r->raw!=c->process_original||r->error_observed)return 0;
@@ -65,9 +78,11 @@ static int contents(const struct slcli_build_principal_windows *c,uint64_t *last
  if(!operands(r,(uintptr_t)(HANDLE)(LONG_PTR)-2,(uintptr_t)&c->thread_creation,(uintptr_t)&c->thread_exit,
  (uintptr_t)&c->thread_kernel,(uintptr_t)&c->thread_user,&prior,c->expires)||!r->raw||r->error_observed)return 0;
  r=&c->calls[SLCLI_BUILD_THREAD_TOKEN];
- if(!operands(r,(uintptr_t)(HANDLE)(LONG_PTR)-2,TOKEN_QUERY,TRUE,(uintptr_t)&c->thread_token_original,0,&prior,c->expires))return 0;
+ if(c->process_primary_only) {
+ if(!zero(r,sizeof(*r))||c->thread_token_original||c->process_token_selected!=1)return 0;
+ }else if(!operands(r,(uintptr_t)(HANDLE)(LONG_PTR)-2,TOKEN_QUERY,TRUE,(uintptr_t)&c->thread_token_original,0,&prior,c->expires))return 0;
  if(c->process_token_selected) {
- if(r->raw||r->error_observed!=1||r->error!=ERROR_NO_TOKEN||c->thread_token_original)return 0;
+ if(!c->process_primary_only&&(r->raw||r->error_observed!=1||r->error!=ERROR_NO_TOKEN||c->thread_token_original))return 0;
  r=&c->calls[SLCLI_BUILD_PROCESS_TOKEN];
  if(!operands(r,(uintptr_t)(HANDLE)(LONG_PTR)-1,TOKEN_QUERY,(uintptr_t)&c->process_token_original,0,0,
  &prior,c->expires)||!r->raw||r->error_observed||!c->process_token_original)return 0;token=c->process_token_original;
@@ -117,14 +132,17 @@ int slcli_build_principal_windows_output_away_original(
  apart(out,bytes,c->expected_original,sizeof(*c->expected_original))&&
  apart(out,bytes,c->expected_original->windows_sid,c->expected_original->windows_sid_bytes)&&
  apart(out,bytes,c->origin_original,sizeof(*c->origin_original))&&
- apart(out,bytes,c->prior_original,sizeof(*c->prior_original));
+ apart(out,bytes,c->prior_original,sizeof(*c->prior_original))&&
+ (!c->process_primary_only||slcli_build_principal_windows_output_away_original(c->issuing_effective_original,out,bytes));
 }
-int slcli_build_principal_windows_capture_original(struct slcli_build_principal_windows *c,
+static int capture_principal(struct slcli_build_principal_windows *c,
  const struct slcli_bq_expected_principal *e,const struct slcli_native_clock *origin,
- const struct slcli_native_clock *previous,uint64_t expires) {
+ const struct slcli_native_clock *previous,uint64_t expires,
+ const struct slcli_build_principal_windows *effective) {
  struct slcli_build_windows_call *r;uint64_t prior;size_t n;
  if(!shape(c,e,origin,previous,expires)||!zero(c,sizeof(*c)))return 0;
  c->expected_original=e;c->origin_original=origin;c->prior_original=previous;
+ c->issuing_effective_original=effective;c->process_primary_only=effective!=NULL;
  c->origin_tick=origin->tick;c->prior_tick=previous->tick;c->expires=expires;c->started=1;c->failed=1;prior=previous->tick;
 #define START(i) r=&c->calls[(i)];if(!begin(c,(i),prior))return 0
 #define DONE(i) if(!end(c,(i),prior))return 0;prior=r->after.tick
@@ -144,12 +162,14 @@ int slcli_build_principal_windows_capture_original(struct slcli_build_principal_
  r->args[3]=(uintptr_t)&c->thread_kernel;r->args[4]=(uintptr_t)&c->thread_user;
  BOOL_RESULT(GetThreadTimes((HANDLE)(LONG_PTR)-2,&c->thread_creation,&c->thread_exit,&c->thread_kernel,&c->thread_user));
  DONE(SLCLI_BUILD_THREAD_TIMES);if(!r->raw)return 0;
+ if(!effective) {
  START(SLCLI_BUILD_THREAD_TOKEN);r->args[0]=(uintptr_t)(HANDLE)(LONG_PTR)-2;r->args[1]=TOKEN_QUERY;r->args[2]=TRUE;
  r->args[3]=(uintptr_t)&c->thread_token_original;
  BOOL_RESULT(OpenThreadToken((HANDLE)(LONG_PTR)-2,TOKEN_QUERY,TRUE,&c->thread_token_original));
  DONE(SLCLI_BUILD_THREAD_TOKEN);
- if(!r->raw) {
- if(r->error!=ERROR_NO_TOKEN||c->thread_token_original)return 0;c->process_token_selected=1;
+ }
+ if(effective||!r->raw) {
+ if(!effective&&(r->error!=ERROR_NO_TOKEN||c->thread_token_original))return 0;c->process_token_selected=1;
  START(SLCLI_BUILD_PROCESS_TOKEN);r->args[0]=(uintptr_t)(HANDLE)(LONG_PTR)-1;r->args[1]=TOKEN_QUERY;
  r->args[2]=(uintptr_t)&c->process_token_original;
  BOOL_RESULT(OpenProcessToken((HANDLE)(LONG_PTR)-1,TOKEN_QUERY,&c->process_token_original));
@@ -180,5 +200,16 @@ int slcli_build_principal_windows_capture_original(struct slcli_build_principal_
  c->completed=1;c->failed=0;if(!contents(c,&prior)){c->failed=1;return 0;}c->failed=1;
  if(!slcli_native_clock_read(&c->finish)||!slcli_native_clock_windows_matches_original(&c->finish)||
  c->finish.tick<prior||c->finish.tick>=expires)return 0;c->failed=0;return 1;
+}
+int slcli_build_principal_windows_capture_original(struct slcli_build_principal_windows *c,
+ const struct slcli_bq_expected_principal *e,const struct slcli_native_clock *origin,
+ const struct slcli_native_clock *previous,uint64_t expires) {
+ return capture_principal(c,e,origin,previous,expires,NULL);
+}
+int slcli_build_process_primary_windows_capture_original(struct slcli_build_principal_windows *c,
+ const struct slcli_build_principal_windows *effective,const struct slcli_bq_expected_principal *expected) {
+ if(!effective||effective->process_primary_only||
+ !slcli_build_principal_windows_output_away_original(effective,c,sizeof(*c)))return 0;
+ return capture_principal(c,expected,effective->origin_original,&effective->finish,effective->expires,effective);
 }
 #endif

@@ -17,6 +17,7 @@ struct slcli_build_windows_call {
 };
 struct slcli_build_principal_windows {
  const struct slcli_bq_expected_principal *expected_original;
+ const struct slcli_build_principal_windows *issuing_effective_original;
  const struct slcli_native_clock *origin_original,*prior_original;
  uint64_t origin_tick,prior_tick,expires;
  struct slcli_build_windows_call calls[SLCLI_BUILD_PRINCIPAL_ROWS];
@@ -28,7 +29,7 @@ struct slcli_build_principal_windows {
  TOKEN_STATISTICS statistics_original,recheck_original;
  DWORD user_bytes_original,statistics_bytes_original,recheck_bytes_original;
  struct slcli_native_clock finish;
- uint32_t started,failed,completed,process_token_selected;
+ uint32_t started,failed,completed,process_token_selected,process_primary_only;
 };
 /* Actual effective-token/process/thread observations only. A matched expected
  * SID/LUID is correspondence, never a designated actor/source/reservation grant.
@@ -38,6 +39,9 @@ struct slcli_build_principal_windows {
 int slcli_build_principal_windows_capture_original(struct slcli_build_principal_windows *,
  const struct slcli_bq_expected_principal *,const struct slcli_native_clock *,
  const struct slcli_native_clock *,uint64_t);
+/* Separate fixed process-token capture, never an effective-thread substitute. */
+int slcli_build_process_primary_windows_capture_original(struct slcli_build_principal_windows *,
+ const struct slcli_build_principal_windows *,const struct slcli_bq_expected_principal *);
 int slcli_build_principal_windows_matches_original(const struct slcli_build_principal_windows *);
 int slcli_build_principal_windows_output_away_original(
  const struct slcli_build_principal_windows *,const void *,size_t);
