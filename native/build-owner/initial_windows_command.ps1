@@ -171,7 +171,7 @@ function New-SlcliInitialWindowsExitCapture {
     $exit=[pscustomobject]@{ Birth=$Birth; Event=$null; Output=$null; Self=$null;
         Duplicate=$null; Reference=$null; ProcessId=$null; Thread=$null;
         Continue=$null; Waits=[object[]]::new($Owner.Source.EventCapacity); WaitsUsed=0;
-        Signal=$null; CodeCall=$null; Code=[UInt32]0; EventCode=[UInt32]0;
+        Signal=$null; CodeCall=$null; DuplicateClose=$null; Code=[UInt32]0; EventCode=[UInt32]0;
         SystemProcessRelease=$null; SystemThreadRelease=$null; Complete=$false }
     $Birth.NaturalExit=$exit
     Register-SlcliInitialWindowsCapture -Owner $Owner -Original $exit
@@ -235,6 +235,13 @@ function Read-SlcliInitialWindowsRootExit {
     # 259 is an ordinary possible exit code AFTER real signaling. This says
     # nothing about descendants, stream EOF, file borrowers or successful build.
     $exit.Reference.LastBorrower=$exit.CodeCall
+    # This PRIVATE duplicate has only the PID, signal and exit-code consumers
+    # above. Creator-return/event/file/other process references are untouched.
+    $exit.DuplicateClose=Invoke-SlcliInitialWindowsCall -Owner $Owner -Name 'CloseHandle' -Arguments @($handle)
+    $exit.Reference.Close=$exit.DuplicateClose
+    if ($exit.DuplicateClose.Raw -eq 0) {
+        $Owner.Pending=$true;throw 'Initial private completion duplicate close failed; reference retained.'
+    }
     $exit.Complete=$true
     return $exit
 }
