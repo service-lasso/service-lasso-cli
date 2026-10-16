@@ -75,14 +75,17 @@ function New-SlcliInitialWindowsModuleWalk {
         SourceMappings=[object[]]::new($Owner.ModuleSources.Rows.Length); ImageBytesComplete=$false;
         ImportBytesObserved=$false; ExportBytesObserved=$false; ImportBefore=$null; ImportAfter=$null;
         ExportBefore=$null; ExportAfter=$null; BoundBefore=$null; BoundAfter=$null; BoundBytesObserved=$false;
-        DelayBefore=$null; DelayAfter=$null; DelayBytesObserved=$false }
+        DelayBefore=$null; DelayAfter=$null; DelayBytesObserved=$false;
+        RouteBefore=$null; RouteAfter=$null; RouteBytesObserved=$false;
+        RouteMatches=[Int64]0; RouteUnresolved=[Int64]0 }
     $Birth.Modules=$original
     Register-SlcliInitialWindowsCapture -Owner $Owner -Original $original
     $original.Controls=Get-SlcliInitialWindowsBuffer -Owner $Owner -Bytes ($capacity*48) -Alignment 8
     for ($index=0;$index -lt $original.Images.Length;$index++) {
         $original.Images[$index]=[pscustomobject]@{ Region=$null; Base=[Int64]0; Path=(New-SlcliInitialWindowsModulePath -Owner $Owner);
             Source=$null; Mapping=$null; ImportRows=[object[]]::new($Owner.Source.ImportCapacity);
-            ExportRows=[object[]]::new($Owner.Source.ExportCapacity); BoundRows=[object[]]::new($Owner.Source.ImportCapacity);
+            ExportRows=[object[]]::new($Owner.Source.ExportCapacity); ImportRoutes=[object[]]::new($Owner.Source.ImportCapacity);
+            BoundRows=[object[]]::new($Owner.Source.ImportCapacity);
             BoundReferenceRows=[object[]]::new($Owner.Source.ImportCapacity); DelayRows=[object[]]::new($Owner.Source.ImportCapacity);
             DelayDescriptors=[object[]]::new($Owner.Source.ImportCapacity+1); Complete=$false }
         $source=$Owner.ModuleSources.Rows[$index]
@@ -91,6 +94,7 @@ function New-SlcliInitialWindowsModuleWalk {
         }
         $original.SourceMappings[$index]=[pscustomobject]@{ Source=$source; Mapping=$mapping }
     }
+    New-SlcliInitialWindowsImportRoutes -Owner $Owner -Walk $original
     return $original
 }
 
