@@ -355,6 +355,16 @@ int slcli_initial_child_birth_linux_parent_matches_original(const struct slcli_i
  return b&&b->parent_started==1&&b->parent_completed==1&&!b->parent_failed&&!b->parent_pending&&
  slcli_initial_child_birth_linux_wait_stage_matches_original(b,1)&&child_matches(b);
 }
+int slcli_initial_child_birth_linux_output_away_original(
+ const struct slcli_initial_child_birth_linux *b,const void *out,uint64_t bytes) {
+ uint64_t i;
+ if(!slcli_initial_child_birth_linux_parent_matches_original(b)||
+ !apart(out,bytes,b,sizeof(*b))||
+ !slcli_initial_child_control_map_linux_output_away_original(b->map_original,out,bytes))return 0;
+ for(i=0;i<2;i++)if(!apart(out,bytes,b->stages[i].rows_original,
+ b->stages[i].capacity*sizeof(*b->stages[i].rows_original)))return 0;
+ return 1;
+}
 int slcli_initial_child_birth_linux_parent_observe_original(struct slcli_initial_child_birth_linux *b) {
  uint64_t expiry;int result;
  if(!source(b,&expiry)||b->parent_started||b->parent_completed||b->parent_failed||b->parent_pending||

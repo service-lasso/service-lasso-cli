@@ -52,5 +52,7 @@ int slcli_initial_child_birth_linux_wait_stage_matches_original(
 /* Actual fixed own-child stop/options/CONT/exec observer; no clone or admission. */
 int slcli_initial_child_birth_linux_parent_observe_original(struct slcli_initial_child_birth_linux *);
 int slcli_initial_child_birth_linux_parent_matches_original(const struct slcli_initial_child_birth_linux *);
+int slcli_initial_child_birth_linux_output_away_original(
+ const struct slcli_initial_child_birth_linux *,const void *,uint64_t);
 #endif
 #endif

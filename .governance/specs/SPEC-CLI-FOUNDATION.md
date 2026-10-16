@@ -423,3 +423,18 @@ to the independently observed actual exec event. This completes raw stopped-chil
 mechanics only. Actual postexec child-local acquisition and genuine initial
 source/principal/reservation/profile constructor remain absent. No current source
 freeze, wholeGO, execution, qualification or release claim follows.
+
+### October16 exec-stop mapping acquisition source
+
+Before source activation, the fixed parent derives /proc/<SAME actual clone PID>/maps
+using checked decimal PID geometry, opens once readonly/CLOEXEC/NOFOLLOW and retains
+native fstat/getfl/getfd and complete bounded short-read/EOF originals. Complete
+source-selected output capacity B has checked B+5 row maximum: four fixed native
+calls, at most B positive-short read calls and one EOF/overflow probe. Each row has
+two original clock calls, plus one final clock. Buffer-full always probes one extra
+byte and refuses actual non-EOF; no truncation-as-complete. All capture/buffer/row
+storage excludes SAME birth/wait/control and complete borrowed graph before writes.
+Native outputs/descriptor survive errors/expiry. No close, seek, resume or loaded
+source grant follows. Proc namespace/mount/kernel/source and complete held-loaded/
+interpreter/writer/private-stack graph remain independently required; maps bytes,
+path or successful capture are only retained observations. All source UNRUN.
