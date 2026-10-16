@@ -23,6 +23,8 @@ struct slcli_build_child_principal_windows {
 };
 int slcli_build_child_principal_windows_capture_original(struct slcli_build_child_principal_windows *,
  const struct slcli_build_windows_command *);
+int slcli_build_child_principal_windows_output_away_original(
+ const struct slcli_build_child_principal_windows *,const void *,size_t);
 int slcli_build_child_principal_windows_matches_original(const struct slcli_build_child_principal_windows *);
 #endif
 #endif

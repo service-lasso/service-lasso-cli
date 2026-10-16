@@ -38,6 +38,8 @@ struct slcli_build_held_file_windows {
 int slcli_build_held_file_windows_capture_original(struct slcli_build_held_file_windows *,
  const struct slcli_build_principal_windows *,const struct slcli_build_windows_member *,
  struct slcli_build_windows_open *,struct slcli_windows_file_capture *,unsigned char *);
+int slcli_build_held_file_windows_observation_matches_original(
+ const struct slcli_build_held_file_windows *,HANDLE,const struct slcli_windows_file_capture *);
 int slcli_build_held_file_windows_output_away_original(
  const struct slcli_build_held_file_windows *,const void *,size_t);
 int slcli_build_held_file_windows_matches_original(const struct slcli_build_held_file_windows *);

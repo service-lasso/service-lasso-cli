@@ -140,6 +140,11 @@ int slcli_build_held_file_windows_matches_original(const struct slcli_build_held
  uint64_t prior;return contents(c,&prior)&&slcli_native_clock_windows_matches_original(&c->finish)&&
  c->finish.tick>=prior&&c->finish.tick<c->expires;
 }
+int slcli_build_held_file_windows_observation_matches_original(
+ const struct slcli_build_held_file_windows *c,HANDLE handle,const struct slcli_windows_file_capture *observed) {
+ return slcli_build_held_file_windows_matches_original(c)&&
+ slcli_windows_source_observation_matches_original(handle,observed)&&metadata_equal(&c->final_original,observed);
+}
 int slcli_build_held_file_windows_output_away_original(
  const struct slcli_build_held_file_windows *c,const void *out,size_t bytes) {
  return slcli_build_held_file_windows_matches_original(c)&&apart(out,bytes,c,sizeof(*c))&&

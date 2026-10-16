@@ -97,6 +97,13 @@ int slcli_build_child_principal_windows_matches_original(const struct slcli_buil
  uint64_t prior;return contents(c,&prior)&&slcli_native_clock_windows_matches_original(&c->finish)&&
  c->finish.tick>=prior&&c->finish.tick<c->expires;
 }
+int slcli_build_child_principal_windows_output_away_original(
+ const struct slcli_build_child_principal_windows *c,const void *out,size_t bytes) {
+ uintptr_t a=(uintptr_t)c,b=(uintptr_t)out;
+ return slcli_build_child_principal_windows_matches_original(c)&&out&&bytes&&
+ a<=UINTPTR_MAX-sizeof(*c)&&b<=UINTPTR_MAX-bytes&&(a+sizeof(*c)<=b||b+bytes<=a)&&
+ slcli_build_windows_command_output_away_original(c->birth_original,out,bytes);
+}
 int slcli_build_child_principal_windows_capture_original(struct slcli_build_child_principal_windows *c,
  const struct slcli_build_windows_command *b) {
  struct slcli_build_windows_call *r;uint64_t prior;size_t i,n;

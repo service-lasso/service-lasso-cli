@@ -211,3 +211,26 @@ byte comparison. All original token/native buffers survive failure; this count
 excludes the unqualified OS/token allocation costs and complete loaded/descendant/
 stream/profile graph. Parent-local debug observations are not a child-local
 Template handoff type or transferable execution/source authority.
+
+Initial debug image-file join (next body) consumes only the actual stopped root
+CREATE_PROCESS_DEBUG_EVENT hFile, reached through the retained child-principal
+occurrence. It never opens a supplied event PID/path. Actual native readonly,
+noninherit/no-reparse FileId/size/owner/mode observations, complete bounded short
+reads, distinct EOF, independent final SAME-handle metadata and full byte/digest
+comparison join that event file reference to the already held executable. All
+buffers/rows exclude the complete child/birth/principal/tool/command graph before
+writes. The event file handle stays caller-owned and retained; the child/event
+remain stopped. Event hFile/source-byte correspondence does not prove actual
+loaded memory, PE section/RVA/start-address/loader imports or complete loaded
+module ancestry. Those joins still precede useful debug continuation. Finite
+source byte/read capacity and backing costs remain in the build-plane profile;
+no ordinary product memory allowance or new reservation issuer is supplied.
+
+The event-file prefix additionally owns a fresh actual issuing-thread call row,
+before/after native clocks, two pre-observation clocks and one fresh pre-read
+clock per preowned row (including EOF). Existing file capture source_thread
+fields have no native producer and are not interpreted as thread evidence. Each
+read/observation starts only after its own retained unchanged-deadline cut; raw
+native output custody still precedes any late-result rejection. Full descriptor,
+row/body/clock backing and replay costs remain separate unqualified build-plane
+inputs; the stopped initial event is not a useful/full builder result.
