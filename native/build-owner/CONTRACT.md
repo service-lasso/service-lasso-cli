@@ -342,3 +342,35 @@ source membership/reservation/child binding. Pending/late effects retain all raw
 rows and once-close state, without retry. Complete native child object/rights/
 birth/source acquisition, paid local admission cuts and genuine entry/family
 connection remain required before any consumer permission.
+
+Selected b52 child native deadline acquisition contract (source construction):
+the actual child INITIAL owner first calls paid prefix preparation WITHOUT a
+product operation clock. Under its retained original initial deadline, a fixed
+private .slprout export supplies ONLY section/parent handle routing, following
+the already selected stopped-child route-cell pattern, never CRT-reserved fields,
+public flags or parent C pointers. Parent exact PE/source/export/write/readback/
+own-writer/birth and native CompareObjectHandles joins remain required as part
+of genuine enclosing construction; syntax/equal bytes/process IDs do not prove
+them. The actual initial source ABI/case must qualify PBI48 PID/parent slots,
+NtQueryObject SDK basic layout, object rights, loader/initial actors and the
+complete capture before ANY invocation. This body cannot self-qualify that case.
+Distinct control is acquired from the already financed arena only after ALL
+initial-source spans and the static route export are disjoint from the ENTIRE
+arena extent, including potential header/padding/split writes. Native current
+thread/process, inherited flags and actual granted readonly-section/parent
+rights, parent PID/birth/PBI/liveness, actual readonly mapping geometry and full
+independent body readbacks, parent token/user/authentication/statistics and
+independent source/route/process rechecks are retained in one-use rows. Unknown,
+short, partial, foreign, writable, changed or late cases retain every output.
+Actual mapped view, readonly aliases, parent process and token references stay
+held through source/native-case/local-cut/entry/family borrowers; this body has
+no release/close/retry. View virtual/PTE/kernel/reference and all copied source,
+row, control, stack/helper/TLS and failure overlap costs are covered by genuine
+INITIAL/prebirth source financing, not a second charge of shared section RAM or
+a buffer-size grant. Fixed24 ordinary APIs each own before/after native clocks,
+plus5 processing clocks, total130 ordinary APIs on successful path (C clock2),
+conditional native error observations separately retained. Native capture alone
+does NOT construct source/designation/finance, publish a local operation clock,
+authorize a TUI profile or establish family settlement. Genuine actual parent/
+child source/native-case/borrower correspondence and funded local admission cut
+remain OUR connected constructor work, never an unavailable caller factory.

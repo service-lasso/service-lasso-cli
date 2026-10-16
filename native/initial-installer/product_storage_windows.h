@@ -27,6 +27,7 @@ struct slcli_product_storage_windows {
  struct slcli_native_clock arena_before,arena_after,finish;
  struct slcli_native_clock section_entry_original;
  struct slcli_native_clock deadline_publication_entry_original;
+ struct slcli_native_clock deadline_acquisition_entry_original;
  struct slcli_product_windows_operation_caller *caller_original;
  struct slcli_native_clock *operation_origin_original;
  struct slcli_source_deadline_original *deadline_original;
