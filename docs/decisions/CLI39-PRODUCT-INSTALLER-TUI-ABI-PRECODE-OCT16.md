@@ -53,29 +53,58 @@ names or declarations cannot make a producer complete.
 ## Concrete private native representation to freeze with header
 
 All references below are SAME-process retained originals. None is a wire field.
-The proposed `slcli_product_windows_owner` embeds (rather than accepts a boolean
-for) these existing actual types:
+The proposed `slcli_product_windows_owner` retains actual acquisitions, never a
+boolean substitute. Its separately charged control extent contains the actual
+`slcli_memory_owner` memory_original and `slcli_arena` arena_original descriptors.
+Those descriptors and their entire storage remain OUTSIDE the arena payload
+extent: arena.c's existing descriptor-overlap refusal is preserved unchanged.
+The control owner retains pointers plus acquisition/block/borrower rows for these
+distinct payload-arena allocations:
 
-- `slcli_memory_owner` memory_original and `slcli_arena` arena_original;
-- `slcli_source_deadline_original` deadline_original, plus original native clock
-  origin/prior/terminal cells and one original expiration;
-- separate `slcli_build_principal_windows` effective_original and primary_original;
-- `slcli_build_held_file_windows` image_original and fixed source/tool members;
-- `slcli_node_transport_windows` section_original, using its actual readonly
-  section/native parent custody operations, not reinterpreting encoded pointers;
-- actual fixed birth/debug/stream/process-duplicate rows with distinct aliases,
-  and preallocated borrower/retirement rows for the whole installed family.
+- `slcli_node_transport_windows *section_original`: its own zeroed exact block
+  start, requested bytes exactly sizeof(*section_original), never an embedded
+  subobject in a larger product-owner allocation;
+- a separate source-owned operation caller row at its own exact live block start
+  and requested caller extent. The section's caller is this actual row, not the
+  enclosing control owner, a copied parent pointer, or the section itself;
+- `slcli_source_deadline_original *deadline_original` and distinct native clock
+  origin/prior/terminal cells, in separately retained arena allocations. The
+  deadline's caller_original is exactly the preceding caller row. Its origin is
+  the SAME genuine operation-origin occurrence, with one unchanged expiration;
+- an independently held descriptor/source span in an arena allocation disjoint
+  from section, caller, deadline, origin and prior outputs;
+- separate `slcli_build_principal_windows` effective/primary originals,
+  `slcli_build_held_file_windows` image/tool members, fixed birth/debug/stream/
+  process-duplicate rows and the whole family's borrower/retirement roster.
+
+Allocation ordering is charged control/ledger -> acquired payload extent ->
+slcli_arena_init -> exact caller block -> distinct deadline/origin/prior blocks ->
+exact transport block and descriptor span -> existing transport create. Every
+earlier acquisition is retained if a later allocation or constructor fails.
+Actual source/native origin acquisition precedes its publication into these
+rows; assigning their fields does not mint an authentic clock or operation.
+The existing transport create checks remain literal requirements: SAME mutable
+arena owner, exact transport and caller live_block checks, live deadline/origin/
+prior/descriptor ranges, completed monotone prior, and transport/caller/prior/
+descriptor/deadline exclusions. No live_range replaces live_block and no copied
+larger owner is presented as a caller. This retains the actual readonly section
+and parent custody operations without interpreting encoded pointers.
 
 The owner also retains the actual source expectation occurrence
 `slcli_bq_provider_expectations`, complete `slcli_bq_owner_resource_profile`,
 source-root/member/loaded-provider originals and the acquired backing roster.
-These expectation structs constrain observations; embedding them does not issue
+These expectation structs constrain observations; retaining them does not issue
 source membership, reserve, designation, or admission. The constructor joins the
 source-owned actual occurrence to native acquisitions before its first effect.
 
 The child type `slcli_product_windows_entry` owns its *own* memory ledger, arena,
 clock/principal/file/loaded-source/native channel observations and typed TUI
 consumer storage. No parent's struct is mapped and dereferenced as a child owner.
+Its control descriptors likewise remain outside its own payload arena, with
+separate exact-block caller/transport allocations and disjoint deadline/clock/
+descriptor ranges under the existing checks. Parent and child each retain their
+own failed and pending acquisitions through every actual last borrower; neither
+transport success nor a control pointer authorizes freeing the other's storage.
 A child-local operation original and source-domain original are constructed from
 the actual installation/birth/channel/source/reserve relation before use; they
 are not supplied pointers, digest-derived identities, or defaults.
