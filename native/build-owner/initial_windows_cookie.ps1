@@ -29,8 +29,8 @@ function New-SlcliInitialWindowsCookieCapture {
     return $capture
 }
 
-function New-SlcliInitialWindowsCookieCase {
-    param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Capture,[Parameter(Mandatory)][object]$Row)
+function Assert-SlcliInitialWindowsCreatedCapture {
+    param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Capture)
     $birth=$Capture.Birth;$event=$birth.PendingEvent
     if ($Owner.Failed -or -not [Object]::ReferenceEquals($Capture.Owner,$Owner) -or
         -not [Object]::ReferenceEquals($Capture.Recipe,$Owner.CompilePlan) -or
@@ -61,6 +61,12 @@ function New-SlcliInitialWindowsCookieCase {
             throw 'Cookie case has prior continuation/native event or attach/replayed phase.'
         }
     }
+}
+
+function New-SlcliInitialWindowsCookieCase {
+    param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Capture,[Parameter(Mandatory)][object]$Row)
+    Assert-SlcliInitialWindowsCreatedCapture -Owner $Owner -Capture $Capture
+    $birth=$Capture.Birth;$event=$birth.PendingEvent
     $found=$false
     foreach ($owned in $Capture.Rows) { if ([Object]::ReferenceEquals($owned,$Row)) { $found=$true;break } }
     if (-not $found -or $null -ne $Row.Case -or $null -eq $Row.CaseBacking -or

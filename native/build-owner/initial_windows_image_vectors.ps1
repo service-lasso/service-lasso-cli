@@ -49,7 +49,7 @@ function Test-SlcliInitialWindowsFinalImageVectors {
     # Algorithm-only synthetic bytes. This creates neither native capture nor
     # a source/effect issuer; the actual final caller still owns all native cuts.
     $fixture=[pscustomobject]@{ Geometry=[pscustomobject]@{ImageBytes=32};
-        Expected=[byte[]]::new(32); Observed=[byte[]]::new(32); Compared=0; CookieOutput=$null }
+        Expected=[byte[]]::new(32); Observed=[byte[]]::new(32); Compared=0; CookieOutput=$null; TlsIndexOutput=$null }
     if ((Find-SlcliInitialWindowsImageDifference -Original $fixture) -ne 32) { throw 'Synthetic equal full image differs.' }
     foreach ($offset in @(0,7,8,15,16,24,31)) {
         $fixture.Observed[$offset]=1

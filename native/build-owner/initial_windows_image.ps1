@@ -112,7 +112,7 @@ function New-SlcliInitialWindowsImageBacking {
         BindingSeen=[byte[]]::new([Int32][Math]::Floor(([Int64]$geometry.ImageBytes+7)/8));
         BindingEffects=[object[]]::new($Owner.Source.ImportCapacity); BindingEffectsUsed=0;
         RelocationCursor=0; Relocations=0; Compared=0; Thread=$null; BeforeCompare=$null; AfterCompare=$null;
-        BeforeExpected=$null; AfterExpected=$null; CookieOutput=$null;
+        BeforeExpected=$null; AfterExpected=$null; CookieOutput=$null; TlsIndexOutput=$null;
         CapturedComplete=$false; ExpectedComplete=$false; Complete=$false }
     Register-SlcliInitialWindowsCapture -Owner $Owner -Original $original
     $original.Body=Get-SlcliInitialWindowsBuffer -Owner $Owner -Bytes $geometry.ImageBytes
@@ -265,11 +265,14 @@ function Find-SlcliInitialWindowsImageDifference {
         throw 'Full image byte vectors differ from selected geometry.'
     }
     if ($null -ne $Original.CookieOutput) { Assert-SlcliInitialWindowsCookieOutput -Mapping $Original }
+    if ($null -ne $Original.TlsIndexOutput) { Assert-SlcliInitialWindowsTlsIndexOutput -Mapping $Original }
     for ($Original.Compared=0;$Original.Compared -lt $Original.Geometry.ImageBytes;$Original.Compared++) {
         if ($null -ne $Original.CookieOutput -and $Original.Compared -ge $Original.CookieOutput.Source.Rva -and
             $Original.Compared-$Original.CookieOutput.Source.Rva -lt 8) {
             continue
         }
+        if ($null -ne $Original.TlsIndexOutput -and $Original.Compared -ge $Original.TlsIndexOutput.Source.Tls.IndexRva -and
+            $Original.Compared-$Original.TlsIndexOutput.Source.Tls.IndexRva -lt 4) { continue }
         if ($Original.Expected[$Original.Compared] -ne $Original.Observed[$Original.Compared]) {
             return $Original.Compared
         }

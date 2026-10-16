@@ -68,6 +68,7 @@ function New-SlcliInitialWindowsNative {
         @('kernel32.dll','GetThreadContext',$b,[Type[]]@($pointer,$pointer),$true),
         @('ntdll.dll','NtQueryInformationFile',$b,[Type[]]@($pointer,$pointer,$pointer,$u,$u),$false),
         @('ntdll.dll','NtQueryInformationProcess',$b,[Type[]]@($pointer,$u,$pointer,$u,$pointer),$false),
+        @('ntdll.dll','NtQueryInformationThread',$b,[Type[]]@($pointer,$u,$pointer,$u,$pointer),$false),
         @('ntdll.dll','NtQueryObject',$b,[Type[]]@($pointer,$u,$pointer,$u,$pointer),$false)
     )
     $assemblyName = [Reflection.AssemblyName]::new('ServiceLasso.InitialSeedA.FixedWindows')

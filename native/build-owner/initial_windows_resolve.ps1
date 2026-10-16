@@ -200,6 +200,7 @@ function Complete-SlcliInitialWindowsImageCorrespondence {
             $effect.Applied=$true
         }
     }
+    Complete-SlcliInitialWindowsTlsIndexOutputs -Owner $Owner -Birth $Birth
     $walk.EffectAfter=Read-SlcliInitialWindowsClock -Owner $Owner
     if ($walk.EffectAfter.Tick -lt $walk.EffectBefore.Tick) { throw 'Actual binding-effect clock regressed.' }
     $Owner.PriorTick=$walk.EffectAfter.Tick

@@ -88,7 +88,7 @@ function Start-SlcliInitialWindowsFixedCompile {
         Events=[object[]]::new($Owner.Source.EventCapacity); EventsUsed=0; PendingEvent=$null;
         Stdin=$null; Stdout=$null; Stderr=$null; StdinWriterClose=$null; AttributeProbe=$null; AttributeInit=$null;
         AttributeHandles=$null; IssuingThread=$null; Birth=$null; ProcessReference=$null; ThreadReference=$null;
-        Environment=$Owner.Environment; Streams=$null; Child=$null; EventImage=$null; RemoteImage=$null; Modules=$null; ApiSet=$null; Cookies=$null;
+        Environment=$Owner.Environment; Streams=$null; Child=$null; EventImage=$null; RemoteImage=$null; Modules=$null; ApiSet=$null; Cookies=$null; Tls=$null;
         Pid=[UInt32]0; Tid=[UInt32]0; NaturalExit=$null; Complete=$false }
     $unit.Birth=$original;$plan.Active=$original
     Register-SlcliInitialWindowsCapture -Owner $Owner -Original $original
@@ -98,6 +98,7 @@ function Start-SlcliInitialWindowsFixedCompile {
     $null=New-SlcliInitialWindowsRemoteImage -Owner $Owner -Birth $original
     $null=New-SlcliInitialWindowsModuleWalk -Owner $Owner -Birth $original
     $null=New-SlcliInitialWindowsCookieCapture -Owner $Owner -Birth $original
+    $null=New-SlcliInitialWindowsTlsCapture -Owner $Owner -Birth $original
     $null=New-SlcliInitialWindowsApiSetCapture -Owner $Owner -Birth $original
     $original.Stdin=New-SlcliInitialWindowsPipe -Owner $Owner -PrivateReader $false
     $original.Stdout=New-SlcliInitialWindowsPipe -Owner $Owner -PrivateReader $true
@@ -156,6 +157,7 @@ function Start-SlcliInitialWindowsFixedCompile {
     $null=Read-SlcliInitialWindowsMappedDelayImports -Owner $Owner -Birth $original
     $null=Read-SlcliInitialWindowsImportRoutes -Owner $Owner -Birth $original
     Read-SlcliInitialWindowsCookieAfter -Owner $Owner -Birth $original
+    $null=Read-SlcliInitialWindowsTlsRelations -Owner $Owner -Birth $original
     $null=Complete-SlcliInitialWindowsImageCorrespondence -Owner $Owner -Birth $original
     return $original
 }

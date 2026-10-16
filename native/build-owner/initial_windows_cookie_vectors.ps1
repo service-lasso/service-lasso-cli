@@ -19,7 +19,7 @@ function New-SlcliInitialWindowsTlsCookieSourceFixture {
     $geometry=Get-SlcliInitialWindowsPeGeometry -Bytes $Bytes -PageBytes 4096 -ImageLimit 8192
     return [pscustomobject]@{ Held=$held; Geometry=$geometry;
         Tls=(Read-SlcliInitialWindowsTlsSource -Held $held -Geometry $geometry -ByteCapacity 64 -CallbackCapacity 4);
-        Imports=[pscustomobject]@{ Used=0; Rows=[object[]]::new(1) };
+        Imports=[pscustomobject]@{ Used=0; Rows=[object[]]::new(1); DescriptorsUsed=0 };
         Exports=[pscustomobject]@{ NameCount=0; Bytes=0 };
         DelayImports=[pscustomobject]@{ DescriptorsUsed=0; Used=0 } }
 }
@@ -60,7 +60,7 @@ function Test-SlcliInitialWindowsTlsCookieSourceVectors {
     # An incomplete output object must never suppress immutable comparison,
     # even when both raw vectors happen to be identical.
     $mapping=[pscustomobject]@{ Geometry=[pscustomobject]@{ImageBytes=32}; Expected=[byte[]]::new(32);
-        Observed=[byte[]]::new(32); Compared=0; CookieOutput=[pscustomobject]@{Case=$null;Complete=$false} }
+        Observed=[byte[]]::new(32); Compared=0; TlsIndexOutput=$null; CookieOutput=[pscustomobject]@{Case=$null;Complete=$false} }
     $denied=$false
     try { $null=Find-SlcliInitialWindowsImageDifference -Original $mapping } catch { $denied=$true }
     if (-not $denied) { throw 'Synthetic missing creation provenance suppressed final image comparison.' }

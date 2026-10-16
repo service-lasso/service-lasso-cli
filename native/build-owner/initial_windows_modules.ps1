@@ -52,6 +52,7 @@ function New-SlcliInitialWindowsModuleSources {
         $row.DelayImports=Read-SlcliInitialWindowsDelayImports -Imports $row.Imports
         $row.EffectBefore=Read-SlcliInitialWindowsClock -Owner $Owner
         $row.Tls=Read-SlcliInitialWindowsTlsSource -Held $row.Held -Geometry $row.Geometry -ByteCapacity $Owner.Source.TlsByteCapacity -CallbackCapacity $Owner.Source.TlsCallbackCapacity
+        Assert-SlcliInitialWindowsTlsSourceLayout -Source $row
         $row.Cookie=Read-SlcliInitialWindowsCookieSource -Source $row
         $row.EffectAfter=Read-SlcliInitialWindowsClock -Owner $Owner
         if ($row.EffectAfter.Tick -lt $row.EffectBefore.Tick) { throw 'Initial TLS/cookie source processing clock regressed.' }
