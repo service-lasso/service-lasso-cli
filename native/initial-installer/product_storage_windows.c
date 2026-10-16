@@ -30,7 +30,7 @@ static int end(struct slcli_product_storage_windows *c,struct slcli_build_window
 }
 static int add(size_t *n,size_t v){if(!v||v>SIZE_MAX-*n)return 0;*n+=v;return 1;}
 static int stop(struct slcli_product_storage_windows *c){c->failed=1;c->memory_original.failed=1;return 0;}
-int slcli_product_storage_windows_prepare_original(struct slcli_product_storage_windows *c,
+int slcli_product_storage_windows_prepare_prefix_original(struct slcli_product_storage_windows *c,
  const struct slcli_product_storage_windows_source *s,struct slcli_build_initial_windows_region_capture *rows) {
  size_t i,j,total=0,row_bytes;uint64_t prefix=0;struct slcli_memory_owner *o;
  if(!c||!s||!rows||!s->regions_original||!s->region_count||s->region_count>=256||
@@ -110,13 +110,18 @@ int slcli_product_storage_windows_prepare_original(struct slcli_product_storage_
  !slcli_build_process_primary_windows_capture_original(c->primary_original,c->effective_original,s->primary_original)||
  !slcli_build_principal_windows_issuing_relation_original(c->effective_original,c->primary_original))return stop(c);
  c->prior_tick=c->primary_original->finish.tick;
+ c->prefix_prepared=1;return 1;
+}
+int slcli_product_storage_windows_prepare_original(struct slcli_product_storage_windows *c,
+ const struct slcli_product_storage_windows_source *s,struct slcli_build_initial_windows_region_capture *rows) {
+ if(!slcli_product_storage_windows_prepare_prefix_original(c,s,rows))return 0;
  /* FIRST construction, before a product origin/deadline/caller is published.
   * No initial clock is copied. This final cell is the actual native output. */
  c->origin_attempted=1;
  c->origin_returned=slcli_native_clock_read(c->operation_origin_original);
  if(!c->origin_returned||c->operation_origin_original->tick<c->prior_tick||
  c->operation_origin_original->tick>=s->operation_expires)return stop(c);
- c->caller_original->initial_source_original=s;c->caller_original->memory_original=o;
+ c->caller_original->initial_source_original=s;c->caller_original->memory_original=&c->memory_original;
  c->caller_original->arena_original=&c->arena_original;c->caller_original->deadline_original=c->deadline_original;
  c->deadline_original->origin=c->operation_origin_original;
  c->deadline_original->caller_original=c->caller_original;c->deadline_original->expires=s->operation_expires;
@@ -127,7 +132,12 @@ int slcli_product_storage_windows_prepare_original(struct slcli_product_storage_
 }
 int slcli_product_storage_windows_output_away_original(
  const struct slcli_product_storage_windows *c,const void *out,size_t n) {
- return c&&c->storage_constructed==1&&!c->failed&&c->source_original&&
+ return c&&c->storage_constructed==1&&
+ slcli_product_storage_windows_prefix_output_away_original(c,out,n);
+}
+int slcli_product_storage_windows_prefix_output_away_original(
+ const struct slcli_product_storage_windows *c,const void *out,size_t n) {
+ return c&&c->prefix_prepared==1&&!c->failed&&c->source_original&&
  slcli_product_windows_initial_source_excludes_output(c->source_original,out,n)&&apart(out,n,c,sizeof(*c))&&
  apart(out,n,c->regions_original,c->source_original->region_count*sizeof(*c->regions_original))&&
  apart(out,n,c->caller_original,sizeof(*c->caller_original))&&

@@ -6,6 +6,7 @@
 #if defined(_WIN32)
 struct slcli_product_section_windows;
 struct slcli_product_windows_deadline_publication;
+struct slcli_product_windows_deadline_acquisition;
 struct slcli_product_windows_operation_caller {
  const struct slcli_product_storage_windows_source *initial_source_original;
  struct slcli_memory_owner *memory_original;
@@ -33,8 +34,9 @@ struct slcli_product_storage_windows {
  struct slcli_build_principal_windows *effective_original,*primary_original;
  struct slcli_product_section_windows *section_original;
  struct slcli_product_windows_deadline_publication *deadline_publication_original;
+ struct slcli_product_windows_deadline_acquisition *deadline_acquisition_original;
  uint64_t prior_tick;
- uint32_t started,failed,origin_attempted,origin_returned,storage_constructed,section_attempted;
+ uint32_t started,failed,origin_attempted,origin_returned,storage_constructed,section_attempted,prefix_prepared;
 };
 /* Constructs paid initial storage BEFORE publishing the first product operation
  * origin. It writes that original directly into its final separate live arena
@@ -43,6 +45,14 @@ struct slcli_product_storage_windows {
 int slcli_product_storage_windows_prepare_original(
  struct slcli_product_storage_windows *,const struct slcli_product_storage_windows_source *,
  struct slcli_build_initial_windows_region_capture *);
+/* Paid INITIAL preparation only; it creates no product clock/deadline/caller.
+ * Child native handoff acquisition runs under the retained INITIAL deadline
+ * before the first final-cell local admission cut. No reset/renewal API. */
+int slcli_product_storage_windows_prepare_prefix_original(
+ struct slcli_product_storage_windows *,const struct slcli_product_storage_windows_source *,
+ struct slcli_build_initial_windows_region_capture *);
+int slcli_product_storage_windows_prefix_output_away_original(
+ const struct slcli_product_storage_windows *,const void *,size_t);
 int slcli_product_storage_windows_output_away_original(
  const struct slcli_product_storage_windows *,const void *,size_t);
 #endif

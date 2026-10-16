@@ -54,6 +54,25 @@ layout/binding, native earliest prologue/helpers, child-local rejoin, natural
 family/IO/provider settlement and Linux peers remain OUR source obligations.
 No producerComplete guard is changed. All parser/compiler/native/tests UNRUN.
 
+## Actual child pre-cut preparation split
+
+The same native paid preparation body is now separately callable as
+slcli_product_storage_windows_prepare_prefix_original. It performs the existing
+initial region/ledger/arena/six-block/principal work under the SAME INITIAL
+origin/prior/expiry and returns prefix_prepared ONLY. It does not write a product
+origin, caller binding or source deadline. The existing parent prepare wrapper
+calls that body once and preserves its original final-cell first-clock/publication
+order and operation expiration; no existing clock is copied/reset or replaced.
+
+This split provides the actual construction window for child readonly handoff
+acquisition BEFORE a first local admission cut. Child acquisition/native object/
+rights/birth/source joins and the eventual cut/binding constructor remain owned
+implementation work, not a capability supplied by prefix_prepared. A separate
+readonly prefix-output exclusion helper preserves full source/control/region/
+principal/caller/clock/transport exclusions; the existing product-output helper
+still additionally requires storage_constructed. No product predicate is relaxed.
+All prefix failures retain the original paid arena and native partial outputs.
+
 ## Fixed private descriptor and actual section connection
 
 product_section_windows.h/.c connects the prepared initial operation to actual
