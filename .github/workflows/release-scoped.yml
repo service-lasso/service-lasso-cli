@@ -1,0 +1,295 @@
+name: Publish scoped protected CLI development candidate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SCOPE_POLICY_SHA256: 159d644c161cf532c94d3bfe17ed55e32bf94c5d2843928945c450f6d8140c12
+
+jobs:
+  identity:
+    if: github.ref == 'refs/heads/develop'
+    name: Freeze exact develop candidate identity
+    runs-on: ubuntu-latest
+    outputs:
+      candidate_version: ${{ steps.identity.outputs.candidate_version }}
+      source_sha: ${{ steps.identity.outputs.source_sha }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 22.23.2
+      - id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/bind-scoped-release-source.mjs
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          package_version="$(node -p 'require("./package.json").version')"
+          candidate_version="${package_version}-dev.${GITHUB_SHA::7}"
+          echo "candidate_version=${candidate_version}" >> "$GITHUB_OUTPUT"
+          echo "source_sha=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+  portable:
+    needs: identity
+    name: Build portable archive once for frozen SHA
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: ${{ needs.identity.outputs.source_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 22.23.2
+          cache: npm
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: "1.22.x"
+      - run: node scripts/bind-scoped-release-source.mjs
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - name: Build existing portable Core-consumer archive once
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/bind-scoped-release-source.mjs
+          test "$(git rev-parse HEAD)" = "${{ needs.identity.outputs.source_sha }}"
+          node scripts/package-candidate-scoped.mjs --output portable-assets --version "${{ needs.identity.outputs.candidate_version }}" --source-sha "${{ needs.identity.outputs.source_sha }}"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: scoped-portable-${{ needs.identity.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: portable-assets/
+          if-no-files-found: error
+          retention-days: 90
+
+  native:
+    needs: identity
+    name: Build and execute native target (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: win32-x64
+          - os: ubuntu-latest
+            target: linux-x64
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: ${{ needs.identity.outputs.source_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 22.23.2
+          cache: npm
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: "1.22.x"
+      - name: Establish isolated native qualification custody before dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/bind-scoped-release-source.mjs
+          qualification_root="$RUNNER_TEMP/service-lasso-native-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_JOB}-${RUNNER_OS}"
+          echo "SERVICE_LASSO_WORKSPACE_ROOT=$qualification_root/workspace" >> "$GITHUB_ENV"
+          echo "SERVICE_LASSO_INSTANCE_REGISTRY_PATH=$qualification_root/instance/registry.json" >> "$GITHUB_ENV"
+          echo "SERVICE_LASSO_HOST_PORT_REGISTRY_PATH=$qualification_root/host-port/registry.json" >> "$GITHUB_ENV"
+          echo "SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS=$GITHUB_WORKSPACE/native-qualification-receipts-negative" >> "$GITHUB_ENV"
+          SERVICE_LASSO_WORKSPACE_ROOT="$qualification_root/workspace" SERVICE_LASSO_INSTANCE_REGISTRY_PATH="$qualification_root/instance/registry.json" SERVICE_LASSO_HOST_PORT_REGISTRY_PATH="$qualification_root/host-port/registry.json" node scripts/prepare-native-qualification-receipt.mjs --receipt-directory "$GITHUB_WORKSPACE/native-qualification-receipts-negative"
+      - run: node scripts/bind-scoped-release-source.mjs
+      - run: npm ci
+      - name: Build target executable once, record dispatch context, and prove its no-Node fixture journey
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/bind-scoped-release-source.mjs
+          test "$(git rev-parse HEAD)" = "${{ needs.identity.outputs.source_sha }}"
+          npm run package:native -- --output native-assets --source-sha "${{ needs.identity.outputs.source_sha }}" --version "${{ needs.identity.outputs.candidate_version }}"
+          node scripts/write-native-ci-context.mjs --directory native-assets --event-name workflow_dispatch --source-sha "${{ needs.identity.outputs.source_sha }}" --tested-base-sha "" --merge-context-sha "${{ needs.identity.outputs.source_sha }}"
+          node scripts/verify-native-ci-provenance.mjs --directory native-assets --expected-source-sha "${{ needs.identity.outputs.source_sha }}" --expected-event workflow_dispatch --expected-base-sha "" --expected-merge-context-sha "${{ needs.identity.outputs.source_sha }}" --expected-platform "${{ runner.os == 'Windows' && 'win32' || 'linux' }}" --expected-architecture x64
+      - name: Record actual native smoke close result
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/bind-scoped-release-source.mjs
+          executable="native-assets/service-lassoctl"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
+          node scripts/run-native-qualification-phase.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --phase smoke --executable "$executable" -- node scripts/smoke-native.mjs --directory native-assets --expected-source-sha "${{ needs.identity.outputs.source_sha }}" --expected-version "${{ needs.identity.outputs.candidate_version }}" --write-host-acceptance
+      - name: Record expected unavailable controlled primary-route result
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/bind-scoped-release-source.mjs
+          executable="native-assets/service-lassoctl"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
+          SERVICE_LASSO_NATIVE_ROUTE_RESULT="$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS/inner-route.json" SERVICE_LASSO_CONTROLLED_NATIVE_EXE="$GITHUB_WORKSPACE/$executable" node scripts/run-native-qualification-phase.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --phase route --qualification-status unavailable --expected-exit zero --route-result "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS/inner-route.json" --executable "$executable" -- node --test --test-name-pattern "controlled source admission" tests/native-distribution.test.js
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        if: matrix.target == 'linux-x64'
+        with:
+          repository: service-lasso/service-lasso
+          ref: 9bef20259e5b43f6bcd2e9796da0f35396305425
+          path: core
+          persist-credentials: false
+      - name: Run the separately named direct Linux native CLI to Core journey
+        if: matrix.target == 'linux-x64'
+        shell: bash
+        env:
+          SERVICE_LASSO_CORE_DIR: ${{ github.workspace }}/core
+          SERVICE_LASSO_CORE_EXPECTED_REVISION: 9bef20259e5b43f6bcd2e9796da0f35396305425
+        run: |
+          set -euo pipefail
+          node scripts/bind-scoped-release-source.mjs
+          (cd core && npm ci && npm run build)
+          SERVICE_LASSO_CLI_NATIVE_EXE="$GITHUB_WORKSPACE/native-assets/service-lassoctl" node --test tests/real-core-durable-acceptance.test.js
+      - name: Archive the accepted native bytes without rebuilding
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/bind-scoped-release-source.mjs
+          mkdir -p native-release
+          executable="native-assets/service-lassoctl"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
+          archive="native-release/service-lassoctl-${{ needs.identity.outputs.candidate_version }}-${{ runner.os == 'Windows' && 'win32' || 'linux' }}-x64.tar.gz"
+          node scripts/run-native-qualification-phase.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --phase archive --executable "$executable" --artifact "$archive" -- node scripts/archive-native-candidate-scoped.mjs --directory native-assets --output native-release --expected-event workflow_dispatch --expected-base-sha "" --expected-merge-context-sha "${{ needs.identity.outputs.source_sha }}" --version "${{ needs.identity.outputs.candidate_version }}" --source-sha "${{ needs.identity.outputs.source_sha }}"
+          cp native-assets/provenance.json native-release/provenance.json
+      - name: Retain the explicitly open native qualification receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/bind-scoped-release-source.mjs
+          executable="native-assets/service-lassoctl"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
+          node scripts/verify-native-qualification-open.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --executable "$executable"
+          cp "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS"/*.json native-release/
+      - name: Require genuine separate positive native route originals
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/bind-scoped-release-source.mjs
+          node scripts/produce-native-positive-qualification-scoped.mjs --directory native-assets --receipt-directory native-qualification-receipts-positive --version "${{ needs.identity.outputs.candidate_version }}" --source-sha "${{ needs.identity.outputs.source_sha }}"
+          executable="native-assets/service-lassoctl"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
+          node scripts/close-native-qualification-receipt.mjs --receipt-directory native-qualification-receipts-positive --executable "$executable"
+          node scripts/verify-positive-native-qualification-scoped.mjs --receipt-directory native-qualification-receipts-positive --native-directory native-assets --archive-directory native-release --version "${{ needs.identity.outputs.candidate_version }}" --source-sha "${{ needs.identity.outputs.source_sha }}"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: scoped-native-${{ matrix.target }}-${{ needs.identity.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: native-release/
+          if-no-files-found: error
+          retention-days: 90
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-qualification-receipts-positive-${{ matrix.target }}-${{ needs.identity.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: native-qualification-receipts-positive/
+          if-no-files-found: error
+          retention-days: 90
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-qualification-receipts-negative-${{ matrix.target }}-${{ needs.identity.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: native-qualification-receipts-negative/
+          if-no-files-found: error
+          retention-days: 90
+
+  assemble:
+    needs: [identity, portable, native]
+    name: Assemble and verify the closed frozen candidate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: ${{ needs.identity.outputs.source_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 22.23.2
+          cache: npm
+      - run: node scripts/bind-scoped-release-source.mjs
+      - run: npm ci
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: scoped-portable-${{ needs.identity.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: portable-assets
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: scoped-native-win32-x64-${{ needs.identity.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: native-win32-x64
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: scoped-native-linux-x64-${{ needs.identity.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: native-linux-x64
+      - name: Create the manifest and checksums from accepted bytes only
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/bind-scoped-release-source.mjs
+          test "$(git rev-parse HEAD)" = "${{ needs.identity.outputs.source_sha }}"
+          node scripts/assemble-protected-candidate-scoped.mjs --output release-assets --portable portable-assets --version "${{ needs.identity.outputs.candidate_version }}" --source-sha "${{ needs.identity.outputs.source_sha }}" --native "win32-x64=native-win32-x64" --native "linux-x64=native-linux-x64"
+          node scripts/verify-protected-candidate-scoped.mjs --directory release-assets --version "${{ needs.identity.outputs.candidate_version }}" --source-sha "${{ needs.identity.outputs.source_sha }}"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: scoped-protected-candidate-${{ needs.identity.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-assets/
+          if-no-files-found: error
+          retention-days: 90
+
+  publish:
+    needs: [identity, assemble]
+    name: Preflight and publish exact immutable candidate bytes
+    runs-on: ubuntu-latest
+    environment:
+      name: development-candidate
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          ref: ${{ needs.identity.outputs.source_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 22.23.2
+          cache: npm
+      - run: node scripts/bind-scoped-release-source.mjs
+      - run: npm ci
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: scoped-protected-candidate-${{ needs.identity.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-assets
+      - name: Preflight and write only accepted immutable bytes
+        shell: bash
+        env:
+          DEVELOPMENT_CANDIDATE_TOKEN: ${{ secrets.DEVELOPMENT_CANDIDATE_TOKEN }}
+          DEVELOPMENT_CANDIDATE_RELEASES_IMMUTABLE: ${{ vars.DEVELOPMENT_CANDIDATE_RELEASES_IMMUTABLE }}
+        run: |
+          set -euo pipefail
+          node scripts/bind-scoped-release-source.mjs
+          test "$(git rev-parse HEAD)" = "${{ needs.identity.outputs.source_sha }}"
+          node scripts/publish-protected-candidate-scoped.mjs --directory release-assets --version "${{ needs.identity.outputs.candidate_version }}" --source-sha "${{ needs.identity.outputs.source_sha }}" --repository service-lasso/service-lasso-cli
+
+  scoped-terminal:
+    if: always()
+    needs: [identity, portable, native, assemble, publish]
+    name: Scoped complete current-attempt release gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 22.23.2
+      - name: Require every selected dependency to succeed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node -e 'const n=JSON.parse(process.env.RESULTS); const ids=["identity","portable","native","assemble","publish"]; if(Object.keys(n).length!==ids.length||ids.some(k=>n[k]?.result!=="success"))process.exit(1)'
