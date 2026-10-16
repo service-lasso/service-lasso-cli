@@ -1,9 +1,9 @@
-# CLI39 initial seed A controller selection — proposed, UNRUN
+# CLI39 initial seed A controller selection — source implementation selected, UNRUN
 
-This is the concrete next pre-code selection for the missing A implementation.
+Windows A selection status: approved for source implementation after fresh different intent review of exact8e01c8dc4813893e02303dbc508079d456f1d6ae. This is the selected contract for the missing A implementation.
 It does not qualify the current native prefixes, grant execution, implement the
-controller by describing it, or move the product producer guard. Parent intent
-review precedes this new emitter/controller body. The independent initial exact
+controller by describing it, or move the product producer guard. Intent approval
+does not admit target emitter/controller execution. The independent initial exact
 ADMISSION is external; the fixed controller, recipe and native custody source
 are CLI implementation work. B's existing seed_compile_windows.c is a compiled
 addon consumer and cannot supply the compiler/load occurrence that creates B.
@@ -169,8 +169,9 @@ fork/clone child cannot assume CLR/P/Invoke bookkeeping is a safe native-only
 pre-exec trampoline. The Linux peer still needs its actual fixed noncircular
 initial mechanism, ELF/interpreter/libc/tool/clone/ptrace/pidfd ownership and full
 source build recipe. This is OUR missing source, not an external factory forever.
-No suitable complete Linux A mechanism has yet been demonstrated by this source
-assessment; that unresolved choice must be made concretely before its body.
+The separate concrete proposal is CLI39-INITIAL-SEED-LINUX-TRAMPOLINE-OCT16.md;
+independent intent review must precede that new mechanism's body. It supplies no
+currently implemented or qualified Linux A factory.
 
 The exact admitted initial engine/native/source/tool/case/capacity/deadline tuple
 is a true external input. Implementing A's controller/recipe/whole finite profile,
