@@ -106,8 +106,8 @@ function policies() {
     environment: { name: 'development-candidate', protection_rules: [{ type: 'wait_timer', wait_timer: 1 }],
       deployment_branch_policy: { custom_branch_policies: true, protected_branches: false } }, branchPolicies: { branch_policies: [{ name: 'develop' }] } };
 }
-function provider(held, { changePolicy, run = runEvidence(), ci = ciEvidence(), collision = false, wrongBytes = false, assetSizeDelta = 0, afterUpload } = {}) {
-  let rounds = 0, draft = true; const calls = [], uploads = new Map();
+function provider(held, { changePolicy, changeTag, changeRules, run = runEvidence(), ci = ciEvidence(), collision = false, wrongBytes = false, assetSizeDelta = 0, afterUpload } = {}) {
+  let rounds = 0, draft = true, refBorn = collision, refReads = 0; const calls = [], uploads = new Map();
   const assets = () => [...held].map(([name, bytes], index) => ({ id: index + 1, name, size: bytes.length + assetSizeDelta,
     browser_download_url: `https://github.com/service-lasso/service-lasso-cli/releases/download/${tag}/${name}` }));
   const release = () => ({ id: 23, tag_name: tag, target_commitish: sourceSha, draft, prerelease: true, immutable: !draft, assets: assets() });
@@ -120,6 +120,12 @@ function provider(held, { changePolicy, run = runEvidence(), ci = ciEvidence(), 
     if (path.endsWith('/branches/develop/protection')) return json(policy.protection);
     if (path.endsWith('/environments/development-candidate')) return json(policy.environment);
     if (path.endsWith('/deployment-branch-policies')) return json(policy.branchPolicies);
+    if (path.endsWith('/rulesets')) return json([{ id: 71 }]);
+    if (path.endsWith('/rulesets/71')) {
+      const rule = { id: 71, target: 'tag', enforcement: 'active', bypass_actors: [],
+        conditions: { ref_name: { include: ['refs/tags/cli-v*-candidate-*'], exclude: [] } }, rules: [{ type: 'update' }, { type: 'deletion' }] };
+      changeRules?.(rule, rounds); return json(rule);
+    }
     if (path.endsWith('/actions/workflows/ci.yml/runs')) return json({ total_count: 1, workflow_runs: [ci.listed] });
     if (path.endsWith('/actions/runs/53')) return json(ci.latest);
     if (path.endsWith('/actions/runs/53/attempts/2')) return json(ci.attempt);
@@ -128,10 +134,14 @@ function provider(held, { changePolicy, run = runEvidence(), ci = ciEvidence(), 
     if (path.endsWith(`/actions/runs/${workflowRun.id}/attempts/1`)) return json(run.attempt);
     if (path.endsWith('/attempts/1/jobs')) return json(run.jobs);
     if (method === 'GET' && path.includes('/releases/tags/')) { if (collision) { draft = false; return json(release()); } return json({}, 404); }
-    if (method === 'GET' && path.includes('/git/ref/tags/')) return collision ? json({ object: { type: 'tag', sha: 'a'.repeat(40) } }) : json({}, 404);
-    if (method === 'GET' && path.endsWith(`/git/tags/${'a'.repeat(40)}`)) return json({ object: { type: 'commit', sha: sourceSha } });
+    if (method === 'GET' && path.includes('/git/ref/tags/')) {
+      if (!refBorn) return json({}, 404);
+      const value = { ref: `refs/tags/${tag}`, object: { type: 'tag', sha: 'a'.repeat(40) } };
+      changeTag?.(value, { reads: ++refReads, uploads: uploads.size, published: !draft }); return json(value);
+    }
+    if (method === 'GET' && path.endsWith(`/git/tags/${'a'.repeat(40)}`)) return json({ sha: 'a'.repeat(40), tag, object: { type: 'commit', sha: sourceSha } });
     if (method === 'POST' && path.endsWith('/git/tags')) return json({ sha: 'a'.repeat(40) }, 201);
-    if (method === 'POST' && path.endsWith('/git/refs')) return json({}, 201);
+    if (method === 'POST' && path.endsWith('/git/refs')) { refBorn = true; return json({}, 201); }
     if (method === 'POST' && path.endsWith('/releases')) return json({ id: 23, tag_name: tag, target_commitish: sourceSha, draft: true, prerelease: true, assets: [] }, 201);
     if (method === 'POST' && path.endsWith('/assets')) { uploads.set(new URL(url).searchParams.get('name'), options.body); await afterUpload?.(uploads.size); return json({}, 201); }
     if (method === 'GET' && path.endsWith('/releases/23')) return json(release());
@@ -249,6 +259,31 @@ test('only exact immutable same-byte collision is readback-only; corrupt public 
   assert.equal(exact.calls.filter(call => call.options.method !== 'GET').length, 0);
   const wrong = provider(held, { collision: true, wrongBytes: true }); await assert.rejects(publish(f.output, wrong));
   assert.equal(wrong.calls.filter(call => call.options.method !== 'GET').length, 0);
+});
+
+test('enforced no-bypass update and deletion policy is mandatory before the first mutation', async t => {
+  const f = await fixture(t), { held } = await verifyCandidateDirectory(f.output, version, sourceSha);
+  for (const changeRules of [rule => rule.enforcement = 'evaluate', rule => rule.target = 'branch',
+    rule => rule.bypass_actors.push({ actor_id: 1, actor_type: 'Integration', bypass_mode: 'always' }),
+    rule => rule.rules.pop(), rule => rule.conditions.ref_name.exclude.push(`refs/tags/${tag}`),
+    rule => rule.conditions.ref_name.include = ['refs/tags/other-*']]) {
+    const adapter = provider(held, { changeRules }); await assert.rejects(publish(f.output, adapter));
+    assert.equal(adapter.calls.filter(call => call.options.method !== 'GET').length, 0);
+  }
+});
+
+test('actual ref rebinding after creation, during uploads and after publication never reports success', async t => {
+  const f = await fixture(t), { held } = await verifyCandidateDirectory(f.output, version, sourceSha);
+  for (const cut of [state => state.reads === 1, state => state.uploads >= 1, state => state.published]) {
+    const adapter = provider(held, { changeTag: (value, state) => {
+      if (cut(state)) value.object.sha = 'b'.repeat(40); // even a different tag object for the SAME commit is forbidden
+    } });
+    await assert.rejects(publish(f.output, adapter), /reference changed/u);
+    if (!adapter.calls.some(call => call.options.method === 'PATCH')) assert.ok(adapter.uploads.size < 8);
+  }
+  const weakened = provider(held, { changeRules: (rule, round) => { if (round >= 5) rule.bypass_actors.push({ actor_id: 1 }); } });
+  await assert.rejects(publish(f.output, weakened));
+  assert.equal(weakened.calls.filter(call => call.options.method === 'PATCH').length, 0);
 });
 
 async function positiveStructuralFixture(f, target) {
