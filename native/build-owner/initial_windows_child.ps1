@@ -1,5 +1,12 @@
 # Fixed stopped-root child identity under the SAME A owner. This is actual
 # CreateProcessW correspondence, not a child-local source/ROOT issuer.
+function Test-SlcliInitialWindowsChildParentIdentity {
+    param([UInt32]$ExpectedChild,[UInt32]$ExpectedParent,[Int64]$ActualChild,[Int64]$ActualParent)
+    return ($ExpectedChild -ne 0 -and $ExpectedParent -ne 0 -and
+        $ActualChild -gt 0 -and $ActualParent -gt 0 -and $ActualChild -le [UInt32]::MaxValue -and
+        $ActualParent -le [UInt32]::MaxValue -and $ActualChild -eq $ExpectedChild -and $ActualParent -eq $ExpectedParent)
+}
+
 function New-SlcliInitialWindowsChild {
     param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Birth)
     if ($null -ne $Birth.Birth -or $null -ne $Birth.Child -or -not $Owner.Primary.Complete) {
@@ -8,13 +15,16 @@ function New-SlcliInitialWindowsChild {
     $child=[pscustomobject]@{ Birth=$Birth; Primary=$Owner.Primary; Event=$null;
         EventFile=$null; EventProcess=$null; EventThread=$null;
         ProcessIds=[object[]]::new(2); ThreadIds=[object[]]::new(2); ThreadProcessIds=[object[]]::new(2);
-        ProcessTimes=[object[]]::new(2); Times=$null; TokenBuffer=$null; Token=[IntPtr]::Zero;
+        ProcessTimes=[object[]]::new(2); Times=$null; Basic=$null; BasicBytes=$null; BasicCall=$null;
+        TokenBuffer=$null; Token=[IntPtr]::Zero;
         TokenOpen=$null; TokenReference=$null; User=$null; Statistics=$null; Recheck=$null; Lengths=$null;
         UserCall=$null; StatisticsCall=$null; RecheckCall=$null; SidValid=$null; SidLength=$null;
         Sid=[byte[]]::new($Owner.Primary.Sid.Length); Complete=$false }
     $Birth.Child=$child
     Register-SlcliInitialWindowsCapture -Owner $Owner -Original $child
     $child.Times=Get-SlcliInitialWindowsBuffer -Owner $Owner -Bytes 64 -Alignment 8
+    $child.Basic=Get-SlcliInitialWindowsBuffer -Owner $Owner -Bytes 48 -Alignment 8
+    $child.BasicBytes=Get-SlcliInitialWindowsBuffer -Owner $Owner -Bytes 4 -Alignment 4
     $child.TokenBuffer=Get-SlcliInitialWindowsBuffer -Owner $Owner -Bytes 8 -Alignment 8
     $child.User=Get-SlcliInitialWindowsBuffer -Owner $Owner -Bytes 88 -Alignment 8
     $child.Statistics=Get-SlcliInitialWindowsBuffer -Owner $Owner -Bytes 56 -Alignment 8
@@ -59,6 +69,14 @@ function Read-SlcliInitialWindowsChild {
     }
     if ([Runtime.InteropServices.Marshal]::ReadInt64($child.Times.Pointer) -ne
         [Runtime.InteropServices.Marshal]::ReadInt64($child.Times.Pointer,32)) { throw 'Initial child creation lifetime differs.' }
+    $child.BasicCall=Invoke-SlcliInitialWindowsCall -Owner $Owner -Name 'NtQueryInformationProcess' -Arguments @(
+        $Birth.ProcessReference.Handle,[UInt32]0,$child.Basic.Pointer,[UInt32]48,$child.BasicBytes.Pointer)
+    if ($child.BasicCall.Raw -ne 0 -or [Runtime.InteropServices.Marshal]::ReadInt32($child.BasicBytes.Pointer) -ne 48 -or
+        -not (Test-SlcliInitialWindowsChildParentIdentity -ExpectedChild $Birth.Pid -ExpectedParent ([UInt32]$Owner.Primary.ProcessId.Raw) -ActualChild (
+            [Runtime.InteropServices.Marshal]::ReadIntPtr($child.Basic.Pointer,32).ToInt64()) -ActualParent (
+            [Runtime.InteropServices.Marshal]::ReadIntPtr($child.Basic.Pointer,40).ToInt64()))) {
+        throw 'Initial actual native child/issuing-parent process relation differs.'
+    }
     $child.TokenOpen=Invoke-SlcliInitialWindowsCall -Owner $Owner -Name 'OpenProcessToken' -Arguments @(
         $Birth.ProcessReference.Handle,[UInt32]8,$child.TokenBuffer.Pointer)
     $child.Token=[Runtime.InteropServices.Marshal]::ReadIntPtr($child.TokenBuffer.Pointer)
