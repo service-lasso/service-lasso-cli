@@ -145,6 +145,7 @@ function Start-SlcliInitialWindowsFixedCompile {
     $null=Read-SlcliInitialWindowsModules -Owner $Owner -Birth $original
     $null=Read-SlcliInitialWindowsEventFile -Owner $Owner -Birth $original
     $null=Read-SlcliInitialWindowsRemoteImage -Owner $Owner -Birth $original
+    $null=Read-SlcliInitialWindowsModuleImages -Owner $Owner -Birth $original
     return $original
 }
 

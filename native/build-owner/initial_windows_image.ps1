@@ -91,14 +91,23 @@ function New-SlcliInitialWindowsRemoteImage {
     param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Birth)
     if ($null -ne $Birth.Birth -or $null -ne $Birth.RemoteImage -or -not $Owner.InitialGeometry.Complete -or
         $Owner.Source.CompilerImageLimit -isnot [Int32]) { throw 'Initial remote image preparation must precede birth.' }
-    $geometry=Get-SlcliInitialWindowsPeGeometry -Bytes $Owner.Compiler.ManagedBody -PageBytes $Owner.InitialGeometry.PageBytes -ImageLimit $Owner.Source.CompilerImageLimit
+    $Birth.RemoteImage=New-SlcliInitialWindowsImageBacking -Owner $Owner -Birth $Birth -Held $Owner.Compiler -ImageLimit $Owner.Source.CompilerImageLimit
+    return $Birth.RemoteImage
+}
+
+function New-SlcliInitialWindowsImageBacking {
+    param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Birth,
+        [Parameter(Mandatory)][object]$Held,[Parameter(Mandatory)][Int32]$ImageLimit)
+    if ($null -ne $Birth.Birth -or -not $Held.Complete -or -not $Owner.InitialGeometry.Complete) {
+        throw 'Actual selected source image backing must precede birth.'
+    }
+    $geometry=Get-SlcliInitialWindowsPeGeometry -Bytes $Held.ManagedBody -PageBytes $Owner.InitialGeometry.PageBytes -ImageLimit $ImageLimit
     if ($geometry.Capacity -gt [Int32]::MaxValue/64) { throw 'Initial remote row budget overflows.' }
-    $original=[pscustomobject]@{ Birth=$Birth; Held=$Owner.Compiler; Geometry=$geometry; EventImage=$null;
+    $original=[pscustomobject]@{ Birth=$Birth; Held=$Held; Geometry=$geometry; EventImage=$null; Module=$null;
         Body=$null; Controls=$null; Rows=[object[]]::new($geometry.Capacity); Used=0; Base=[Int64]0; Cursor=0;
         Expected=[byte[]]::new($geometry.ImageBytes); Observed=[byte[]]::new($geometry.ImageBytes);
         RelocationSeen=[byte[]]::new([Int32][Math]::Floor(([Int64]$geometry.ImageBytes+7)/8));
         RelocationCursor=0; Relocations=0; Compared=0; Thread=$null; BeforeCompare=$null; AfterCompare=$null; Complete=$false }
-    $Birth.RemoteImage=$original
     Register-SlcliInitialWindowsCapture -Owner $Owner -Original $original
     $original.Body=Get-SlcliInitialWindowsBuffer -Owner $Owner -Bytes $geometry.ImageBytes
     $original.Controls=Get-SlcliInitialWindowsBuffer -Owner $Owner -Bytes ($geometry.Capacity*64) -Alignment 8
@@ -113,7 +122,35 @@ function Read-SlcliInitialWindowsRemoteImage {
         throw 'Initial remote image must consume SAME stopped event-file occurrence.'
     }
     $original.EventImage=$image
-    $original.Base=[Runtime.InteropServices.Marshal]::ReadIntPtr($image.Event.Pointer,40).ToInt64()
+    return (Read-SlcliInitialWindowsImageRegions -Owner $Owner -Original $original)
+}
+
+function Read-SlcliInitialWindowsImageRegions {
+    param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Original)
+    $original=$Original;$Birth=$original.Birth
+    if ($original.Complete -or $original.Used -ne 0 -or $original.Cursor -ne 0 -or
+        $null -eq $Birth.PendingEvent -or $null -ne $Birth.PendingEvent.Continue -or
+        -not [Object]::ReferenceEquals($Birth.PendingEvent,$Birth.Child.Event) -or -not $Birth.Child.Complete) {
+        throw 'Actual selected mapping must precede any native event continuation.'
+    }
+    if ($null -ne $original.EventImage) {
+        if ($null -ne $original.Module -or -not $original.EventImage.Complete -or
+            -not [Object]::ReferenceEquals($original.EventImage.Event,$Birth.PendingEvent) -or
+            -not [Object]::ReferenceEquals($original.Held,$Owner.Compiler)) { throw 'Actual root image occurrence mismatch.' }
+        $original.Base=[Runtime.InteropServices.Marshal]::ReadIntPtr($Birth.PendingEvent.Pointer,40).ToInt64()
+    } else {
+        $module=$original.Module;$walk=$Birth.Modules;$found=$false
+        if ($null -eq $module -or -not $walk.Complete -or -not $module.Path.Complete -or
+            -not [Object]::ReferenceEquals($module.Source.Held,$original.Held) -or
+            -not [Object]::ReferenceEquals($module.Mapping,$original)) { throw 'Actual module/source mapping occurrence mismatch.' }
+        for ($index=0;$index -lt $walk.ImagesUsed;$index++) {
+            if ([Object]::ReferenceEquals($walk.Images[$index],$module)) { $found=$true;break }
+        }
+        if (-not $found -or $module.Region.Query.Raw -ne 48 -or $module.Region.Allocation -ne $module.Base) {
+            throw 'Mapped base is not an actual original of this native child walk.'
+        }
+        $original.Base=$module.Base
+    }
     $geometry=$original.Geometry
     if ($original.Base -le 0 -or $original.Base%$geometry.PageBytes -ne 0 -or
         $original.Base -gt [Int64]::MaxValue-$geometry.ImageBytes) { throw 'Initial actual remote image base invalid.' }

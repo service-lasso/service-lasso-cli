@@ -56,16 +56,24 @@ function New-SlcliInitialWindowsModuleWalk {
     $capacity=$Owner.Source.ModuleScanCapacity
     if ($null -ne $Birth.Birth -or $null -ne $Birth.Modules -or -not $Owner.ModuleSources.Complete -or
         -not $Owner.InitialGeometry.Complete -or $capacity -isnot [Int32] -or $capacity -le 0 -or
-        $capacity -gt [Int32]::MaxValue/48) { throw 'Initial complete module walk backing must precede birth.' }
+        $capacity -gt [Int32]::MaxValue/48 -or $Owner.Source.ToolModuleImageLimit -isnot [Int32]) {
+        throw 'Initial complete module walk backing must precede birth.'
+    }
     $original=[pscustomobject]@{ Birth=$Birth; Sources=$Owner.ModuleSources; Thread=$null; Controls=$null;
         Rows=[object[]]::new($capacity); Used=0; Cursor=$Owner.InitialGeometry.Minimum;
-        Images=[object[]]::new($Owner.ModuleSources.Rows.Length); ImagesUsed=0; Started=$false; Complete=$false }
+        Images=[object[]]::new($Owner.ModuleSources.Rows.Length); ImagesUsed=0; Started=$false; Complete=$false;
+        SourceMappings=[object[]]::new($Owner.ModuleSources.Rows.Length); ImageBytesComplete=$false }
     $Birth.Modules=$original
     Register-SlcliInitialWindowsCapture -Owner $Owner -Original $original
     $original.Controls=Get-SlcliInitialWindowsBuffer -Owner $Owner -Bytes ($capacity*48) -Alignment 8
     for ($index=0;$index -lt $original.Images.Length;$index++) {
         $original.Images[$index]=[pscustomobject]@{ Region=$null; Base=[Int64]0; Path=(New-SlcliInitialWindowsModulePath -Owner $Owner);
-            Source=$null; Complete=$false }
+            Source=$null; Mapping=$null; Complete=$false }
+        $source=$Owner.ModuleSources.Rows[$index]
+        $mapping=if ([Object]::ReferenceEquals($source.Held,$Owner.Compiler)) {$Birth.RemoteImage} else {
+            New-SlcliInitialWindowsImageBacking -Owner $Owner -Birth $Birth -Held $source.Held -ImageLimit $Owner.Source.ToolModuleImageLimit
+        }
+        $original.SourceMappings[$index]=[pscustomobject]@{ Source=$source; Mapping=$mapping }
     }
     return $original
 }
@@ -120,6 +128,10 @@ function Read-SlcliInitialWindowsModules {
                     }
                 }
                 if ($null -eq $seen.Source) { throw 'Initial actual mapped image missing from complete selected source roster.' }
+                foreach ($sourceMapping in $original.SourceMappings) {
+                    if ([Object]::ReferenceEquals($sourceMapping.Source,$seen.Source)) { $seen.Mapping=$sourceMapping.Mapping;break }
+                }
+                if ($null -eq $seen.Mapping) { throw 'Actual selected module has no prebirth image backing.' }
                 for ($index=0;$index -lt $original.ImagesUsed-1;$index++) {
                     if ([Object]::ReferenceEquals($original.Images[$index].Source,$seen.Source)) {
                         throw 'Initial duplicate loaded occurrence exceeds selected one-image source schedule.'
@@ -142,4 +154,31 @@ function Read-SlcliInitialWindowsModules {
     # full bytes/imports/loader source and every later load event remain required.
     $original.Complete=$true
     return $original
+}
+
+function Read-SlcliInitialWindowsModuleImages {
+    param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Birth)
+    $walk=$Birth.Modules
+    if ($null -eq $walk -or -not $walk.Complete -or $walk.ImageBytesComplete -or
+        -not $Birth.RemoteImage.Complete -or $null -ne $Birth.PendingEvent.Continue -or
+        -not [Object]::ReferenceEquals($Birth.PendingEvent,$Birth.Child.Event)) {
+        throw 'Actual loaded image bytes require SAME stopped root and complete finite native scan.'
+    }
+    for ($index=0;$index -lt $walk.ImagesUsed;$index++) {
+        $module=$walk.Images[$index]
+        if ([Object]::ReferenceEquals($module.Source.Held,$Owner.Compiler)) {
+            if (-not [Object]::ReferenceEquals($module.Mapping,$Birth.RemoteImage) -or
+                $module.Base -ne $Birth.RemoteImage.Base) { throw 'Root scan/event mapping original changed.' }
+            continue
+        }
+        if ($null -ne $module.Mapping.Module -or $null -ne $module.Mapping.EventImage -or $module.Mapping.Complete) {
+            throw 'Initial module byte backing already consumed.'
+        }
+        $module.Mapping.Module=$module
+        $null=Read-SlcliInitialWindowsImageRegions -Owner $Owner -Original $module.Mapping
+    }
+    # This marker means strict source-relocated bytes only, never complete
+    # native loader/import/state authority or permission to continue an event.
+    $walk.ImageBytesComplete=$true
+    return $walk
 }
