@@ -92,6 +92,7 @@ function Start-SlcliInitialWindowsFixedCompile {
         Pid=[UInt32]0; Tid=[UInt32]0; NaturalExit=$null; Complete=$false }
     $unit.Birth=$original;$plan.Active=$original
     Register-SlcliInitialWindowsCapture -Owner $Owner -Original $original
+    $null=New-SlcliInitialWindowsExitCapture -Owner $Owner -Birth $original
     $null=New-SlcliInitialWindowsStreams -Owner $Owner -Birth $original
     $null=New-SlcliInitialWindowsChild -Owner $Owner -Birth $original
     $null=New-SlcliInitialWindowsEventFile -Owner $Owner -Birth $original
@@ -160,6 +161,82 @@ function Start-SlcliInitialWindowsFixedCompile {
     $null=Read-SlcliInitialWindowsTlsRelations -Owner $Owner -Birth $original
     $null=Complete-SlcliInitialWindowsImageCorrespondence -Owner $Owner -Birth $original
     return $original
+}
+
+# Fixed terminal lifecycle observation, not source qualification or publication.
+# This storage exists before CreateProcessW, including failed duplicate/wait rows.
+function New-SlcliInitialWindowsExitCapture {
+    param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Birth)
+    if ($null -ne $Birth.Birth -or $null -ne $Birth.NaturalExit) { throw 'Initial terminal storage must precede birth.' }
+    $exit=[pscustomobject]@{ Birth=$Birth; Event=$null; Output=$null; Self=$null;
+        Duplicate=$null; Reference=$null; ProcessId=$null; Thread=$null;
+        Continue=$null; Waits=[object[]]::new($Owner.Source.EventCapacity); WaitsUsed=0;
+        Signal=$null; CodeCall=$null; Code=[UInt32]0; EventCode=[UInt32]0;
+        SystemProcessRelease=$null; SystemThreadRelease=$null; Complete=$false }
+    $Birth.NaturalExit=$exit
+    Register-SlcliInitialWindowsCapture -Owner $Owner -Original $exit
+    $exit.Output=Get-SlcliInitialWindowsBuffer -Owner $Owner -Bytes 16 -Alignment 8
+    return $exit
+}
+
+function Read-SlcliInitialWindowsRootExit {
+    param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Birth)
+    $exit=$Birth.NaturalExit;$event=$Birth.PendingEvent
+    if ($null -eq $exit -or -not [Object]::ReferenceEquals($exit.Birth,$Birth) -or
+        $null -ne $exit.Event -or $null -eq $event -or $event.Code -ne 5 -or
+        $event.Pid -ne $Birth.Pid -or $null -ne $event.Continue -or
+        $null -eq $Birth.Child -or -not $Birth.Child.Complete) {
+        throw 'Initial actual root exit event/custody mismatch.'
+    }
+    $exit.Event=$event
+    $exit.EventCode=[UInt32]([Int64][Runtime.InteropServices.Marshal]::ReadInt32($event.Pointer,16) -band [Int64]0xffffffff)
+    $exit.Thread=Invoke-SlcliInitialWindowsCall -Owner $Owner -Name 'GetCurrentThreadId' -Arguments @()
+    if ($exit.Thread.Raw -ne $Owner.Primary.ThreadId.Raw) { throw 'Initial terminal continuation left creator thread.' }
+    # The debugger owns event process/thread references. Own a DISTINCT native
+    # duplicate before ContinueDebugEvent can cause the system to close those.
+    $exit.Self=Invoke-SlcliInitialWindowsCall -Owner $Owner -Name 'GetCurrentProcess' -Arguments @()
+    $exit.Duplicate=Invoke-SlcliInitialWindowsCall -Owner $Owner -Name 'DuplicateHandle' -Arguments @(
+        $exit.Self.Raw,$Birth.ProcessReference.Handle,$exit.Self.Raw,$exit.Output.Pointer,
+        [UInt32]0x00101000,[Int32]0,[UInt32]0)
+    $handle=[Runtime.InteropServices.Marshal]::ReadIntPtr($exit.Output.Pointer)
+    $exit.Reference=Register-SlcliInitialWindowsHandle -Owner $Owner -Row $exit.Duplicate -Handle $handle -Role 'RootKernelCompletionDuplicate'
+    if ($exit.Duplicate.Raw -eq 0 -or $handle.ToInt64() -in @(0,-1)) {
+        $Owner.Pending=$true;throw 'Initial terminal duplicate absent; event remains stopped.'
+    }
+    $exit.ProcessId=Invoke-SlcliInitialWindowsCall -Owner $Owner -Name 'GetProcessId' -Arguments @($handle)
+    if ($exit.ProcessId.Raw -ne $Birth.Pid) { throw 'Initial terminal duplicate names a different process.' }
+    $exit.Continue=Invoke-SlcliInitialWindowsCall -Owner $Owner -Name 'ContinueDebugEvent' -Arguments @(
+        $event.Pid,$event.Tid,[UInt32]0x00010002)
+    $event.Continue=$exit.Continue
+    if ($exit.Continue.Raw -eq 0) { $Owner.Pending=$true;throw 'Initial terminal continuation failed/unresolved.' }
+    # These are system release observations, NOT CloseHandle occurrences. Keep
+    # creator-return aliases, hFile, duplicates and other thread rows separate.
+    $exit.SystemProcessRelease=$exit.Continue
+    $exit.SystemThreadRelease=$exit.Continue
+    $event.TerminalAliasesReleased=$true
+    $Birth.PendingEvent=$null
+    while ($exit.WaitsUsed -lt $exit.Waits.Length) {
+        $remaining=$Owner.Expires-$Owner.PriorTick
+        $whole=[Numerics.BigInteger]::Divide(([Numerics.BigInteger]$remaining+999999),[Numerics.BigInteger]1000000)
+        $milliseconds=[UInt32][Math]::Min([Int64]$whole,[Int64]$Owner.Source.WaitQuantumMilliseconds)
+        if ($milliseconds -eq 0) { $Owner.Pending=$true;throw 'Initial kernel completion has no original deadline remaining.' }
+        $wait=Invoke-SlcliInitialWindowsCall -Owner $Owner -Name 'WaitForSingleObject' -Arguments @($handle,$milliseconds)
+        $exit.Waits[$exit.WaitsUsed]=$wait;$exit.WaitsUsed++
+        if ($wait.Raw -eq 0) { $exit.Signal=$wait;break }
+        if ($wait.Raw -ne 258) { $Owner.Pending=$true;throw 'Initial kernel completion wait failed/unresolved.' }
+    }
+    if ($null -eq $exit.Signal) { $Owner.Pending=$true;throw 'Initial kernel completion finite wait roster exhausted.' }
+    $exit.CodeCall=Invoke-SlcliInitialWindowsCall -Owner $Owner -Name 'GetExitCodeProcess' -Arguments @(
+        $handle,[IntPtr]::Add($exit.Output.Pointer,8))
+    $exit.Code=[UInt32]([Int64][Runtime.InteropServices.Marshal]::ReadInt32($exit.Output.Pointer,8) -band [Int64]0xffffffff)
+    if ($exit.CodeCall.Raw -eq 0 -or $exit.Code -ne $exit.EventCode) {
+        $Owner.Pending=$true;throw 'Initial signaled process/event exit code mismatch.'
+    }
+    # 259 is an ordinary possible exit code AFTER real signaling. This says
+    # nothing about descendants, stream EOF, file borrowers or successful build.
+    $exit.Reference.LastBorrower=$exit.CodeCall
+    $exit.Complete=$true
+    return $exit
 }
 
 function Wait-SlcliInitialWindowsEvent {

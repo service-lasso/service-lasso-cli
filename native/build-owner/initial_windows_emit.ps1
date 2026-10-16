@@ -61,6 +61,7 @@ function New-SlcliInitialWindowsNative {
         @('kernel32.dll','GetProcessIdOfThread',$u,[Type[]]@($pointer),$true),
         @('kernel32.dll','DuplicateHandle',$b,[Type[]]@($pointer,$pointer,$pointer,$pointer,$u,$b,$u),$true),
         @('kernel32.dll','GetExitCodeProcess',$b,[Type[]]@($pointer,$pointer),$true),
+        @('kernel32.dll','WaitForSingleObject',$u,[Type[]]@($pointer,$u),$true),
         @('kernel32.dll','GetExitCodeThread',$b,[Type[]]@($pointer,$pointer),$true),
         @('kernel32.dll','GetModuleHandleExW',$b,[Type[]]@($u,$pointer,$pointer),$true),
         @('kernel32.dll','GetModuleFileNameW',$u,[Type[]]@($pointer,$pointer,$u),$true),
