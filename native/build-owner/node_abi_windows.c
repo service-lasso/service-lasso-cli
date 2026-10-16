@@ -127,6 +127,7 @@ int slcli_build_node_abi_windows_capture_original(struct slcli_build_node_abi_wi
  struct slcli_build_bootstrap_windows *b,const struct slcli_build_node_abi_windows_source *s) {
  size_t i;uint64_t prior;
  if(!c||!b||!s||!b->completed||b->failed||b->memory_original.failed||
+ !slcli_build_principal_windows_issuing_relation_original(b->effective_original,b->primary_original)||
  !slcli_arena_live_block(&b->arena_original,c,sizeof(*c))||!zero(c,sizeof(*c))||
  !apart(c,sizeof(*c),b,sizeof(*b))||!slcli_build_node_abi_windows_source_output_away_original(s,c,sizeof(*c))||
  !slcli_build_held_file_windows_output_away_original(b->compiler_original,c,sizeof(*c)))return 0;
@@ -143,7 +144,7 @@ int slcli_build_node_abi_windows_capture_original(struct slcli_build_node_abi_wi
  prior=b->prior_tick;
  for(i=0;i<SLCLI_BUILD_NODE_INPUTS;i++) {
  struct slcli_build_node_input_windows *row=&c->inputs[i];
- if(!slcli_build_held_file_windows_capture_original(&row->held_original,b->primary_original,&s->members[i],
+ if(!slcli_build_held_file_windows_capture_original(&row->held_original,b->effective_original,&s->members[i],
  row->ancestors_original,row->reads_original,row->body_original)||
  row->ancestors_original[0].call.before.tick<prior||row->held_original.finish.tick<prior)return deny(c,b);
  prior=row->held_original.finish.tick;c->inputs_acquired++;

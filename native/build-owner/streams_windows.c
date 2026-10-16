@@ -39,6 +39,9 @@ int slcli_build_streams_windows_begin_original(struct slcli_build_streams_window
  !slcli_build_windows_command_birth_matches_original(b)||prior->tick<b->finish.tick||
  !slcli_build_windows_command_output_away_original(b,c,sizeof(*c)))return 0;
  c->birth_original=b;c->started=1;c->prior_tick=prior->tick;c->expires=b->expires;
+ /* Birth replay checked this exact successful close BEFORE CreateProcessW.
+  * The fixed schedule makes no WriteFile call and inherits only the reader. */
+ c->stdin_writer_close_original=&b->stdin_writer_close;
  c->streams_original[0].reader_original=b->stdout_original.read_original;
  c->streams_original[1].reader_original=b->stderr_original.read_original;
  r=&c->issuing_thread;if(!begin(c,r))return deny(c);r->called=1;r->raw=GetCurrentThreadId();r->returned=1;
@@ -55,7 +58,8 @@ int slcli_build_streams_windows_begin_original(struct slcli_build_streams_window
 }
 int slcli_build_streams_windows_poll_original(struct slcli_build_streams_windows *c) {
  struct slcli_build_windows_call *call;struct slcli_native_clock *finish;size_t i;
- if(!c||!c->prepared||!c->started||c->failed||c->streams_complete||c->parent_ends_closed!=3)return 0;
+ if(!c||!c->prepared||!c->started||c->failed||c->streams_complete||c->parent_ends_closed!=3||
+ c->stdin_writer_close_original!=&c->birth_original->stdin_writer_close)return 0;
  if(c->polls_used>=c->poll_capacity)return deny(c);
  call=&c->poll_threads_original[c->polls_used];finish=&c->poll_finishes_original[c->polls_used++];
  if(!begin(c,call))return deny(c);call->called=1;call->raw=GetCurrentThreadId();call->returned=1;

@@ -24,8 +24,7 @@ static int shape(const struct slcli_build_windows_command *c,
  const struct slcli_build_windows_command_source *s,WCHAR *command,void *attributes) {
  const void *outputs[3];size_t sizes[3],i,j;
  if(!c||!s||!s->executable_original||!s->process_primary_original||
- !s->process_primary_original->process_primary_only||
- s->executable_original->principal_original!=s->process_primary_original->issuing_effective_original||
+ !slcli_build_principal_windows_issuing_relation_original(s->executable_original->principal_original,s->process_primary_original)||
  !span(s->command_original,s->command_units,0)||s->command_units>32767||s->command_units<2||
  !span(s->environment_original,s->environment_units,1)||!span(s->cwd_original,s->cwd_units,0)||
  s->cwd_units<4||!((s->cwd_original[0]>='A'&&s->cwd_original[0]<='Z')||

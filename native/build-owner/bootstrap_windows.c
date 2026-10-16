@@ -130,7 +130,8 @@ int slcli_build_bootstrap_windows_acquire_compiler_original(
  prior=&c->finish;
  if(!slcli_build_principal_windows_capture_original(c->effective_original,s->effective_original,s->origin_original,prior,s->expires)||
  !slcli_build_process_primary_windows_capture_original(c->primary_original,c->effective_original,s->primary_original)||
- !slcli_build_held_file_windows_capture_original(c->compiler_original,c->primary_original,m,
+ !slcli_build_principal_windows_issuing_relation_original(c->effective_original,c->primary_original)||
+ !slcli_build_held_file_windows_capture_original(c->compiler_original,c->effective_original,m,
  c->compiler_ancestors_original,c->compiler_reads_original,c->compiler_body_original))return deny(c);
  c->prior_tick=c->compiler_original->finish.tick;c->completed=1;c->failed=0;return 1;
 }

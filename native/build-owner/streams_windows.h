@@ -18,6 +18,9 @@ struct slcli_build_stream_windows {
 };
 struct slcli_build_streams_windows {
  const struct slcli_build_windows_command *birth_original;
+ /* Actual one-use prebirth writer close for the fixed EMPTY input schedule.
+  * This is input producer closure, never observed child consumption/exit. */
+ const struct slcli_build_windows_call *stdin_writer_close_original;
  struct slcli_build_windows_call issuing_thread,parent_child_ends[3];
  struct slcli_build_stream_windows streams_original[2];
  struct slcli_build_windows_call *poll_threads_original;

@@ -1,5 +1,10 @@
 #include "principal_windows.h"
 #if defined(_WIN32)
+int slcli_build_principal_windows_issuing_relation_original(
+ const struct slcli_build_principal_windows *effective,const struct slcli_build_principal_windows *primary) {
+ return effective&&primary&&effective!=primary&&!effective->process_primary_only&&
+ primary->process_primary_only==1&&primary->issuing_effective_original==effective;
+}
 static int apart(const void *a,size_t n,const void *b,size_t m) {
  uintptr_t x=(uintptr_t)a,y=(uintptr_t)b;
  return a&&b&&n&&m&&x<=UINTPTR_MAX-n&&y<=UINTPTR_MAX-m&&(x+n<=y||y+m<=x);

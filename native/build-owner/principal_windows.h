@@ -43,6 +43,9 @@ int slcli_build_principal_windows_capture_original(struct slcli_build_principal_
 int slcli_build_process_primary_windows_capture_original(struct slcli_build_principal_windows *,
  const struct slcli_build_principal_windows *,const struct slcli_bq_expected_principal *);
 int slcli_build_principal_windows_matches_original(const struct slcli_build_principal_windows *);
+/* Pure private pointer/plane relation, NOT native capture or authority. */
+int slcli_build_principal_windows_issuing_relation_original(
+ const struct slcli_build_principal_windows *,const struct slcli_build_principal_windows *);
 int slcli_build_principal_windows_output_away_original(
  const struct slcli_build_principal_windows *,const void *,size_t);
 #endif
