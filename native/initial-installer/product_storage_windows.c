@@ -155,4 +155,16 @@ int slcli_product_storage_windows_prepare_original(struct slcli_product_storage_
  !slcli_arena_live_block(&c->arena_original,c->transport_original,sizeof(*c->transport_original)))return stop(c);
  c->prior_tick=c->operation_origin_original->tick;c->storage_constructed=1;c->failed=0;return 1;
 }
+int slcli_product_storage_windows_output_away_original(
+ const struct slcli_product_storage_windows *c,const void *out,size_t n) {
+ return c&&c->storage_constructed==1&&!c->failed&&c->source_original&&
+ source_away(c->source_original,out,n)&&apart(out,n,c,sizeof(*c))&&
+ apart(out,n,c->regions_original,c->source_original->region_count*sizeof(*c->regions_original))&&
+ apart(out,n,c->caller_original,sizeof(*c->caller_original))&&
+ apart(out,n,c->deadline_original,sizeof(*c->deadline_original))&&
+ apart(out,n,c->operation_origin_original,sizeof(*c->operation_origin_original))&&
+ apart(out,n,c->transport_original,sizeof(*c->transport_original))&&
+ apart(out,n,c->effective_original,sizeof(*c->effective_original))&&
+ apart(out,n,c->primary_original,sizeof(*c->primary_original));
+}
 #endif

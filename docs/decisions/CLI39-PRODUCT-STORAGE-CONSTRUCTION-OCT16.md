@@ -53,3 +53,42 @@ loaded case/principal/reservation/family construction, complete Windows TUI
 layout/binding, native earliest prologue/helpers, child-local rejoin, natural
 family/IO/provider settlement and Linux peers remain OUR source obligations.
 No producerComplete guard is changed. All parser/compiler/native/tests UNRUN.
+
+## Fixed private descriptor and actual section connection
+
+product_section_windows.h/.c connects the prepared initial operation to actual
+source-created private section security and the existing native transport create
+body. It takes no ACL/SDDL/mask/callback operand. Fixed masks and native effect/
+cost/alias/lifetime contract precede the body in native/build-owner/CONTRACT.md.
+
+Before SD calls it preowns a separate exact control block (including thirteen
+raw API/clock rows and two fresh native principal captures), an ACL block of
+sizeof(ACL)+16+effectiveSIDBytes+primarySIDBytes, and a self-relative maximum of
+sizeof(SECURITY_DESCRIPTOR_RELATIVE)+effectiveSIDBytes+ACLBytes. Actual SID bounds
+are source-selected and natively rechecked; no probe/grow/default-current-user
+financing occurs. An initial one-use operation entry clock precedes allocations;
+all later native cuts use the SAME original deadline and retain late failures.
+
+Actual InitializeSecurityDescriptor/InitializeAcl/two AddAccessAllowedAceEx/
+SetOwner/SetDacl/SetControl/MakeSelfRelativeSD/validity/owner/DACL/control/length
+calls construct and inspect the exact protected two-ACE private descriptor. Its
+native self-relative offsets, bounded owner SID and two exact ACE masks/SIDs/
+flags/sizes/ACL geometry are checked; group/SACL/defaulted/inherited/unknown
+control variants deny. This is source/native correspondence under independently
+qualified SDK/OS/source/actor inputs, never permission from bytes alone.
+
+The actual existing transport constructor then acquires its unnamed section and
+writer view/readonly alias/parent duplicate, using the exact separate caller and
+transport allocations and SAME live deadline. Parent process birth/PID/native
+primary SID/token/authentication/type are joined to the fresh principal original.
+No bytes have been published and no child is born. All SD/control/ACL/relative/
+token/file/section/view/duplicate objects remain owned through their actual proof
+and family borrowers; failed attempts are absorbing and retained.
+
+The source fixture product_section_windows_vectors.c has a deliberately
+synthetic PURE byte-correspondence baseline and thirteen mutation denials. It
+calls no native constructor, claims no native positive/ROOT/reservation/profile/
+family evidence and remains UNRUN. Fixture linking still needs the genuine
+explicit compiler/entry/GS/CRT/helper/import/source/charged-family admission.
+Full installer child/entry/claim dominance, TUI binding, native prologue/helper
+closure, event-family/source/runtime builder and Linux remain incomplete.
