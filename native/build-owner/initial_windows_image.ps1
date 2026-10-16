@@ -1,15 +1,20 @@
 # Fixed initial A PE64 source/mapping consumer. No compiled B helper is used.
 function Read-SlcliInitialWindowsGeometry {
     param([Parameter(Mandatory)][object]$Owner)
-    $original=[pscustomobject]@{ Buffer=$null; Call=$null; PageBytes=0; AllocationBytes=0; Complete=$false }
+    $original=[pscustomobject]@{ Buffer=$null; Call=$null; PageBytes=0; AllocationBytes=0;
+        Minimum=[Int64]0; Maximum=[Int64]0; Complete=$false }
     $Owner.InitialGeometry=$original
     $original.Buffer=Get-SlcliInitialWindowsBuffer -Owner $Owner -Bytes 48 -Alignment 8
     $original.Call=Invoke-SlcliInitialWindowsCall -Owner $Owner -Name 'GetSystemInfo' -Arguments @($original.Buffer.Pointer)
     $original.PageBytes=[Runtime.InteropServices.Marshal]::ReadInt32($original.Buffer.Pointer,4)
     $original.AllocationBytes=[Runtime.InteropServices.Marshal]::ReadInt32($original.Buffer.Pointer,40)
+    $original.Minimum=[Runtime.InteropServices.Marshal]::ReadIntPtr($original.Buffer.Pointer,8).ToInt64()
+    $original.Maximum=[Runtime.InteropServices.Marshal]::ReadIntPtr($original.Buffer.Pointer,16).ToInt64()
     if ($original.PageBytes -le 0 -or ($original.PageBytes -band ($original.PageBytes-1)) -ne 0 -or
         $original.AllocationBytes -lt $original.PageBytes -or $original.AllocationBytes%$original.PageBytes -ne 0 -or
-        [Runtime.InteropServices.Marshal]::ReadInt16($original.Buffer.Pointer) -ne 9) {
+        [Runtime.InteropServices.Marshal]::ReadInt16($original.Buffer.Pointer) -ne 9 -or
+        $original.Minimum -le 0 -or $original.Maximum -lt $original.Minimum -or $original.Maximum -eq [Int64]::MaxValue -or
+        $original.Minimum%$original.PageBytes -ne 0 -or ($original.Maximum+1)%$original.PageBytes -ne 0) {
         throw 'Initial actual native system geometry is not selected AMD64.'
     }
     $original.Complete=$true

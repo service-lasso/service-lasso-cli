@@ -25,7 +25,7 @@ function New-SlcliInitialWindowsOwner {
         NativeHandles=[object[]]::new($Source.NativeRows); HandlesUsed=0
         Captures=[object[]]::new($Source.NativeRows); CapturesUsed=0
         Files=[Collections.Generic.List[object]]::new($Source.NativeRows); Compiler=$null
-        Environment=$null; CompilePlan=$null
+        Environment=$null; CompilePlan=$null; ModuleSources=$null
         PriorTick=$Source.PriorTick; Expires=$Source.Expires; FirstCause=$null
         Failed=$false; Pending=$false; Native=$null; Process=$null; Thread=$null
         Effective=$null; Primary=$null; InitialClock=$null; InitialGeometry=$null
@@ -54,6 +54,7 @@ function New-SlcliInitialWindowsOwner {
         $null=Read-SlcliInitialWindowsPrincipal -Owner $owner -Expected $Source.Effective -Plane Effective
         $null=Read-SlcliInitialWindowsPrincipal -Owner $owner -Expected $Source.Primary -Plane Primary
         $owner.Compiler=Read-SlcliInitialWindowsHeldFile -Owner $owner -Member $Source.Compiler
+        $null=New-SlcliInitialWindowsModuleSources -Owner $owner
         $owner.Environment=New-SlcliInitialWindowsEnvironment -Owner $owner
         $null=New-SlcliInitialWindowsCompilePlan -Owner $owner
         $owner.Returned=$true

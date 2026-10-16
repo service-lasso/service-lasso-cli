@@ -88,7 +88,7 @@ function Start-SlcliInitialWindowsFixedCompile {
         Events=[object[]]::new($Owner.Source.EventCapacity); EventsUsed=0; PendingEvent=$null;
         Stdin=$null; Stdout=$null; Stderr=$null; StdinWriterClose=$null; AttributeProbe=$null; AttributeInit=$null;
         AttributeHandles=$null; IssuingThread=$null; Birth=$null; ProcessReference=$null; ThreadReference=$null;
-        Environment=$Owner.Environment; Streams=$null; Child=$null; EventImage=$null; RemoteImage=$null;
+        Environment=$Owner.Environment; Streams=$null; Child=$null; EventImage=$null; RemoteImage=$null; Modules=$null;
         Pid=[UInt32]0; Tid=[UInt32]0; NaturalExit=$null; Complete=$false }
     $unit.Birth=$original;$plan.Active=$original
     Register-SlcliInitialWindowsCapture -Owner $Owner -Original $original
@@ -96,6 +96,7 @@ function Start-SlcliInitialWindowsFixedCompile {
     $null=New-SlcliInitialWindowsChild -Owner $Owner -Birth $original
     $null=New-SlcliInitialWindowsEventFile -Owner $Owner -Birth $original
     $null=New-SlcliInitialWindowsRemoteImage -Owner $Owner -Birth $original
+    $null=New-SlcliInitialWindowsModuleWalk -Owner $Owner -Birth $original
     $original.Stdin=New-SlcliInitialWindowsPipe -Owner $Owner -PrivateReader $false
     $original.Stdout=New-SlcliInitialWindowsPipe -Owner $Owner -PrivateReader $true
     $original.Stderr=New-SlcliInitialWindowsPipe -Owner $Owner -PrivateReader $true
@@ -141,6 +142,7 @@ function Start-SlcliInitialWindowsFixedCompile {
     if ($original.PendingEvent.Code -ne 3 -or $original.PendingEvent.Pid -ne $original.Pid -or
         $original.PendingEvent.Tid -ne $original.Tid) { throw 'Initial compiler first native event mismatch.' }
     $null=Read-SlcliInitialWindowsChild -Owner $Owner -Birth $original
+    $null=Read-SlcliInitialWindowsModules -Owner $Owner -Birth $original
     $null=Read-SlcliInitialWindowsEventFile -Owner $Owner -Birth $original
     $null=Read-SlcliInitialWindowsRemoteImage -Owner $Owner -Birth $original
     return $original
