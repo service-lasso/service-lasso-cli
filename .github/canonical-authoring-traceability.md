@@ -229,3 +229,33 @@ is justified by latest HEAD alone. Complete independent source review and NEW
 exact authentic ROOT/input/command admission precede local product execution;
 natural new-push CI remains separately allowed. Protected Development publication
 and same-byte Core integration remain incomplete; macOS N/A, never PASS.
+
+### October16 actual stopped-child producer source
+
+The next owning body consumes the fresh prepared roster and actual slot3 probe,
+then performs once clone3(CLONE_PIDFD,SIGCHLD) with no shared VM/FD table. Parent
+pidfd output is retained parent-locally; child's raw0 is a separate shared native
+observation. Child uses ten fixed rows for TRACEME/selfpid/selftid/STOP/F_GETFD3,
+conditional known-owned close3/dup3 or SAME custody3 F_SETFD, held execveat and
+cleanup-only exit_group127. It reobserves its own3 and compares the selected
+prebirth branch; parent numeric flags never become child-native observations.
+Successful exec has only called/before, no invented return or afterclock. Failed
+useful steps set failed before once cleanup exit. Unexpected cleanup return keeps
+raw/returned/trap-attempted; the subsequent fixed trap is FAILED/UNKNOWN, never
+termination or borrower-release proof. No signal disposition or spin is invented.
+
+Clone/child/observer source construction supplies no authentic ROOT/source/profile
+association. Complete native descriptor/private stack/loader/control/failed-prefix
+precharge and genuine preceding reservation still must be acquired by the fixed
+source caller before activation. All source UNRUN; whole fit UNKNOWN. The entire
+remaining sequence, independent review, new ROOT admission and protected release
+acceptance gates remain unchanged.
+
+October16 returning closure: actual parent completion additionally replays every
+child-owned successful-prefix row against SAME clone PID/TID, post-CONT STOP
+return, source-selected3 branch and held exec inputs; unused branch/exit rows stay
+fresh. Successful exec remains called-only with no returned/raw/postclock, joined
+to the independently observed actual exec event. This completes raw stopped-child
+mechanics only. Actual postexec child-local acquisition and genuine initial
+source/principal/reservation/profile constructor remain absent. No current source
+freeze, wholeGO, execution, qualification or release claim follows.

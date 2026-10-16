@@ -14,6 +14,8 @@ static int apart(const void *a,uint64_t n,const void *b,uint64_t m) {
 static int zero(const void *p,uint64_t n) {
  const unsigned char *s=p;uint64_t i;for(i=0;i<n;i++)if(s[i])return 0;return 1;
 }
+static int unborn_stage(const struct slcli_initial_child_wait_stage_linux *);
+static const char child_empty_path[]="";
 static int clocks(const struct slcli_initial_custody_call_linux *r,uint64_t prior,uint64_t expiry) {
  return r->called==1&&r->returned==1&&slcli_native_clock_linux_matches_original(&r->before)&&
  slcli_native_clock_linux_matches_original(&r->after)&&r->before.tick>=prior&&
@@ -94,6 +96,7 @@ int slcli_initial_child_birth_linux_probe_slot3_original(struct slcli_initial_ch
 static int source(const struct slcli_initial_child_birth_linux *b,uint64_t *expiry) {
  const struct slcli_initial_custody_call_linux *r;
  if(!enrollment(b,expiry)||!slcli_initial_child_birth_linux_slot3_matches_original(b))return 0;
+ if(b->birth_started!=1||b->birth_returned!=1||b->birth_failed||b->birth_pending)return 0;
  r=&b->clone_call;
  return r->number==__NR_clone3&&r->args[0]==(long)(uintptr_t)&b->clone_input&&
  r->args[1]==sizeof(b->clone_input)&&!r->args[2]&&!r->args[3]&&!r->args[4]&&!r->args[5]&&
@@ -103,6 +106,107 @@ static int source(const struct slcli_initial_child_birth_linux *b,uint64_t *expi
  !b->clone_input.parent_tid&&!b->clone_input.stack&&!b->clone_input.stack_size&&!b->clone_input.tls&&
  !b->clone_input.set_tid&&!b->clone_input.set_tid_size&&!b->clone_input.cgroup&&
  clocks(r,b->slot3_call.after.tick,*expiry);
+}
+/* These are new child-owned clock rows in the separately acquired shared map.
+ * Parent copied clock pointers are never replayed as child-native originals. */
+static int child_call(struct slcli_initial_child_control_linux *c,uint32_t index,
+ long number,long a,long d,long e,long f,long g,long h,uint64_t prior,uint64_t expiry) {
+ struct slcli_initial_custody_call_linux *r=&c->child_calls[index];
+ if(!zero(r,sizeof(*r)))return 0;
+ r->number=number;r->args[0]=a;r->args[1]=d;r->args[2]=e;
+ r->args[3]=f;r->args[4]=g;r->args[5]=h;
+ if(!slcli_native_clock_read(&r->before)||!slcli_native_clock_linux_matches_original(&r->before)||
+ r->before.tick<prior||r->before.tick>=expiry)return 0;
+ r->called=1;r->raw=slcli_kernel_call(number,a,d,e,f,g,h);r->returned=1;
+ return slcli_native_clock_read(&r->after)&&clocks(r,prior,expiry);
+}
+static void child_failure(struct slcli_initial_child_control_linux *c) {
+ struct slcli_initial_custody_call_linux *r=&c->child_calls[SLCLI_INITIAL_CHILD_EXIT];
+ c->failed=1;
+ /* Cleanup only: no fresh deadline, no claimed returned success/postclock. */
+ r->number=__NR_exit_group;r->args[0]=127;c->exit_called=1;r->called=1;
+ r->raw=slcli_kernel_call(__NR_exit_group,127,0,0,0,0,0);
+ r->returned=1;c->exit_returned=1;c->trap_attempted=1;
+ /* A returned exit is FAILED/UNKNOWN. This instruction proves no termination,
+  * natural EOF, last borrower or release; external pending custody remains. */
+ __builtin_trap();
+}
+static void child_original(struct slcli_initial_child_birth_linux *b) {
+ struct slcli_initial_child_control_linux *c=b->map_original->control_original;
+ const struct slcli_initial_held_file_linux *e=b->map_original->executable_original;
+ const struct slcli_initial_child_input_linux *in=b->map_original->input_original;
+ long custody=e->custody_original->descriptor_original,pid,tid,observed;
+ uint64_t prior=b->clone_call.before.tick,expiry=b->map_original->expires;
+ struct slcli_initial_custody_call_linux *r;
+ c->clone_child_raw=0;c->clone_child_returned=1;
+ if(!child_call(c,SLCLI_INITIAL_CHILD_TRACEME,__NR_ptrace,PTRACE_TRACEME,0,0,0,0,0,prior,expiry)||
+ c->child_calls[SLCLI_INITIAL_CHILD_TRACEME].raw)child_failure(c);
+ prior=c->child_calls[SLCLI_INITIAL_CHILD_TRACEME].after.tick;
+ if(!child_call(c,SLCLI_INITIAL_CHILD_GETPID,__NR_getpid,0,0,0,0,0,0,prior,expiry))child_failure(c);
+ pid=c->child_calls[SLCLI_INITIAL_CHILD_GETPID].raw;if(pid<=0||pid>INT_MAX)child_failure(c);
+ prior=c->child_calls[SLCLI_INITIAL_CHILD_GETPID].after.tick;
+ if(!child_call(c,SLCLI_INITIAL_CHILD_GETTID,__NR_gettid,0,0,0,0,0,0,prior,expiry))child_failure(c);
+ tid=c->child_calls[SLCLI_INITIAL_CHILD_GETTID].raw;if(tid<=0||tid>INT_MAX)child_failure(c);
+ prior=c->child_calls[SLCLI_INITIAL_CHILD_GETTID].after.tick;
+ if(!child_call(c,SLCLI_INITIAL_CHILD_STOP,__NR_tgkill,pid,tid,SIGSTOP,0,0,0,prior,expiry)||
+ c->child_calls[SLCLI_INITIAL_CHILD_STOP].raw)child_failure(c);
+ prior=c->child_calls[SLCLI_INITIAL_CHILD_STOP].after.tick;
+ if(!child_call(c,SLCLI_INITIAL_CHILD_GETFD3,__NR_fcntl,3,F_GETFD,0,0,0,0,prior,expiry))child_failure(c);
+ observed=c->child_calls[SLCLI_INITIAL_CHILD_GETFD3].raw;
+ if(observed!=b->slot3_call.raw)child_failure(c);
+ prior=c->child_calls[SLCLI_INITIAL_CHILD_GETFD3].after.tick;
+ if(b->slot3_kind==SLCLI_INITIAL_SLOT3_CUSTODY) {
+ if(custody!=3||observed!=FD_CLOEXEC||
+ !child_call(c,SLCLI_INITIAL_CHILD_SETFD3,__NR_fcntl,3,F_SETFD,0,0,0,0,prior,expiry)||
+ c->child_calls[SLCLI_INITIAL_CHILD_SETFD3].raw)child_failure(c);
+ prior=c->child_calls[SLCLI_INITIAL_CHILD_SETFD3].after.tick;
+ } else {
+ if(custody<0||custody==3)child_failure(c);
+ if(b->slot3_kind!=SLCLI_INITIAL_SLOT3_ABSENT) {
+ if((b->slot3_kind!=SLCLI_INITIAL_SLOT3_SELF_PIDFD&&b->slot3_kind!=SLCLI_INITIAL_SLOT3_OPENED_FILE)||
+ observed!=FD_CLOEXEC||!child_call(c,SLCLI_INITIAL_CHILD_CLOSE3,__NR_close,3,0,0,0,0,0,prior,expiry)||
+ c->child_calls[SLCLI_INITIAL_CHILD_CLOSE3].raw)child_failure(c);
+ prior=c->child_calls[SLCLI_INITIAL_CHILD_CLOSE3].after.tick;
+ } else if(observed!=-EBADF)child_failure(c);
+ if(!child_call(c,SLCLI_INITIAL_CHILD_DUP3,__NR_dup3,custody,3,0,0,0,0,prior,expiry)||
+ c->child_calls[SLCLI_INITIAL_CHILD_DUP3].raw!=3)child_failure(c);
+ prior=c->child_calls[SLCLI_INITIAL_CHILD_DUP3].after.tick;
+ }
+ r=&c->child_calls[SLCLI_INITIAL_CHILD_EXEC];r->number=__NR_execveat;
+ r->args[0]=e->descriptor_original;r->args[1]=(long)(uintptr_t)child_empty_path;
+ r->args[2]=(long)(uintptr_t)in->argv_original;r->args[3]=(long)(uintptr_t)in->env_original;
+ r->args[4]=AT_EMPTY_PATH;
+ if(!slcli_native_clock_read(&r->before)||!slcli_native_clock_linux_matches_original(&r->before)||
+ r->before.tick<prior||r->before.tick>=expiry)child_failure(c);
+ r->called=1;r->raw=slcli_kernel_call(r->number,r->args[0],r->args[1],r->args[2],r->args[3],r->args[4],0);
+ r->returned=1;c->failed=1;
+ /* Only a failed exec returns; raw result survives even a failed postclock. */
+ (void)slcli_native_clock_read(&r->after);child_failure(c);
+}
+int slcli_initial_child_birth_linux_capture_original(struct slcli_initial_child_birth_linux *b) {
+ struct slcli_initial_custody_call_linux *r;uint64_t expiry;long result;
+ if(!enrollment(b,&expiry)||!slcli_initial_child_birth_linux_slot3_matches_original(b)||
+ b->birth_started||b->birth_returned||b->birth_failed||b->birth_pending||
+ b->parent_started||b->parent_completed||b->parent_failed||b->parent_pending||
+ !zero(&b->clone_call,sizeof(b->clone_call))||!zero(&b->clone_input,sizeof(b->clone_input))||
+ !zero(&b->options_call,sizeof(b->options_call))||!zero(&b->continue_call,sizeof(b->continue_call))||
+ !unborn_stage(&b->stages[0])||!unborn_stage(&b->stages[1])||
+ !zero(b->map_original->control_original,sizeof(*b->map_original->control_original))||
+ b->pidfd_original!=-1)return 0;
+ b->birth_started=1;b->birth_failed=1;r=&b->clone_call;
+ b->clone_input.flags=CLONE_PIDFD;b->clone_input.exit_signal=SIGCHLD;
+ b->clone_input.pidfd=(uintptr_t)&b->pidfd_original;
+ r->number=__NR_clone3;r->args[0]=(long)(uintptr_t)&b->clone_input;r->args[1]=sizeof(b->clone_input);
+ if(!slcli_native_clock_read(&r->before)||!slcli_native_clock_linux_matches_original(&r->before)||
+ r->before.tick<b->slot3_call.after.tick||r->before.tick>=expiry){b->birth_pending=1;return 0;}
+ r->called=1;result=slcli_kernel_call(r->number,r->args[0],r->args[1],0,0,0,0);
+ if(!result)child_original(b);
+ r->raw=result;r->returned=1;b->birth_returned=1;
+ if(!slcli_native_clock_read(&r->after)||!clocks(r,b->slot3_call.after.tick,expiry)){
+ b->birth_pending=1;return 0;}
+ if(result<=0||result>INT_MAX||b->pidfd_original<0)return 0;
+ b->birth_failed=0;
+ return slcli_initial_child_birth_linux_parent_observe_original(b);
 }
 static int classify(const siginfo_t *s,long child) {
  if(!s->si_signo&&!s->si_pid&&!s->si_errno&&!s->si_code&&!s->si_uid&&!s->si_status)
@@ -206,9 +310,50 @@ static int unborn_stage(const struct slcli_initial_child_wait_stage_linux *s) {
  return !s->started&&!s->completed&&!s->pending&&!s->failed&&!s->used&&
  zero(&s->finish,sizeof(s->finish))&&zero(s->rows_original,s->capacity*sizeof(*s->rows_original));
 }
+static int child_row(const struct slcli_initial_child_control_linux *c,uint32_t index,
+ long number,long a,long d,long e,long f,long g,long h,long raw,uint64_t *prior,uint64_t expiry) {
+ const struct slcli_initial_custody_call_linux *r=&c->child_calls[index];
+ if(r->number!=number||r->args[0]!=a||r->args[1]!=d||r->args[2]!=e||r->args[3]!=f||
+ r->args[4]!=g||r->args[5]!=h||r->raw!=raw||!clocks(r,*prior,expiry))return 0;
+ *prior=r->after.tick;return 1;
+}
+static int child_matches(const struct slcli_initial_child_birth_linux *b) {
+ const struct slcli_initial_child_control_linux *c=b->map_original->control_original;
+ const struct slcli_initial_held_file_linux *e=b->map_original->executable_original;
+ const struct slcli_initial_child_input_linux *in=b->map_original->input_original;
+ const struct slcli_initial_custody_call_linux *r;long pid=b->clone_call.raw;
+ uint64_t prior=b->clone_call.before.tick,expiry=b->map_original->expires;
+ if(c->clone_child_returned!=1||c->clone_child_raw||c->failed||c->exit_called||c->exit_returned||
+ c->trap_attempted||!zero(&c->child_calls[SLCLI_INITIAL_CHILD_EXIT],sizeof(*c->child_calls)))return 0;
+ if(!child_row(c,SLCLI_INITIAL_CHILD_TRACEME,__NR_ptrace,PTRACE_TRACEME,0,0,0,0,0,0,&prior,expiry)||
+ !child_row(c,SLCLI_INITIAL_CHILD_GETPID,__NR_getpid,0,0,0,0,0,0,pid,&prior,expiry)||
+ !child_row(c,SLCLI_INITIAL_CHILD_GETTID,__NR_gettid,0,0,0,0,0,0,pid,&prior,expiry)||
+ !child_row(c,SLCLI_INITIAL_CHILD_STOP,__NR_tgkill,pid,pid,SIGSTOP,0,0,0,0,&prior,expiry)||
+ prior<b->continue_call.before.tick||
+ !child_row(c,SLCLI_INITIAL_CHILD_GETFD3,__NR_fcntl,3,F_GETFD,0,0,0,0,b->slot3_call.raw,&prior,expiry))return 0;
+ if(b->slot3_kind==SLCLI_INITIAL_SLOT3_CUSTODY) {
+ if(!zero(&c->child_calls[SLCLI_INITIAL_CHILD_CLOSE3],sizeof(*c->child_calls))||
+ !zero(&c->child_calls[SLCLI_INITIAL_CHILD_DUP3],sizeof(*c->child_calls))||
+ !child_row(c,SLCLI_INITIAL_CHILD_SETFD3,__NR_fcntl,3,F_SETFD,0,0,0,0,0,&prior,expiry))return 0;
+ } else {
+ if(!zero(&c->child_calls[SLCLI_INITIAL_CHILD_SETFD3],sizeof(*c->child_calls)))return 0;
+ if(b->slot3_kind==SLCLI_INITIAL_SLOT3_ABSENT) {
+ if(!zero(&c->child_calls[SLCLI_INITIAL_CHILD_CLOSE3],sizeof(*c->child_calls)))return 0;
+ } else if(!child_row(c,SLCLI_INITIAL_CHILD_CLOSE3,__NR_close,3,0,0,0,0,0,0,&prior,expiry))return 0;
+ if(!child_row(c,SLCLI_INITIAL_CHILD_DUP3,__NR_dup3,e->custody_original->descriptor_original,
+ 3,0,0,0,0,3,&prior,expiry))return 0;
+ }
+ r=&c->child_calls[SLCLI_INITIAL_CHILD_EXEC];
+ return r->number==__NR_execveat&&r->args[0]==e->descriptor_original&&
+ r->args[1]==(long)(uintptr_t)child_empty_path&&r->args[2]==(long)(uintptr_t)in->argv_original&&
+ r->args[3]==(long)(uintptr_t)in->env_original&&r->args[4]==AT_EMPTY_PATH&&!r->args[5]&&
+ r->called==1&&!r->returned&&!r->raw&&zero(&r->after,sizeof(r->after))&&
+ slcli_native_clock_linux_matches_original(&r->before)&&r->before.tick>=prior&&
+ r->before.tick<expiry&&r->before.tick<=b->stages[1].rows_original[b->stages[1].used-1].call.after.tick;
+}
 int slcli_initial_child_birth_linux_parent_matches_original(const struct slcli_initial_child_birth_linux *b) {
  return b&&b->parent_started==1&&b->parent_completed==1&&!b->parent_failed&&!b->parent_pending&&
- slcli_initial_child_birth_linux_wait_stage_matches_original(b,1);
+ slcli_initial_child_birth_linux_wait_stage_matches_original(b,1)&&child_matches(b);
 }
 int slcli_initial_child_birth_linux_parent_observe_original(struct slcli_initial_child_birth_linux *b) {
  uint64_t expiry;int result;
@@ -226,6 +371,7 @@ int slcli_initial_child_birth_linux_parent_observe_original(struct slcli_initial
  if(result!=1){b->parent_pending=result<0;return 0;}
  if(!slcli_initial_child_birth_linux_wait_stage_original(b,1)){
  b->parent_pending=b->stages[1].pending;return 0;}
+ if(!child_matches(b))return 0;
  b->parent_completed=1;b->parent_failed=0;return 1;
 }
 #endif

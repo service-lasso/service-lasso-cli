@@ -59,3 +59,33 @@ CLI36 concrete child slot3 writer/lifetime closure before clone body: the privat
 Expanded preowned child raw-call roster before bodies: TRACEME; getpid; gettid; tgkill(actualpid,actualtid,SIGSTOP); observed F_GETFD3; conditional close3; dup3 branch; sourcefd3 F_SETFD0 branch; execveat(actual relocated executable, empty path, SAME complete argv/env, AT_EMPTY_PATH); cleanup-only exit_group127. Distinct ten rows, unused branches remain unborn; successful exec/exit nonreturns never gain returned/postclock originals. Shared clone-child0 observation remains separate from parent's positive clone return; child's own row-owned native clocks reconstruct actual child outputs, never treat inherited private parent clock copies as second native originals. Child executes only fixed operations; no callbacks/external PID or descriptor patch. All complete raw inputs/shared outputs/page/cache/private C stack/kernel loader/native/pure/failed cleanup costs must be acquired/charged before clone under actual selected source/profile; no scalar flag grants this relation. Actual clone/child caller remains unfinished until these operands and genuine initial source closure are connected. UNRUN.
 
 CLI36 closed-slot applicability refinement: a genuinely absent3 is also valid and must not be excluded when standard descriptors were closed before launch. The fixed prebirth native F_GETFD3 observation (separate retained raw/clock row) distinguishes exact -EBADF absent3 from an actual inherited reference; it must precede clone and join the complete initial descriptor/source graph. Child fresh F_GETFD3 rejoins that exact native birth relation. Absent3 branch performs no close and directly dup3(sourcefd,3,0). Present3 may be closed only for the exact identified source-owned child reference/no-borrower branch above; no unowned KEEP/foreign3 settlement. Sourcefd3 still never closes. Add this actual prebirth probe plus its two clocks to parent count:3*(N0+N1)+14; preserve its failed/pending raw outputs and prior clock relation before clone. This is necessary geometry/observation, not FD-absence authority or finance. Full source/own-writer/nonmutation qualification must preserve the observed slot relation through actual clone/inherit/last borrower. No useful body or native execution from this refinement.
+
+### October16 actual stopped-child producer source
+
+The next owning body consumes the fresh prepared roster and actual slot3 probe,
+then performs once clone3(CLONE_PIDFD,SIGCHLD) with no shared VM/FD table. Parent
+pidfd output is retained parent-locally; child's raw0 is a separate shared native
+observation. Child uses ten fixed rows for TRACEME/selfpid/selftid/STOP/F_GETFD3,
+conditional known-owned close3/dup3 or SAME custody3 F_SETFD, held execveat and
+cleanup-only exit_group127. It reobserves its own3 and compares the selected
+prebirth branch; parent numeric flags never become child-native observations.
+Successful exec has only called/before, no invented return or afterclock. Failed
+useful steps set failed before once cleanup exit. Unexpected cleanup return keeps
+raw/returned/trap-attempted; the subsequent fixed trap is FAILED/UNKNOWN, never
+termination or borrower-release proof. No signal disposition or spin is invented.
+
+Clone/child/observer source construction supplies no authentic ROOT/source/profile
+association. Complete native descriptor/private stack/loader/control/failed-prefix
+precharge and genuine preceding reservation still must be acquired by the fixed
+source caller before activation. All source UNRUN; whole fit UNKNOWN. The entire
+remaining sequence, independent review, new ROOT admission and protected release
+acceptance gates remain unchanged.
+
+October16 returning closure: actual parent completion additionally replays every
+child-owned successful-prefix row against SAME clone PID/TID, post-CONT STOP
+return, source-selected3 branch and held exec inputs; unused branch/exit rows stay
+fresh. Successful exec remains called-only with no returned/raw/postclock, joined
+to the independently observed actual exec event. This completes raw stopped-child
+mechanics only. Actual postexec child-local acquisition and genuine initial
+source/principal/reservation/profile constructor remain absent. No current source
+freeze, wholeGO, execution, qualification or release claim follows.
