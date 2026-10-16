@@ -186,3 +186,28 @@ copied command span have finite source-derived input lengths. This is only the
 initial prefix cost: kernel pipe capacity is advisory, actual pipe/process/image/
 attribute allocations and descendant/stream/reserve costs remain unqualified and
 must enter the complete independently backed profile before any execution.
+
+Actual child principal/alias join (next body) borrows the stopped root occurrence,
+not a caller PID. GetProcessId/GetThreadId/GetProcessIdOfThread on both returned
+PROCESS_INFORMATION and debug-event handles independently join the actual native
+aliases to the born PID/TID. Both process handles receive separate creation-time
+reads. The child token is opened from its returned real process handle, retained
+before postclock, and gets its own complete bounded TokenUser and independent
+TokenStatistics/recheck originals. Child SID/authentication LUID must equal the
+already observed selected process-primary source; child TokenId stays its own
+actual native result, not a guessed parent numeric token identity. TokenPrimary,
+unchanged ModifiedId/TokenId/authentication/type/group/privilege-count readback
+are required. These are native birth/identity correspondences only; complete
+principal policy, source membership and original financing remain separate.
+No debug event is continued, no token/event/returned alias is closed, and every
+failure retains the stopped child plus real token/output prefix under the same
+issuing owner and unchanged deadline. The whole borrowed root graph and all
+transitive source/command/attribute/pipe storage are excluded before first write.
+
+The stopped-child identity prefix preowns 14 one-use native rows and 28 two-call
+Windows clock observations plus its two-call finish clock (72 native calls on a
+complete successful prefix). SID validation and extent checks precede length or
+byte comparison. All original token/native buffers survive failure; this count
+excludes the unqualified OS/token allocation costs and complete loaded/descendant/
+stream/profile graph. Parent-local debug observations are not a child-local
+Template handoff type or transferable execution/source authority.

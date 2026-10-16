@@ -39,6 +39,8 @@ struct slcli_build_windows_command {
  * Whole owner and external exact admission precede invoking this private body. */
 int slcli_build_windows_command_birth_original(struct slcli_build_windows_command *,
  const struct slcli_build_windows_command_source *,WCHAR *,void *);
+int slcli_build_windows_command_output_away_original(
+ const struct slcli_build_windows_command *,const void *,size_t);
 int slcli_build_windows_command_birth_matches_original(const struct slcli_build_windows_command *);
 #endif
 #endif

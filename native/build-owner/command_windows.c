@@ -30,7 +30,8 @@ static int shape(const struct slcli_build_windows_command *c,
  !span(s->environment_original,s->environment_units,1)||!span(s->cwd_original,s->cwd_units,0)||
  s->cwd_units<4||!((s->cwd_original[0]>='A'&&s->cwd_original[0]<='Z')||
  (s->cwd_original[0]>='a'&&s->cwd_original[0]<='z'))||s->cwd_original[1]!=':'||
- s->cwd_original[2]!='\\'||!s->attribute_capacity||!s->pipe_capacity)return 0;
+ s->cwd_original[2]!='\\'||!s->attribute_capacity||!s->pipe_capacity||
+ (uintptr_t)attributes%sizeof(void *)||(uintptr_t)command%sizeof(WCHAR))return 0;
  outputs[0]=c;sizes[0]=sizeof(*c);outputs[1]=command;sizes[1]=s->command_units*sizeof(WCHAR);
  outputs[2]=attributes;sizes[2]=s->attribute_capacity;
  for(i=0;i<3;i++) {
@@ -168,6 +169,13 @@ static int contents(const struct slcli_build_windows_command *c,uint64_t *last) 
 int slcli_build_windows_command_birth_matches_original(const struct slcli_build_windows_command *c) {
  uint64_t prior;return contents(c,&prior)&&slcli_native_clock_windows_matches_original(&c->finish)&&
  c->finish.tick>=prior&&c->finish.tick<c->expires;
+}
+int slcli_build_windows_command_output_away_original(
+ const struct slcli_build_windows_command *c,const void *out,size_t bytes) {
+ return slcli_build_windows_command_birth_matches_original(c)&&apart(out,bytes,c,sizeof(*c))&&
+ away(c->source_original,out,bytes)&&
+ apart(out,bytes,c->command_mutable_original,c->source_original->command_units*sizeof(WCHAR))&&
+ apart(out,bytes,c->attribute_original,c->source_original->attribute_capacity);
 }
 int slcli_build_windows_command_birth_original(struct slcli_build_windows_command *c,
  const struct slcli_build_windows_command_source *s,WCHAR *command,void *attributes) {
