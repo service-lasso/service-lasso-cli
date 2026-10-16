@@ -326,3 +326,6 @@ No producerComplete gate is waived by partial repairs. All source UNRUN; actual
 complete Windows/Linux recipe, genuine member/tool inputs, whole source review and
 NEW exact ROOT/commands still precede execution. No older binary/fake manifest or
 reduced runtime route is accepted.
+
+
+Issue39 private native build-owner constructor/effect/cost/alias/last-borrower contract is native/build-owner/CONTRACT.md. CLI owns the real factory; current Core types are not a supplied authority. Entire fixed descendant graph and Windows/Linux actual source/loaded/principal/reservation/stream/native terminal conjunction remain mandatory. No new public six-action slot or JSON issuer. Source-only UNRUN; producer guard remains pending complete coherent implementation and fresh whole review/ROOT admission.
