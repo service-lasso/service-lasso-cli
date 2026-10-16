@@ -10,7 +10,7 @@ enum { SLCLI_BUILD_SELF_PROCESS=0,SLCLI_BUILD_SELF_THREAD=1,
  SLCLI_BUILD_SID_VALID=8,SLCLI_BUILD_SID_LENGTH=9,
  SLCLI_BUILD_TOKEN_RECHECK=10,SLCLI_BUILD_PRINCIPAL_ROWS=11 };
 struct slcli_build_windows_call {
- uintptr_t args[6],raw;
+ uintptr_t args[12],raw;
  struct slcli_native_clock before,after;
  DWORD error;
  uint32_t called,returned,error_observed;
@@ -39,5 +39,7 @@ int slcli_build_principal_windows_capture_original(struct slcli_build_principal_
  const struct slcli_bq_expected_principal *,const struct slcli_native_clock *,
  const struct slcli_native_clock *,uint64_t);
 int slcli_build_principal_windows_matches_original(const struct slcli_build_principal_windows *);
+int slcli_build_principal_windows_output_away_original(
+ const struct slcli_build_principal_windows *,const void *,size_t);
 #endif
 #endif

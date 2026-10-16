@@ -41,7 +41,10 @@ static int sid_extent(const struct slcli_build_principal_windows *c,size_t *byte
 }
 static int operands(const struct slcli_build_windows_call *r,uintptr_t a,uintptr_t b,
  uintptr_t d,uintptr_t e,uintptr_t f,uint64_t *prior,uint64_t expiry) {
- if(r->args[0]!=a||r->args[1]!=b||r->args[2]!=d||r->args[3]!=e||r->args[4]!=f||r->args[5]||
+ size_t i;
+ for(i=5;i<12;i++)if(r->args[i])return 0;
+ if(r->args[0]!=a||r->args[1]!=b||r->args[2]!=d||r->args[3]!=e||r->args[4]!=f||
+ r->error_observed>1||(!r->error_observed&&r->error)||
  !clocks(r,*prior,expiry))return 0;*prior=r->after.tick;return 1;
 }
 static int contents(const struct slcli_build_principal_windows *c,uint64_t *last) {
@@ -107,6 +110,14 @@ static int contents(const struct slcli_build_principal_windows *c,uint64_t *last
 int slcli_build_principal_windows_matches_original(const struct slcli_build_principal_windows *c) {
  uint64_t prior;return contents(c,&prior)&&slcli_native_clock_windows_matches_original(&c->finish)&&
  c->finish.tick>=prior&&c->finish.tick<c->expires;
+}
+int slcli_build_principal_windows_output_away_original(
+ const struct slcli_build_principal_windows *c,const void *out,size_t bytes) {
+ return slcli_build_principal_windows_matches_original(c)&&apart(out,bytes,c,sizeof(*c))&&
+ apart(out,bytes,c->expected_original,sizeof(*c->expected_original))&&
+ apart(out,bytes,c->expected_original->windows_sid,c->expected_original->windows_sid_bytes)&&
+ apart(out,bytes,c->origin_original,sizeof(*c->origin_original))&&
+ apart(out,bytes,c->prior_original,sizeof(*c->prior_original));
 }
 int slcli_build_principal_windows_capture_original(struct slcli_build_principal_windows *c,
  const struct slcli_bq_expected_principal *e,const struct slcli_native_clock *origin,

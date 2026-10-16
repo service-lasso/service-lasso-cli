@@ -191,8 +191,8 @@ static int captured_mode(HANDLE original,const struct slcli_windows_file_capture
   c->mode_args[2]==(uintptr_t)&c->mode&&c->mode_args[3]==sizeof(c->mode)&&c->mode_args[4]==16&&
   !c->mode_status&&!c->mode_io.Status&&c->mode_io.Information==sizeof(c->mode)&&(c->mode&0x30);
 }
-int slcli_windows_source_observation_matches_original(HANDLE original,
- const struct slcli_windows_file_capture *c){
+static int source_observation_matches_original(HANDLE original,
+ const struct slcli_windows_file_capture *c,int directory){
  const void *outputs[4];size_t sizes[4],i,sid_bytes;uintptr_t start,sid;
  const SECURITY_DESCRIPTOR_RELATIVE *descriptor;
  const uint64_t classes[4]={FileIdInfo,FileStandardInfo,FileAttributeTagInfo,FileBasicInfo};
@@ -209,8 +209,9 @@ int slcli_windows_source_observation_matches_original(HANDLE original,
   c->handle_args[0]!=(uintptr_t)original||c->handle_args[1]!=(uintptr_t)&c->handle_flags||
   !c->handle_status||(c->handle_flags&HANDLE_FLAG_INHERIT)||
   !c->identity_status||!c->standard_status||!c->attributes_status||!c->basic_status||
-  c->standard.Directory||c->standard.DeletePending||c->standard.EndOfFile.QuadPart<0||
-  (c->attributes.FileAttributes&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT))||
+  (!!c->standard.Directory!=!!directory)||c->standard.DeletePending||c->standard.EndOfFile.QuadPart<0||
+  (!!(c->attributes.FileAttributes&FILE_ATTRIBUTE_DIRECTORY)!=!!directory)||
+  (c->attributes.FileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)||
   c->security_args[0]!=(uintptr_t)original||c->security_args[1]!=OWNER_SECURITY_INFORMATION||
   c->security_args[2]!=(uintptr_t)c->security||c->security_args[3]!=sizeof(c->security)||
   c->security_args[4]!=(uintptr_t)&c->security_bytes||!c->security_status||!c->owner_status||!c->sid_status||
@@ -234,6 +235,12 @@ int slcli_windows_source_observation_matches_original(HANDLE original,
   sid_bytes>c->security_bytes-(sid-start)||sid_bytes>sizeof(c->owner_sid)||c->owner_sid_bytes!=sid_bytes)return 0;
  for(i=0;i<sid_bytes;i++)if(c->owner_sid[i]!=((const unsigned char *)c->owner_pointer)[i])return 0;
  return 1;
+}
+int slcli_windows_source_observation_matches_original(HANDLE original,
+ const struct slcli_windows_file_capture *c){return source_observation_matches_original(original,c,0);}
+int slcli_windows_directory_source_observation_matches_original(HANDLE original,
+ const struct slcli_windows_file_capture *c){
+ return source_observation_matches_original(original,c,1)&&!(c->access_raw.GrantedAccess&FILE_DELETE_CHILD);
 }
 int slcli_windows_file_read(HANDLE original, unsigned char *destination,
                             DWORD bytes, uint64_t offset,

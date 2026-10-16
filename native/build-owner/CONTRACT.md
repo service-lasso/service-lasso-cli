@@ -121,3 +121,19 @@ Primary references (mechanism only; not installed native qualification):
 First constructor source body: principal_windows.h/c captures actual current PID/TID and native process/thread creation-time originals, effective thread-token acquisition with exact ERROR_NO_TOKEN-only process-token branch, complete bounded native TokenUser output/SID extent, actual TokenStatistics and independent ModifiedId/token identity readback. Source-selected SID/LUID comparisons select no default principal and grant no authority. Both token-handle occurrences remain separate/retained before postclock. Native raw rows and row-owned QPC/frequency outputs are original; all storage excludes supplied expected SID/principal/origin/prior before writes. Full loaded/source/reservation/whole principal context/child native graph and genuine fixed builder caller remain unfinished, so no tool admission or producer guard change follows. This is implementation source, UNRUN.
 
 Debug owner-loss mechanism requires separate explicit retention: Microsoft DebugSetProcessKillOnExit defaults to terminating debuggees, while FALSE detaches them on issuing-thread exit, and either behavior has native effects. Neither is proof of stopped/live-child retention. The complete bridge must keep its admitted issuing task alive through every pending child/event/stream; no implicit process/thread exit, generic detach/kill or unsupported loss-as-closure is selected. Actual owner-loss/OS disposition remains a required failure-case record and cannot pass qualification.
+
+Next actual factory stage binds the retained effective-principal occurrence to a
+complete source-selected canonical Windows ancestor chain and leaf. Each ancestor
+and leaf gets a distinct real readonly/noninheritable/no-reparse handle and raw
+rights/FileId/size/owner/native mode/clock observations before the next stage.
+Complete byte reads use fresh retained16KiB-or-smaller native windows, real short
+progress and a separate EOF probe, checked finite source-selected row capacity,
+full expected byte/digest comparison and independent SAME-handle final metadata.
+No ancestor, leaf or token handle is closed or retired by this constructor. Every
+output excludes all earlier source/principal/paths/rosters/backings before writes.
+Finite capacity exhaustion preserves the full prefix and denies; no retry/default
+count or read truncation supplies success. This is native source correspondence
+under the external independently qualified ROOT/tool/member occurrence, not
+signature validation, source authentication or loaded-module admission by hashes.
+The full fixed factory still owes loaded image/descendant/debug/stream/reservation/
+last-borrower and Linux construction before the producer guard can change.

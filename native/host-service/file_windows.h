@@ -66,6 +66,8 @@ int slcli_windows_directory_source_observe(HANDLE,struct slcli_windows_file_capt
 int slcli_windows_source_observe(HANDLE, struct slcli_windows_file_capture *);
 int slcli_windows_source_observation_matches_original(HANDLE,
  const struct slcli_windows_file_capture *);
+int slcli_windows_directory_source_observation_matches_original(HANDLE,
+ const struct slcli_windows_file_capture *);
 int slcli_windows_file_read(HANDLE, unsigned char *, DWORD, uint64_t,
                             struct slcli_windows_file_capture *);
 /* Reconstruct exact original synchronous seek/read/mode/raw clock operands.
