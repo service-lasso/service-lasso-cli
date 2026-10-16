@@ -308,3 +308,21 @@ Native outputs/descriptor survive errors/expiry. No close, seek, resume or loade
 source grant follows. Proc namespace/mount/kernel/source and complete held-loaded/
 interpreter/writer/private-stack graph remain independently required; maps bytes,
 path or successful capture are only retained observations. All source UNRUN.
+
+### October16 full source-runtime builder continuation
+
+The active implementation frontier is the actual full Node source builder.
+Windows generation and compilation become distinct fixed original vcbuild phases:
+release x64 full-icu vs2022 projgen nobuild, retained generated config.gypi and
+used configure flags, then release x64 full-icu vs2022 noprojgen. Generated actual
+JSON variables must preserve x64/nonshared/static CRT/full ICU/bundled V8/default
+platform/snapshot/codecache/WebAssembly/inspector/lite-mode exclusion before the
+compiler phase; post-build held readback must equal that complete original config.
+The fixed upstream configure source emits JSON after one literal generated header,
+so no Python eval or regex-as-config substitution is selected. Complete generated
+MSBuild/runtime library/link ancestry and tool/native-owner/loaded closure remain
+required. Exact source-derived command/capture geometry is checked before effects.
+No producerComplete gate is waived by partial repairs. All source UNRUN; actual
+complete Windows/Linux recipe, genuine member/tool inputs, whole source review and
+NEW exact ROOT/commands still precede execution. No older binary/fake manifest or
+reduced runtime route is accepted.

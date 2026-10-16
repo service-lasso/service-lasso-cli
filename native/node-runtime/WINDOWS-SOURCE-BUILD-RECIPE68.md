@@ -46,3 +46,21 @@ The private Windows backing receiver's actual CompareObjectHandles call requires
 The current source producer requires the explicit kernelbase-preentry.def as an admitted raw native source input and uses the original retained librarian /DEF /MACHINE:X64 /OUT to produce a fresh import library and export file before the Node link, retaining both full outputs. This source-owned adapter does not claim Kernelbase.dll export/native ancestry, tool admission, successful link, installed entry or execution. LIB option contract: https://learn.microsoft.com/en-us/cpp/build/reference/overview-of-lib?view=msvc-170 . All actions remain UNRUN and the producer's unfinished admission guard remains intact.
 
 CLI33 original ntdll import connection: explicit source-owned ntdll-preentry.def names fixed NtMapViewOfSection/NtQueryInformationProcess and existing LdrLockLoaderLock/LdrUnlockLoaderLock imports. The same retained librarian/fresh namespace producer must emit and retain full import library/export originals before the Node link, with no implicit SDK search-library authority. This adapter supplies no loaded ntdll image/source/ABI/private loader-lock eligibility, native execution or positive owner promotion. Full original tool/image associations and admission remain required; producerComplete stays false.
+
+### October16 full source-runtime builder continuation
+
+The active implementation frontier is the actual full Node source builder.
+Windows generation and compilation become distinct fixed original vcbuild phases:
+release x64 full-icu vs2022 projgen nobuild, retained generated config.gypi and
+used configure flags, then release x64 full-icu vs2022 noprojgen. Generated actual
+JSON variables must preserve x64/nonshared/static CRT/full ICU/bundled V8/default
+platform/snapshot/codecache/WebAssembly/inspector/lite-mode exclusion before the
+compiler phase; post-build held readback must equal that complete original config.
+The fixed upstream configure source emits JSON after one literal generated header,
+so no Python eval or regex-as-config substitution is selected. Complete generated
+MSBuild/runtime library/link ancestry and tool/native-owner/loaded closure remain
+required. Exact source-derived command/capture geometry is checked before effects.
+No producerComplete gate is waived by partial repairs. All source UNRUN; actual
+complete Windows/Linux recipe, genuine member/tool inputs, whole source review and
+NEW exact ROOT/commands still precede execution. No older binary/fake manifest or
+reduced runtime route is accepted.
