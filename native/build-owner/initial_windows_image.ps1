@@ -66,7 +66,8 @@ function Get-SlcliInitialWindowsPeGeometry {
                 throw 'Initial PE overlapping source sections.'
             }
         }
-        $sections[$index]=[pscustomobject]@{ Va=[Int32]$va; Raw=[Int32]$raw; File=[Int32]$file; Span=[Int32]$span }
+        $name=[byte[]]::new(8);[Array]::Copy($Bytes,$row,$name,0,8)
+        $sections[$index]=[pscustomobject]@{ Va=[Int32]$va; Raw=[Int32]$raw; File=[Int32]$file; Span=[Int32]$span; Name=$name }
     }
     return [pscustomobject]@{ ImageBytes=[Int32]$image; HeadersBytes=[Int32]$headers; Sections=$sections;
         Optional=[Int32]$at; Directories=[Int32]$directories; Preferred=[BitConverter]::ToUInt64($Bytes,$at+24);
