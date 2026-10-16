@@ -88,9 +88,10 @@ function Start-SlcliInitialWindowsFixedCompile {
         Events=[object[]]::new($Owner.Source.EventCapacity); EventsUsed=0; PendingEvent=$null;
         Stdin=$null; Stdout=$null; Stderr=$null; StdinWriterClose=$null; AttributeProbe=$null; AttributeInit=$null;
         AttributeHandles=$null; IssuingThread=$null; Birth=$null; ProcessReference=$null; ThreadReference=$null;
-        Environment=$Owner.Environment; Pid=[UInt32]0; Tid=[UInt32]0; NaturalExit=$null; Complete=$false }
+        Environment=$Owner.Environment; Streams=$null; Pid=[UInt32]0; Tid=[UInt32]0; NaturalExit=$null; Complete=$false }
     $unit.Birth=$original;$plan.Active=$original
     Register-SlcliInitialWindowsCapture -Owner $Owner -Original $original
+    $null=New-SlcliInitialWindowsStreams -Owner $Owner -Birth $original
     $original.Stdin=New-SlcliInitialWindowsPipe -Owner $Owner -PrivateReader $false
     $original.Stdout=New-SlcliInitialWindowsPipe -Owner $Owner -PrivateReader $true
     $original.Stderr=New-SlcliInitialWindowsPipe -Owner $Owner -PrivateReader $true
@@ -129,6 +130,7 @@ function Start-SlcliInitialWindowsFixedCompile {
     $original.Tid=[UInt32]([Int64][Runtime.InteropServices.Marshal]::ReadInt32($process.Pointer,20) -band [Int64]0xffffffff)
     if ($original.Birth.Raw -eq 0 -or $ph.ToInt64() -in @(0,-1) -or $th.ToInt64() -in @(0,-1) -or
         $original.Pid -eq 0 -or $original.Tid -eq 0) { $Owner.Pending=$true;throw 'Initial native compiler birth failed/unresolved.' }
+    Start-SlcliInitialWindowsStreams -Owner $Owner -Birth $original
     # First real event remains STOPPED until full native image/principal/source
     # joins; no callback or always-continue path is supplied by this body.
     $null=Wait-SlcliInitialWindowsEvent -Owner $Owner -Birth $original
@@ -141,6 +143,7 @@ function Wait-SlcliInitialWindowsEvent {
     param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Birth)
     if ($null -ne $Birth.PendingEvent) { throw 'Initial native event still pending.' }
     while ($Birth.EventsUsed -lt $Birth.Events.Length) {
+        if (-not $Birth.Streams.Complete) { $null=Read-SlcliInitialWindowsStreams -Owner $Owner -Birth $Birth }
         $thread=Invoke-SlcliInitialWindowsCall -Owner $Owner -Name 'GetCurrentThreadId' -Arguments @()
         if ($thread.Raw -ne $Owner.Primary.ThreadId.Raw) { throw 'Initial debug wait left its creator thread.' }
         $remaining=$Owner.Expires-$Owner.PriorTick

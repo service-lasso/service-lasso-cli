@@ -202,3 +202,23 @@ entry remains distinct from product installer/TUI launch. Code/source correspond
 and successful raw syscalls never mint the initial authority. A complete runnable
 A/B/fixed runtime route, fresh ENTIRE review and NEW exact input/ROOT/commands are
 still required. producerComplete remains false; every local target action is UNRUN.
+
+Exact initial CLR child-reaper dependency (source audit, not execution)
+
+The selected .NET10.0.12 [native signal implementation](https://raw.githubusercontent.com/dotnet/runtime/v10.0.12/src/native/libs/System.Native/pal_signal.c)
+selects reap-all when its recorded process PID is 1 or its original SIGCHLD action
+was SIG_IGN. Its signal thread may then consume waitpid(-1, WNOHANG) results even
+without a managed child callback. [Process.Unix](https://raw.githubusercontent.com/dotnet/runtime/v10.0.12/src/libraries/System.Diagnostics.Process/src/System/Diagnostics/Process.Unix.cs)
+passes that native flag to the managed child checker. [ProcessWaitState.Unix](https://raw.githubusercontent.com/dotnet/runtime/v10.0.12/src/libraries/System.Diagnostics.Process/src/System/Diagnostics/ProcessWaitState.Unix.cs)
+normally reaps only registered managed child PIDs; reap-all additionally consumes
+unknown children. Thus avoiding Process.Start/managed registration is necessary
+but insufficient to establish sole native wait custody.
+
+The independently admitted initial occurrence must join the actual namespace PID,
+pre-CLR SIGCHLD disposition and engine-creation custody to this exact loaded runtime
+source. A later rt_sigaction observation cannot recover the runtime's retained
+original action. No input boolean, private-global patch, reaper disablement, signal
+handler replacement or extra host permission supplies that history. If the selected
+creation wrapper fixed and observed it before engine exec, consume that SAME
+original. Actual construction and exclusion of other wait actors remain required
+implementation/profile work; the current proposal has not established them.
