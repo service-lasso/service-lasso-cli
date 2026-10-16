@@ -70,8 +70,9 @@ int slcli_build_seed_compile_windows_birth_original(struct slcli_build_seed_comp
  c->image_body_original=slcli_arena_calloc(a,(size_t)compiler->bytes,1);
  c->mapping_original=slcli_arena_calloc(a,1,sizeof(*c->mapping_original));
  c->node_tuple_original=slcli_arena_calloc(a,1,sizeof(*c->node_tuple_original));
+ c->node_loaded_original=slcli_arena_calloc(a,1,sizeof(*c->node_loaded_original));
  if(!c->command_original_bytes||!c->command_mutable_original||!c->attributes_original||
- !c->image_reads_original||!c->image_clocks_original||!c->image_body_original||!c->mapping_original||!c->node_tuple_original||
+ !c->image_reads_original||!c->image_clocks_original||!c->image_body_original||!c->mapping_original||!c->node_tuple_original||!c->node_loaded_original||
  !slcli_build_remote_image_windows_prepare_original(c->mapping_original,a,b->compiler_original,
  b->pages_original.dwPageSize))return deny(c,b);
  if(!quote(c->command_original_bytes,s->command_capacity,&used,compiler->leaf.original,compiler->leaf.units)||
@@ -88,10 +89,11 @@ int slcli_build_seed_compile_windows_birth_original(struct slcli_build_seed_comp
  c->command_source_original.environment_original=s->environment_original;c->command_source_original.environment_units=s->environment_units;
  c->command_source_original.cwd_original=s->cwd_original;c->command_source_original.cwd_units=s->cwd_units;
  c->command_source_original.attribute_capacity=s->attribute_capacity;c->command_source_original.pipe_capacity=s->pipe_capacity;
- if(!slcli_build_node_abi_windows_capture_original(c->node_tuple_original,b,s->node_tuple_original))return deny(c,b);
+ if(!slcli_build_node_abi_windows_capture_original(c->node_tuple_original,b,s->node_tuple_original)||
+ !slcli_build_node_loaded_windows_capture_original(c->node_loaded_original,b,c->node_tuple_original))return deny(c,b);
  if(!slcli_build_windows_command_birth_original(&c->command_original,&c->command_source_original,
  c->command_mutable_original,c->attributes_original)||
- c->command_original.issuing_process.before.tick<c->node_tuple_original->after_parse.tick||
+ c->command_original.issuing_process.before.tick<c->node_loaded_original->finish.tick||
  !slcli_build_child_principal_windows_capture_original(&c->child_original,&c->command_original)||
  !slcli_build_loaded_file_windows_capture_original(&c->image_original,&c->child_original,
  c->image_reads_original,c->image_clocks_original,c->image_body_original)||
