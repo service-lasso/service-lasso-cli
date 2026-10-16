@@ -1,7 +1,8 @@
-# CLI39 Linux A native trampoline — proposed, UNRUN
+# CLI39 Linux A native trampoline — source implementation selected, UNRUN
 
-This is a new private initial seed-loading selection for independent intent
-review before any body/emission. It is not implemented, ABI-qualified, source GO
+Fresh different intent review of exact2c5f03b710e62bb2e678a2c2323d6915153c89a7
+selects this private initial seed-loading mechanism for source implementation
+only. It is not implemented, ABI-qualified, source GO
 or execution admission. Its purpose is the complete Linux A controller → actual
 compiler/addon output → actual Node/addon load → child-local B/full runtime build
 route, not another constructor prefix. Windows A's separate emitter approval does
