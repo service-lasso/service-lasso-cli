@@ -5,11 +5,13 @@
 #include "child_principal_windows.h"
 #include "loaded_file_windows.h"
 #include "remote_image_windows.h"
+#include "node_abi_windows.h"
 #if defined(_WIN32)
 /* Private fixed first seed compile, not argv/callback/public registration.
  * The fixed caller's whole source/SDK/header/include closure is held before
  * invoking this body. Further compilation/link/load remain the SAME schedule. */
 struct slcli_build_seed_compile_windows_source {
+ const struct slcli_build_node_abi_windows_source *node_tuple_original;
  const struct slcli_build_held_file_windows *translation_unit_original;
  const WCHAR *object_original,*environment_original,*cwd_original;
  size_t object_units,environment_units,cwd_units;
@@ -30,6 +32,7 @@ struct slcli_build_seed_compile_windows {
  struct slcli_native_clock *image_clocks_original;
  unsigned char *image_body_original;
  struct slcli_build_remote_image_windows *mapping_original;
+ struct slcli_build_node_abi_windows *node_tuple_original;
  uint32_t started,failed,stopped_prefix_captured;
 };
 /* Consumes the actual held compiler in bootstrap_original and issues its real

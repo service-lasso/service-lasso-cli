@@ -36,9 +36,10 @@ int slcli_build_seed_compile_windows_birth_original(struct slcli_build_seed_comp
  static const WCHAR object_suffix[]=L"\\bootstrap_windows.obj";
  if(!c||!b||!s||!b->completed||b->failed||b->memory_original.failed||!b->compiler_original||
  !slcli_build_held_file_windows_matches_original(b->compiler_original)||
- !s->translation_unit_original||!slcli_build_held_file_windows_matches_original(s->translation_unit_original)||
+ !s->node_tuple_original||!s->translation_unit_original||!slcli_build_held_file_windows_matches_original(s->translation_unit_original)||
  !slcli_arena_live_block(&b->arena_original,c,sizeof(*c))||!zero(c,sizeof(*c))||
  !apart(c,sizeof(*c),s,sizeof(*s))||!apart(c,sizeof(*c),b,sizeof(*b))||
+ !slcli_build_node_abi_windows_source_output_away_original(s->node_tuple_original,c,sizeof(*c))||
  !slcli_build_held_file_windows_output_away_original(s->translation_unit_original,c,sizeof(*c))||
  !slcli_build_held_file_windows_output_away_original(b->compiler_original,c,sizeof(*c))||
  !tail(&s->translation_unit_original->member_original->leaf,L"bootstrap_windows.c",19)||
@@ -68,8 +69,9 @@ int slcli_build_seed_compile_windows_birth_original(struct slcli_build_seed_comp
  c->image_clocks_original=slcli_arena_calloc(a,compiler->read_capacity,sizeof(*c->image_clocks_original));
  c->image_body_original=slcli_arena_calloc(a,(size_t)compiler->bytes,1);
  c->mapping_original=slcli_arena_calloc(a,1,sizeof(*c->mapping_original));
+ c->node_tuple_original=slcli_arena_calloc(a,1,sizeof(*c->node_tuple_original));
  if(!c->command_original_bytes||!c->command_mutable_original||!c->attributes_original||
- !c->image_reads_original||!c->image_clocks_original||!c->image_body_original||!c->mapping_original||
+ !c->image_reads_original||!c->image_clocks_original||!c->image_body_original||!c->mapping_original||!c->node_tuple_original||
  !slcli_build_remote_image_windows_prepare_original(c->mapping_original,a,b->compiler_original,
  b->pages_original.dwPageSize))return deny(c,b);
  if(!quote(c->command_original_bytes,s->command_capacity,&used,compiler->leaf.original,compiler->leaf.units)||
@@ -86,8 +88,10 @@ int slcli_build_seed_compile_windows_birth_original(struct slcli_build_seed_comp
  c->command_source_original.environment_original=s->environment_original;c->command_source_original.environment_units=s->environment_units;
  c->command_source_original.cwd_original=s->cwd_original;c->command_source_original.cwd_units=s->cwd_units;
  c->command_source_original.attribute_capacity=s->attribute_capacity;c->command_source_original.pipe_capacity=s->pipe_capacity;
+ if(!slcli_build_node_abi_windows_capture_original(c->node_tuple_original,b,s->node_tuple_original))return deny(c,b);
  if(!slcli_build_windows_command_birth_original(&c->command_original,&c->command_source_original,
  c->command_mutable_original,c->attributes_original)||
+ c->command_original.issuing_process.before.tick<c->node_tuple_original->after_parse.tick||
  !slcli_build_child_principal_windows_capture_original(&c->child_original,&c->command_original)||
  !slcli_build_loaded_file_windows_capture_original(&c->image_original,&c->child_original,
  c->image_reads_original,c->image_clocks_original,c->image_body_original)||
