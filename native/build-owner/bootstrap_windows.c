@@ -45,6 +45,7 @@ static int end(struct slcli_build_bootstrap_windows *c,struct slcli_build_window
 static int checked_add(size_t *total,size_t value) {
  if(!value||value>SIZE_MAX-*total)return 0;*total+=value;return 1;
 }
+static int deny(struct slcli_build_bootstrap_windows *c) { c->failed=1;c->memory_original.failed=1;return 0; }
 int slcli_build_bootstrap_windows_acquire_compiler_original(
  struct slcli_build_bootstrap_windows *c,const struct slcli_build_initial_windows_source *s,
  struct slcli_build_initial_windows_region_capture *rows) {
@@ -86,10 +87,10 @@ int slcli_build_bootstrap_windows_acquire_compiler_original(
  !checked_add(&total,slcli_arena_allocation_bytes(m->read_capacity*sizeof(struct slcli_windows_file_capture)))||
  !checked_add(&total,slcli_arena_allocation_bytes((size_t)m->bytes))||total>s->arena_bytes)return 0;
  c->source_original=s;c->regions_original=rows;c->started=1;c->failed=1;c->prior_tick=s->prior_original->tick;
- if(!begin(c,&c->pages))return 0;c->pages.args[0]=(uintptr_t)&c->pages_original;
+ if(!begin(c,&c->pages))return deny(c);c->pages.args[0]=(uintptr_t)&c->pages_original;
  c->pages.called=1;GetSystemInfo(&c->pages_original);c->pages.returned=1;
  if(!end(c,&c->pages)||!c->pages_original.dwPageSize||!c->pages_original.dwAllocationGranularity||
- c->pages_original.dwAllocationGranularity%c->pages_original.dwPageSize)return 0;
+ c->pages_original.dwAllocationGranularity%c->pages_original.dwPageSize)return deny(c);
  o=&c->memory_original;o->limit=s->owner_limit;o->next_sequence=1;
  o->native_page_size=c->pages_original.dwPageSize;
  o->native_page_geometry[0]=c->pages_original.dwPageSize;o->native_page_geometry[1]=c->pages_original.dwAllocationGranularity;
@@ -98,24 +99,24 @@ int slcli_build_bootstrap_windows_acquire_compiler_original(
  for(i=0;i<s->region_count;i++) {
  const struct slcli_build_initial_windows_region *r=&s->regions_original[i];
  struct slcli_build_initial_windows_region_capture *v=&rows[i];MEMORY_BASIC_INFORMATION *g=&v->geometry_original;
- if(r->base%o->native_page_size||r->bytes%o->native_page_size||!begin(c,&v->query))return 0;
+ if(r->base%o->native_page_size||r->bytes%o->native_page_size||!begin(c,&v->query))return deny(c);
  v->query.args[0]=r->base;v->query.args[1]=(uintptr_t)g;v->query.args[2]=sizeof(*g);
  v->query.called=1;v->query.raw=VirtualQuery((void *)r->base,g,sizeof(*g));v->query.returned=1;
  if(!v->query.raw){v->query.error=GetLastError();v->query.error_observed=1;}
  if(!end(c,&v->query)||v->query.raw!=sizeof(*g)||g->BaseAddress!=(void *)r->base||
- g->RegionSize!=r->bytes||g->State!=r->state||g->Type!=r->type||g->Protect!=r->protection)return 0;
+ g->RegionSize!=r->bytes||g->State!=r->state||g->Type!=r->type||g->Protect!=r->protection)return deny(c);
  /* Adopt observed initial backing into its SAME ledger; this is not a new
   * OS allocation, source authority, or a second independent owner allowance. */
  if(!slcli_memory_prepare(o,r->category,r->bytes,&v->request_original)||
  !slcli_memory_partial_acquired(o,&v->request_original,r->base)||
- !slcli_memory_acquired(o,&v->request_original,r->base,r->bytes,r->state==MEM_COMMIT?r->bytes:0,1))return 0;
+ !slcli_memory_acquired(o,&v->request_original,r->base,r->bytes,r->state==MEM_COMMIT?r->bytes:0,1))return deny(c);
  }
- if(!slcli_native_clock_read(&c->arena_before)||c->arena_before.tick<c->prior_tick||c->arena_before.tick>=s->expires)return 0;
+ if(!slcli_native_clock_read(&c->arena_before)||c->arena_before.tick<c->prior_tick||c->arena_before.tick>=s->expires)return deny(c);
  if(!slcli_platform_acquire(o,SLCLI_RUNTIME,s->arena_bytes,&c->arena_acquisition_original)||
  c->arena_acquisition_original.tick<c->prior_tick||c->arena_acquisition_original.tick>=s->expires||
  !slcli_native_clock_read(&c->arena_after)||c->arena_after.tick<c->arena_acquisition_original.tick||
  c->arena_after.tick<c->arena_before.tick||c->arena_after.tick>=s->expires||
- !slcli_arena_init(&c->arena_original,o,c->arena_acquisition_original.request.index))return 0;
+ !slcli_arena_init(&c->arena_original,o,c->arena_acquisition_original.request.index))return deny(c);
  c->prior_tick=c->arena_after.tick;
  c->effective_original=slcli_arena_calloc(&c->arena_original,1,sizeof(*c->effective_original));
  c->primary_original=slcli_arena_calloc(&c->arena_original,1,sizeof(*c->primary_original));
@@ -125,12 +126,12 @@ int slcli_build_bootstrap_windows_acquire_compiler_original(
  c->compiler_body_original=slcli_arena_calloc(&c->arena_original,(size_t)m->bytes,1);
  if(!c->effective_original||!c->primary_original||!c->compiler_original||!c->compiler_ancestors_original||
  !c->compiler_reads_original||!c->compiler_body_original||!slcli_native_clock_read(&c->finish)||
- c->finish.tick<c->prior_tick||c->finish.tick>=s->expires)return 0;
+ c->finish.tick<c->prior_tick||c->finish.tick>=s->expires)return deny(c);
  prior=&c->finish;
  if(!slcli_build_principal_windows_capture_original(c->effective_original,s->effective_original,s->origin_original,prior,s->expires)||
  !slcli_build_process_primary_windows_capture_original(c->primary_original,c->effective_original,s->primary_original)||
  !slcli_build_held_file_windows_capture_original(c->compiler_original,c->primary_original,m,
- c->compiler_ancestors_original,c->compiler_reads_original,c->compiler_body_original))return 0;
+ c->compiler_ancestors_original,c->compiler_reads_original,c->compiler_body_original))return deny(c);
  c->prior_tick=c->compiler_original->finish.tick;c->completed=1;c->failed=0;return 1;
 }
 #endif
