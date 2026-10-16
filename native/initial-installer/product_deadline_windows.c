@@ -20,6 +20,17 @@ static int values(const struct slcli_product_windows_deadline_values *v) {
  v->parent_pid&&(v->parent_creation[0]||v->parent_creation[1])&&
  v->qpc_frequency&&v->qpc_frequency<=INT64_MAX;
 }
+int slcli_product_windows_deadline_conservative_bounds(
+ struct slcli_product_windows_deadline_bounds *out,const struct slcli_product_windows_deadline_values *v) {
+ uint64_t guard;
+ if(!out||!apart(out,sizeof(*out),v,sizeof(*v))||!values(v))return 0;
+ guard=UINT64_C(1000000000)/v->qpc_frequency;
+ if(UINT64_C(1000000000)%v->qpc_frequency)guard++;
+ guard++; /* Native counter ordering plus integer-conversion conservatism. */
+ if(v->enclosing_expires<=guard||v->active_phase_expires<=guard)return 0;
+ out->guard_nanoseconds=guard;out->enclosing_expires=v->enclosing_expires-guard;
+ out->active_phase_expires=v->active_phase_expires-guard;return 1;
+}
 int slcli_product_windows_deadline_encode(unsigned char *out,size_t bytes,
  const struct slcli_product_windows_deadline_values *v) {
  size_t i;

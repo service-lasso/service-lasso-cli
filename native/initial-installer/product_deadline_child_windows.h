@@ -47,6 +47,7 @@ struct slcli_product_windows_deadline_acquisition {
  unsigned char readback_original[SLCLI_BOOTSTRAP_TRANSPORT_BYTES];
  unsigned char final_body_original[SLCLI_BOOTSTRAP_TRANSPORT_BYTES];
  struct slcli_product_windows_deadline_values values;
+ struct slcli_product_windows_deadline_bounds bounds;
  uint32_t started,failed,native_capture_completed;
 };
 /* Reads ONLY the fixed source-owned product route cell, then actually acquires

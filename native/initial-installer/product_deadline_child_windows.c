@@ -20,6 +20,7 @@ static int same(const struct slcli_product_windows_deadline_acquisition *c) {
 }
 static int clock_cut(struct slcli_product_windows_deadline_acquisition *c,struct slcli_native_clock *out) {
  if(!slcli_native_clock_read(out)||!same(c)||out->tick<c->prior_tick||out->tick>=c->initial_expires)return 0;
+ if(c->bounds.guard_nanoseconds&&(out->tick>=c->bounds.enclosing_expires||out->tick>=c->bounds.active_phase_expires))return 0;
  c->prior_tick=out->tick;return 1;
 }
 static int before(struct slcli_product_windows_deadline_acquisition *c,size_t i) {
@@ -138,8 +139,9 @@ int slcli_product_windows_deadline_acquire_original(struct slcli_product_storage
  c->values.parent_creation[0]!=c->parent_creation.dwLowDateTime||
  c->values.parent_creation[1]!=c->parent_creation.dwHighDateTime||
  c->values.qpc_frequency!=(uint64_t)c->initial_origin_original->native_windows_frequency.QuadPart||
+ !slcli_product_windows_deadline_conservative_bounds(&c->bounds,&c->values)||
  !clock_cut(c,&c->body_cut))return fail(c);
- if(c->body_cut.tick>=c->values.active_phase_expires||c->body_cut.tick>=c->values.enclosing_expires)return fail(c);
+ if(c->body_cut.tick>=c->bounds.active_phase_expires||c->body_cut.tick>=c->bounds.enclosing_expires)return fail(c);
  i=SLCLI_PRODUCT_CHILD_PARENT_TOKEN;r=&c->calls[i];r->args[0]=(uintptr_t)c->route.parent_process;
  r->args[1]=TOKEN_QUERY;r->args[2]=(uintptr_t)&c->parent_token_original;
  BOOLRAW(OpenProcessToken(c->route.parent_process,TOKEN_QUERY,&c->parent_token_original));END();
@@ -180,7 +182,7 @@ int slcli_product_windows_deadline_acquire_original(struct slcli_product_storage
  for(i=0;i<SLCLI_PRODUCT_ROUTE_BYTES;i++)c->route_after[i]=slcli_product_route_cell_v1[i];
  if(!equal(c->body_original,c->final_body_original,SLCLI_BOOTSTRAP_TRANSPORT_BYTES)||
  !equal(c->route_before,c->route_after,SLCLI_PRODUCT_ROUTE_BYTES)||!clock_cut(c,&c->finish)||
- c->finish.tick>=c->values.active_phase_expires||c->finish.tick>=c->values.enclosing_expires)return fail(c);
+ c->finish.tick>=c->bounds.active_phase_expires||c->finish.tick>=c->bounds.enclosing_expires)return fail(c);
  s->prior_tick=c->finish.tick;c->native_capture_completed=1;return 1;
 }
 #undef RAW

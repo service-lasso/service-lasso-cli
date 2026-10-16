@@ -69,3 +69,25 @@ an excuse for a fourth Go handle or a C-to-Go private assembler cast. New such
 bridge ABI requires separate concrete intent. Full Windows A/full Node/Linux/
 product nativecase/entry/helpers/schema3/protected release remain incomplete.
 producerComplete=false. No local target parser/compiler/load/test/native ran.
+
+## Conservative absolute bounds before the local admission cut
+
+Selectedb52 permits shortening, never renewing, the received absolute bounds.
+The C native clock uses integer floor nanoseconds from the actual QPC counter/
+frequency. Before accepting any useful acquired body or subsequent native row,
+derive a guard of ceil(1000000000/frequency)+1 nanoseconds: one full native-counter
+tick of cross-thread ordering ambiguity plus one integer conversion nanosecond.
+Checked subtraction shortens BOTH received absolute enclosing and active-phase
+expirations by that guard. Frequency zero/overflow, underflow, phase inversion,
+or a cut at/after either shortened bound denies. No duration is added to a child
+sample, and the retained raw parent values/originals remain unchanged.
+
+This arithmetic is a constraints-only pure helper. It does not establish SAME
+boot/host/QPC-domain provenance, native source/parent/object/finance membership,
+or a product operation origin. Those actual nativecase/INITIAL source joins are
+still required BEFORE any child caller/deadline may publish. The acquisition
+retains the derived bounds separately, uses them for its body/remaining native
+cuts and final cut, and still publishes no local operation. The finite pure
+arithmetic and its retained24-byte bounds row add no native call; complete source
+cost/physical/failure obligations remain independently financed. Labelled pure
+boundary vectors do not stand in for the genuine native domain/case proof.

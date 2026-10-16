@@ -10,6 +10,9 @@ struct slcli_product_windows_deadline_values {
  uint64_t enclosing_expires,active_phase_expires,qpc_frequency;
  uint32_t active_phase,parent_pid,parent_creation[2];
 };
+struct slcli_product_windows_deadline_bounds {
+ uint64_t guard_nanoseconds,enclosing_expires,active_phase_expires;
+};
 struct slcli_product_windows_deadline_source {
  /* Exact distinct LIVE arena descriptor before publisher entry. Local phase
   * deadline/origin are LIVE ranges. External/free/header/padding descriptors
@@ -33,6 +36,10 @@ int slcli_product_windows_deadline_encode(unsigned char *,size_t,
  const struct slcli_product_windows_deadline_values *);
 int slcli_product_windows_deadline_decode(struct slcli_product_windows_deadline_values *,
  const unsigned char *,size_t);
+/* Pure no-later constraints only; SAME boot/native QPC-domain/source membership
+ * is independent. Never adds a duration or constructs a local clock/caller. */
+int slcli_product_windows_deadline_conservative_bounds(
+ struct slcli_product_windows_deadline_bounds *,const struct slcli_product_windows_deadline_values *);
 /* Actual private section publication + writer disposal only. Full genuine
  * source/active-phase/funding admission must precede this fixed caller. Success
  * is NOT child acquisition, family/entry permission or native qualification. */
