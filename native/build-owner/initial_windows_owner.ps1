@@ -50,6 +50,7 @@ function New-SlcliInitialWindowsOwner {
         $owner.PriorTick = $owner.InitialClock.Tick
         $owner.Process = Invoke-SlcliInitialWindowsCall -Owner $owner -Name 'GetCurrentProcess' -Arguments @()
         $owner.Thread = Invoke-SlcliInitialWindowsCall -Owner $owner -Name 'GetCurrentThread' -Arguments @()
+        $null=Read-SlcliInitialWindowsGeometry -Owner $owner
         $null=Read-SlcliInitialWindowsPrincipal -Owner $owner -Expected $Source.Effective -Plane Effective
         $null=Read-SlcliInitialWindowsPrincipal -Owner $owner -Expected $Source.Primary -Plane Primary
         $owner.Compiler=Read-SlcliInitialWindowsHeldFile -Owner $owner -Member $Source.Compiler
