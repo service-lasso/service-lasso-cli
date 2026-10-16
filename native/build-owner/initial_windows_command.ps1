@@ -148,6 +148,8 @@ function Start-SlcliInitialWindowsFixedCompile {
     $null=Read-SlcliInitialWindowsModuleImages -Owner $Owner -Birth $original
     $null=Read-SlcliInitialWindowsMappedImports -Owner $Owner -Birth $original
     $null=Read-SlcliInitialWindowsMappedExports -Owner $Owner -Birth $original
+    $null=Read-SlcliInitialWindowsMappedBoundImports -Owner $Owner -Birth $original
+    $null=Read-SlcliInitialWindowsMappedDelayImports -Owner $Owner -Birth $original
     return $original
 }
 

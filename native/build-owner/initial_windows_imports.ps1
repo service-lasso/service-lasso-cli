@@ -107,6 +107,7 @@ function Read-SlcliInitialWindowsMappedImports {
     $walk=$Birth.Modules
     if (-not $walk.ImageBytesComplete -or $walk.ImportBytesObserved -or $null -ne $Birth.PendingEvent.Continue -or
         -not [Object]::ReferenceEquals($Birth.PendingEvent,$Birth.Child.Event)) { throw 'Actual import bytes require SAME stopped mapped images.' }
+    $walk.ImportBefore=Read-SlcliInitialWindowsClock -Owner $Owner
     for ($index=0;$index -lt $walk.ImagesUsed;$index++) {
         $module=$walk.Images[$index];$imports=$module.Source.Imports;$mapping=$module.Mapping
         if (-not $mapping.Complete -or -not $imports.OrdinaryComplete -or
@@ -122,6 +123,9 @@ function Read-SlcliInitialWindowsMappedImports {
             }
         }
     }
+    $walk.ImportAfter=Read-SlcliInitialWindowsClock -Owner $Owner
+    if ($walk.ImportAfter.Tick -lt $walk.ImportBefore.Tick) { throw 'Actual import processing clock regressed.' }
+    $Owner.PriorTick=$walk.ImportAfter.Tick
     $walk.ImportBytesObserved=$true
     return $walk
 }
