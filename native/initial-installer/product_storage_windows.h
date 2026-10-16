@@ -1,29 +1,10 @@
 #ifndef SLCLI_PRODUCT_STORAGE_WINDOWS_H
 #define SLCLI_PRODUCT_STORAGE_WINDOWS_H
+#include "product_source_windows.h"
 #include "../build-owner/bootstrap_windows.h"
 #include "../node-owner/transport_windows.h"
 #if defined(_WIN32)
 struct slcli_product_section_windows;
-/* Private INITIAL preparation input. Its independently admitted occurrence pays
- * all pre-operation acquisition/control/native costs. These expectations are not
- * an issuer, serialized grant, or a product clock which can later be replaced. */
-struct slcli_product_initial_windows_source_span {
- const void *original;size_t bytes;
- const void *actor_original;size_t actor_bytes;
- const void *occurrence_original;size_t occurrence_bytes;
-};
-struct slcli_product_storage_windows_source {
- const struct slcli_native_clock *initial_origin_original,*initial_prior_original;
- uint64_t initial_expires,operation_expires,owner_limit,arena_bytes;
- const struct slcli_build_initial_windows_region *regions_original;
- size_t region_count;
- const struct slcli_bq_owner_resource_profile *profile_original;
- const struct slcli_bq_expected_principal *effective_original,*primary_original;
- const struct slcli_bq_provider_expectations *initial_source_original;
- const struct slcli_product_initial_windows_source_span *source_graph_original;
- size_t source_graph_count;
- unsigned char birth[32],image[32],owner[32],source[32];
-};
 struct slcli_product_windows_operation_caller {
  const struct slcli_product_storage_windows_source *initial_source_original;
  struct slcli_memory_owner *memory_original;

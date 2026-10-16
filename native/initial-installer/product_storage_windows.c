@@ -19,37 +19,6 @@ static int inside_prefix(const struct slcli_product_storage_windows_source *s,co
  p>=r->base&&p+n<=r->base+r->bytes)return 1;
  }return 0;
 }
-static int principal_away(const struct slcli_bq_expected_principal *p,const void *out,size_t n) {
- return p&&p->platform==SLCLI_BQ_EXPECTED_WINDOWS&&p->windows_sid&&p->windows_sid_bytes&&
- p->windows_sid_bytes<=SECURITY_MAX_SID_SIZE&&apart(out,n,p,sizeof(*p))&&
- apart(out,n,p->windows_sid,p->windows_sid_bytes);
-}
-static int source_away(const struct slcli_product_storage_windows_source *s,const void *out,size_t n) {
- size_t i;const struct slcli_bq_provider_expectations *e=s->initial_source_original;
- if(!e||!e->command_count||e->command_count>SIZE_MAX/sizeof(*e->requirements_per_command)||
- !e->subject_count||e->subject_count>SIZE_MAX/sizeof(*e->subjects)||
- !s->source_graph_original||!s->source_graph_count||
- s->source_graph_count>SIZE_MAX/sizeof(*s->source_graph_original)||
- !apart(out,n,e->requirements_per_command,e->command_count*sizeof(*e->requirements_per_command))||
- !apart(out,n,e->subjects,e->subject_count*sizeof(*e->subjects))||
- !principal_away(&e->principal,out,n)||
- (e->producer.entry_symbol_bytes&&!apart(out,n,e->producer.entry_symbol,e->producer.entry_symbol_bytes))||
- !apart(out,n,s->source_graph_original,s->source_graph_count*sizeof(*s->source_graph_original)))return 0;
- for(i=0;i<e->subject_count;i++)if(e->subjects[i].reader_role_bytes&&
- !apart(out,n,e->subjects[i].reader_role,e->subjects[i].reader_role_bytes))return 0;
- for(i=0;i<s->source_graph_count;i++) {
- const struct slcli_product_initial_windows_source_span *v=&s->source_graph_original[i];
- if(!apart(out,n,v->original,v->bytes)||!apart(out,n,v->actor_original,v->actor_bytes)||
- !apart(out,n,v->occurrence_original,v->occurrence_bytes))return 0;
- }
- return apart(out,n,s,sizeof(*s))&&
- apart(out,n,s->initial_origin_original,sizeof(*s->initial_origin_original))&&
- apart(out,n,s->initial_prior_original,sizeof(*s->initial_prior_original))&&
- apart(out,n,s->regions_original,s->region_count*sizeof(*s->regions_original))&&
- apart(out,n,s->profile_original,sizeof(*s->profile_original))&&
- apart(out,n,s->initial_source_original,sizeof(*s->initial_source_original))&&
- principal_away(s->effective_original,out,n)&&principal_away(s->primary_original,out,n);
-}
 static int begin(struct slcli_product_storage_windows *c,struct slcli_build_windows_call *r) {
  return slcli_native_clock_read(&r->before)&&r->before.tick>=c->prior_tick&&
  r->before.tick<c->source_original->initial_expires;
@@ -85,7 +54,7 @@ int slcli_product_storage_windows_prepare_original(struct slcli_product_storage_
  (void *)s->regions_original[j].base,(size_t)s->regions_original[j].bytes))return 0;
  }
  if(prefix>s->owner_limit||s->arena_bytes>s->owner_limit-prefix||
- !source_away(s,c,sizeof(*c))||!source_away(s,rows,row_bytes)||!apart(c,sizeof(*c),rows,row_bytes)||
+ !slcli_product_windows_initial_source_excludes_output(s,c,sizeof(*c))||!slcli_product_windows_initial_source_excludes_output(s,rows,row_bytes)||!apart(c,sizeof(*c),rows,row_bytes)||
  !inside_prefix(s,c,sizeof(*c))||!inside_prefix(s,rows,row_bytes)||
  !zero(c,sizeof(*c))||!zero(rows,row_bytes))return 0;
  if(!add(&total,slcli_arena_allocation_bytes(sizeof(*c->caller_original)))||
@@ -158,7 +127,7 @@ int slcli_product_storage_windows_prepare_original(struct slcli_product_storage_
 int slcli_product_storage_windows_output_away_original(
  const struct slcli_product_storage_windows *c,const void *out,size_t n) {
  return c&&c->storage_constructed==1&&!c->failed&&c->source_original&&
- source_away(c->source_original,out,n)&&apart(out,n,c,sizeof(*c))&&
+ slcli_product_windows_initial_source_excludes_output(c->source_original,out,n)&&apart(out,n,c,sizeof(*c))&&
  apart(out,n,c->regions_original,c->source_original->region_count*sizeof(*c->regions_original))&&
  apart(out,n,c->caller_original,sizeof(*c->caller_original))&&
  apart(out,n,c->deadline_original,sizeof(*c->deadline_original))&&
