@@ -91,7 +91,8 @@ int slcli_build_seed_compile_windows_birth_original(struct slcli_build_seed_comp
  !slcli_build_child_principal_windows_capture_original(&c->child_original,&c->command_original)||
  !slcli_build_loaded_file_windows_capture_original(&c->image_original,&c->child_original,
  c->image_reads_original,c->image_clocks_original,c->image_body_original)||
- !slcli_build_remote_image_windows_observe_original(c->mapping_original,&c->image_original))return deny(c,b);
+ !slcli_build_remote_image_windows_observe_original(c->mapping_original,&c->image_original)||
+ !slcli_build_remote_image_windows_initial_bytes_original(c->mapping_original))return deny(c,b);
  c->stopped_prefix_captured=1;c->failed=0;return 1;
 }
 #endif

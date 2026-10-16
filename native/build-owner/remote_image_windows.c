@@ -1,8 +1,11 @@
 #include "remote_image_windows.h"
 #if defined(_WIN32)
+_Static_assert(sizeof(uintptr_t)==8,"Selected compiler child image capture requires Windows x64");
 static int zero(const void *p,size_t n){const unsigned char *s=p;size_t i;for(i=0;i<n;i++)if(s[i])return 0;return 1;}
 static uint32_t le16(const unsigned char *p){return (uint32_t)p[0]|((uint32_t)p[1]<<8);}
 static uint32_t le32(const unsigned char *p){return le16(p)|(le16(p+2)<<16);}
+static uint64_t le64(const unsigned char *p){return (uint64_t)le32(p)|((uint64_t)le32(p+4)<<32);}
+static void put64(unsigned char *p,uint64_t value){size_t i;for(i=0;i<8;i++){p[i]=(unsigned char)value;value>>=8;}}
 int slcli_build_pe64_geometry_windows_original(struct slcli_build_pe64_geometry_windows *c,
  const unsigned char *p,size_t n,size_t page) {
  size_t offset,optional,sections,i,j,section_align,file_align,directories;uintptr_t out=(uintptr_t)c,in=(uintptr_t)p;
@@ -47,7 +50,9 @@ int slcli_build_remote_image_windows_prepare_original(struct slcli_build_remote_
  c->page_bytes=geometry.page_bytes;c->capacity=geometry.capacity;
  c->rows_original=slcli_arena_calloc(a,c->capacity,sizeof(*c->rows_original));
  c->body_original=slcli_arena_calloc(a,c->image_bytes,1);
- if(!c->rows_original||!c->body_original)return 0;
+ c->expected_image_original=slcli_arena_calloc(a,c->image_bytes,1);
+ c->relocation_seen_original=slcli_arena_calloc(a,c->image_bytes/8+(c->image_bytes%8!=0),1);
+ if(!c->rows_original||!c->body_original||!c->expected_image_original||!c->relocation_seen_original)return 0;
  c->prepared=1;return 1;
 }
 static int begin(struct slcli_build_remote_image_windows *c,struct slcli_build_windows_call *r) {
@@ -107,5 +112,63 @@ int slcli_build_remote_image_windows_observe_original(struct slcli_build_remote_
  c->headers_correspond=1;
  if(!slcli_native_clock_read(&c->finish)||c->finish.tick<c->prior_tick||c->finish.tick>=c->expires)return 0;
  c->geometry_complete=1;c->body_complete=complete?1:0;c->failed=0;return 1;
+}
+static const unsigned char *source_rva(const struct slcli_build_remote_image_windows *c,size_t rva,size_t bytes) {
+ const unsigned char *file=c->file_original->body_original;size_t i;
+ if(rva>c->image_bytes||bytes>c->image_bytes-rva)return NULL;
+ if(rva<c->headers_bytes&&bytes<=c->headers_bytes-rva)return file+rva;
+ for(i=0;i<c->section_count;i++) {
+ const unsigned char *s=file+c->section_table_offset+i*40;
+ size_t va=le32(s+12),raw=le32(s+16),offset=le32(s+20);
+ if(rva>=va&&rva-va<=raw&&bytes<=raw-(rva-va))return file+offset+(rva-va);
+ }return NULL;
+}
+int slcli_build_remote_image_windows_initial_bytes_original(struct slcli_build_remote_image_windows *c) {
+ const unsigned char *file,*table=NULL;size_t i,j,offset,optional,directories,reloc_rva=0,reloc_bytes=0;
+ uint64_t preferred,actual;
+ if(!c||!c->started||c->failed||!c->geometry_complete||!c->body_complete||!c->headers_correspond||
+ c->initial_bytes_correspond||c->comparison_offset||c->relocation_cursor||c->relocations_processed||
+ !slcli_build_loaded_file_windows_matches_original(c->event_file_original)||
+ !slcli_build_held_file_windows_matches_original(c->file_original)||
+ !zero(c->expected_image_original,c->image_bytes)||
+ !zero(c->relocation_seen_original,c->image_bytes/8+(c->image_bytes%8!=0)))return 0;
+ c->failed=1;
+ if(!slcli_native_clock_read(&c->bytes_before)||c->bytes_before.tick<c->finish.tick||c->bytes_before.tick>=c->expires)return 0;
+ file=c->file_original->body_original;offset=le32(file+60);optional=offset+24;
+ preferred=le64(file+optional+24);actual=c->base_original;
+ if(!preferred||c->image_bytes>UINT64_MAX-preferred||c->image_bytes>UINT64_MAX-actual)return 0;
+ for(i=0;i<c->headers_bytes;i++)c->expected_image_original[i]=file[i];
+ for(i=0;i<c->section_count;i++) {
+ const unsigned char *s=file+c->section_table_offset+i*40;size_t va=le32(s+12),raw=le32(s+16),from=le32(s+20);
+ for(j=0;j<raw;j++)c->expected_image_original[va+j]=file[from+j];
+ }
+ directories=le32(file+optional+108);
+ if(directories>5){reloc_rva=le32(file+optional+112+5*8);reloc_bytes=le32(file+optional+112+5*8+4);}
+ if((reloc_rva==0)!=(reloc_bytes==0)||(!reloc_bytes&&preferred!=actual))return 0;
+ if(reloc_bytes){table=source_rva(c,reloc_rva,reloc_bytes);if(!table)return 0;}
+ while(c->relocation_cursor<reloc_bytes) {
+ size_t cursor=c->relocation_cursor,page,block,count;
+ if(reloc_bytes-cursor<8)return 0;page=le32(table+cursor);block=le32(table+cursor+4);
+ if(page%4096||block<8||block%2||block>reloc_bytes-cursor)return 0;count=(block-8)/2;
+ for(i=0;i<count;i++) {
+ uint32_t entry=le16(table+cursor+8+i*2),kind=entry>>12;size_t target;uint64_t value;
+ c->relocations_processed++;
+ if(kind==0)continue;
+ if(kind!=10||page>c->image_bytes||(entry&4095)>c->image_bytes-page)return 0;
+ target=page+(entry&4095);if(c->image_bytes-target<8)return 0;
+ for(j=0;j<8;j++) {
+ size_t bit=target+j;if(c->relocation_seen_original[bit/8]&(1u<<(bit%8)))return 0;
+ c->relocation_seen_original[bit/8]|=(unsigned char)(1u<<(bit%8));
+ }
+ value=le64(c->expected_image_original+target);
+ if(value<preferred||value-preferred>c->image_bytes)return 0;
+ put64(c->expected_image_original+target,actual+(value-preferred));
+ }
+ c->relocation_cursor+=block;
+ }
+ for(c->comparison_offset=0;c->comparison_offset<c->image_bytes;c->comparison_offset++)
+ if(c->body_original[c->comparison_offset]!=c->expected_image_original[c->comparison_offset])return 0;
+ if(!slcli_native_clock_read(&c->bytes_after)||c->bytes_after.tick<c->bytes_before.tick||c->bytes_after.tick>=c->expires)return 0;
+ c->initial_bytes_correspond=1;c->failed=0;return 1;
 }
 #endif
