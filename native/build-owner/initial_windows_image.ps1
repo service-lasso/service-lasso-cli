@@ -108,7 +108,10 @@ function New-SlcliInitialWindowsImageBacking {
         Body=$null; Controls=$null; Rows=[object[]]::new($geometry.Capacity); Used=0; Base=[Int64]0; Cursor=0;
         Expected=[byte[]]::new($geometry.ImageBytes); Observed=[byte[]]::new($geometry.ImageBytes);
         RelocationSeen=[byte[]]::new([Int32][Math]::Floor(([Int64]$geometry.ImageBytes+7)/8));
-        RelocationCursor=0; Relocations=0; Compared=0; Thread=$null; BeforeCompare=$null; AfterCompare=$null; Complete=$false }
+        BindingSeen=[byte[]]::new([Int32][Math]::Floor(([Int64]$geometry.ImageBytes+7)/8));
+        BindingEffects=[object[]]::new($Owner.Source.ImportCapacity); BindingEffectsUsed=0;
+        RelocationCursor=0; Relocations=0; Compared=0; Thread=$null; BeforeCompare=$null; AfterCompare=$null;
+        BeforeExpected=$null; AfterExpected=$null; CapturedComplete=$false; ExpectedComplete=$false; Complete=$false }
     Register-SlcliInitialWindowsCapture -Owner $Owner -Original $original
     $original.Body=Get-SlcliInitialWindowsBuffer -Owner $Owner -Bytes $geometry.ImageBytes
     $original.Controls=Get-SlcliInitialWindowsBuffer -Owner $Owner -Bytes ($geometry.Capacity*64) -Alignment 8
@@ -129,7 +132,7 @@ function Read-SlcliInitialWindowsRemoteImage {
 function Read-SlcliInitialWindowsImageRegions {
     param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Original)
     $original=$Original;$Birth=$original.Birth
-    if ($original.Complete -or $original.Used -ne 0 -or $original.Cursor -ne 0 -or
+    if ($original.CapturedComplete -or $original.Complete -or $original.Used -ne 0 -or $original.Cursor -ne 0 -or
         $null -eq $Birth.PendingEvent -or $null -ne $Birth.PendingEvent.Continue -or
         -not [Object]::ReferenceEquals($Birth.PendingEvent,$Birth.Child.Event) -or -not $Birth.Child.Complete) {
         throw 'Actual selected mapping must precede any native event continuation.'
@@ -184,15 +187,16 @@ function Read-SlcliInitialWindowsImageRegions {
         $original.Cursor+=[Int32]$row.Bytes
     }
     [Runtime.InteropServices.Marshal]::Copy($original.Body.Pointer,$original.Observed,0,$geometry.ImageBytes)
-    $null=Compare-SlcliInitialWindowsRemoteImage -Owner $Owner -Original $original
-    $original.Complete=$true
+    $original.CapturedComplete=$true
+    $null=Prepare-SlcliInitialWindowsExpectedImage -Owner $Owner -Original $original
     return $original
 }
 
-function Compare-SlcliInitialWindowsRemoteImage {
+function Prepare-SlcliInitialWindowsExpectedImage {
     param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Original)
     $g=$Original.Geometry;$file=$Original.Held.ManagedBody
-    $Original.BeforeCompare=Read-SlcliInitialWindowsClock -Owner $Owner
+    if (-not $Original.CapturedComplete -or $Original.ExpectedComplete) { throw 'Expected image requires fresh complete capture.' }
+    $Original.BeforeExpected=Read-SlcliInitialWindowsClock -Owner $Owner
     if ($g.Preferred -eq 0 -or [Numerics.BigInteger]$g.Preferred+$g.ImageBytes -gt [UInt64]::MaxValue) {
         throw 'Initial preferred image base overflows.'
     }
@@ -233,12 +237,35 @@ function Compare-SlcliInitialWindowsRemoteImage {
         }
         $Original.RelocationCursor+=[Int32]$block
     }
-    for ($Original.Compared=0;$Original.Compared -lt $g.ImageBytes;$Original.Compared++) {
-        if ($Original.Expected[$Original.Compared] -ne $Original.Observed[$Original.Compared]) {
-            throw 'Initial full actual relocated image correspondence differs; imports/loader gaps are not waived.'
-        }
+    $Original.AfterExpected=Read-SlcliInitialWindowsClock -Owner $Owner
+    if ($Original.AfterExpected.Tick -lt $Original.BeforeExpected.Tick) { throw 'Initial image expectation clock regressed.' }
+    $Owner.PriorTick=$Original.AfterExpected.Tick;$Original.ExpectedComplete=$true
+}
+
+function Compare-SlcliInitialWindowsRemoteImage {
+    param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Original)
+    if (-not $Original.CapturedComplete -or -not $Original.ExpectedComplete -or $Original.Complete) {
+        throw 'Final image correspondence requires SAME complete capture and source expectation.'
+    }
+    $Original.BeforeCompare=Read-SlcliInitialWindowsClock -Owner $Owner
+    $null=Find-SlcliInitialWindowsImageDifference -Original $Original
+    if ($Original.Compared -ne $Original.Geometry.ImageBytes) {
+        throw 'Initial complete source/effect image correspondence differs; unexplained loader bytes are not waived.'
     }
     $Original.AfterCompare=Read-SlcliInitialWindowsClock -Owner $Owner
     if ($Original.AfterCompare.Tick -lt $Original.BeforeCompare.Tick) { throw 'Initial image comparison clock regressed.' }
-    $Owner.PriorTick=$Original.AfterCompare.Tick
+    $Owner.PriorTick=$Original.AfterCompare.Tick;$Original.Complete=$true
+}
+
+function Find-SlcliInitialWindowsImageDifference {
+    param([Parameter(Mandatory)][object]$Original)
+    if ($Original.Expected.Length -ne $Original.Geometry.ImageBytes -or $Original.Observed.Length -ne $Original.Geometry.ImageBytes) {
+        throw 'Full image byte vectors differ from selected geometry.'
+    }
+    for ($Original.Compared=0;$Original.Compared -lt $Original.Geometry.ImageBytes;$Original.Compared++) {
+        if ($Original.Expected[$Original.Compared] -ne $Original.Observed[$Original.Compared]) {
+            return $Original.Compared
+        }
+    }
+    return $Original.Compared
 }

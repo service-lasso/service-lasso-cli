@@ -86,12 +86,12 @@ function Read-SlcliInitialWindowsDelayImports {
 function Read-SlcliInitialWindowsMappedDelayImports {
     param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Birth)
     $walk=$Birth.Modules
-    if (-not $walk.ImageBytesComplete -or $walk.DelayBytesObserved -or $null -ne $Birth.PendingEvent.Continue -or
+    if (-not $walk.ImagesCaptured -or $walk.DelayBytesObserved -or $null -ne $Birth.PendingEvent.Continue -or
         -not [Object]::ReferenceEquals($Birth.PendingEvent,$Birth.Child.Event)) { throw 'Actual delay bytes require SAME stopped mapped images.' }
     $walk.DelayBefore=Read-SlcliInitialWindowsClock -Owner $Owner
     for ($index=0;$index -lt $walk.ImagesUsed;$index++) {
         $module=$walk.Images[$index];$delay=$module.Source.DelayImports;$imports=$delay.Imports;$mapping=$module.Mapping
-        if (-not $mapping.Complete -or -not $delay.Complete -or
+        if ((-not $mapping.CapturedComplete -or -not $mapping.ExpectedComplete) -or -not $delay.Complete -or
             -not [Object]::ReferenceEquals($mapping.Held,$imports.Held)) { throw 'Actual delay source/mapped occurrence mismatch.' }
         for ($entry=0;$entry -lt $delay.DescriptorsUsed;$entry++) {
             $source=$delay.Descriptors[$entry];$at=$imports.DelayRva+$source.Offset

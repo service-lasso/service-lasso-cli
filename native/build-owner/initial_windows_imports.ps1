@@ -105,12 +105,12 @@ function Read-SlcliInitialWindowsOrdinaryImports {
 function Read-SlcliInitialWindowsMappedImports {
     param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Birth)
     $walk=$Birth.Modules
-    if (-not $walk.ImageBytesComplete -or $walk.ImportBytesObserved -or $null -ne $Birth.PendingEvent.Continue -or
+    if (-not $walk.ImagesCaptured -or $walk.ImportBytesObserved -or $null -ne $Birth.PendingEvent.Continue -or
         -not [Object]::ReferenceEquals($Birth.PendingEvent,$Birth.Child.Event)) { throw 'Actual import bytes require SAME stopped mapped images.' }
     $walk.ImportBefore=Read-SlcliInitialWindowsClock -Owner $Owner
     for ($index=0;$index -lt $walk.ImagesUsed;$index++) {
         $module=$walk.Images[$index];$imports=$module.Source.Imports;$mapping=$module.Mapping
-        if (-not $mapping.Complete -or -not $imports.OrdinaryComplete -or
+        if ((-not $mapping.CapturedComplete -or -not $mapping.ExpectedComplete) -or -not $imports.OrdinaryComplete -or
             -not [Object]::ReferenceEquals($mapping.Held,$imports.Held)) { throw 'Actual import source/mapped occurrence mismatch.' }
         for ($entry=0;$entry -lt $imports.Used;$entry++) {
             $source=$imports.Rows[$entry]
@@ -118,9 +118,6 @@ function Read-SlcliInitialWindowsMappedImports {
             $module.ImportRows[$entry]=[pscustomobject]@{ Source=$source; Mapping=$mapping;
                 Address=($mapping.Base+$source.IatRva); Actual=[BitConverter]::ToUInt64($mapping.Observed,$source.IatRva);
                 ExpectedInitial=[BitConverter]::ToUInt64($mapping.Expected,$source.IatRva) }
-            if ($module.ImportRows[$entry].Actual -ne $module.ImportRows[$entry].ExpectedInitial) {
-                throw 'Actual initial mapped import slot differs from strict source-relocated image.'
-            }
         }
     }
     $walk.ImportAfter=Read-SlcliInitialWindowsClock -Owner $Owner

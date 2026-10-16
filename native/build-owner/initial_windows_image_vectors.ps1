@@ -44,3 +44,22 @@ function Test-SlcliInitialWindowsPeVectors {
     catch { $denied=$true }
     if (-not $denied) { throw 'Synthetic image exceeded original finite capacity.' }
 }
+
+function Test-SlcliInitialWindowsFinalImageVectors {
+    # Algorithm-only synthetic bytes. This creates neither native capture nor
+    # a source/effect issuer; the actual final caller still owns all native cuts.
+    $fixture=[pscustomobject]@{ Geometry=[pscustomobject]@{ImageBytes=32};
+        Expected=[byte[]]::new(32); Observed=[byte[]]::new(32); Compared=0 }
+    if ((Find-SlcliInitialWindowsImageDifference -Original $fixture) -ne 32) { throw 'Synthetic equal full image differs.' }
+    foreach ($offset in @(0,7,8,15,16,24,31)) {
+        $fixture.Observed[$offset]=1
+        if ((Find-SlcliInitialWindowsImageDifference -Original $fixture) -ne $offset) {
+            throw 'Unexplained synthetic header/IAT-adjacent/data/tail byte was ignored.'
+        }
+        $fixture.Observed[$offset]=0
+    }
+    $fixture.Observed=[byte[]]::new(31)
+    $denied=$false
+    try { $null=Find-SlcliInitialWindowsImageDifference -Original $fixture } catch { $denied=$true }
+    if (-not $denied) { throw 'Short synthetic captured vector accepted.' }
+}

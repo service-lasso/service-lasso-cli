@@ -48,12 +48,12 @@ function Read-SlcliInitialWindowsBoundImports {
 function Read-SlcliInitialWindowsMappedBoundImports {
     param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Birth)
     $walk=$Birth.Modules
-    if (-not $walk.ImageBytesComplete -or $walk.BoundBytesObserved -or $null -ne $Birth.PendingEvent.Continue -or
+    if (-not $walk.ImagesCaptured -or $walk.BoundBytesObserved -or $null -ne $Birth.PendingEvent.Continue -or
         -not [Object]::ReferenceEquals($Birth.PendingEvent,$Birth.Child.Event)) { throw 'Actual bound bytes require SAME stopped mapped images.' }
     $walk.BoundBefore=Read-SlcliInitialWindowsClock -Owner $Owner
     for ($index=0;$index -lt $walk.ImagesUsed;$index++) {
         $module=$walk.Images[$index];$bound=$module.Source.BoundImports;$imports=$bound.Imports;$mapping=$module.Mapping
-        if (-not $mapping.Complete -or -not $bound.Complete -or
+        if ((-not $mapping.CapturedComplete -or -not $mapping.ExpectedComplete) -or -not $bound.Complete -or
             -not [Object]::ReferenceEquals($mapping.Held,$imports.Held)) { throw 'Actual bound source/mapped occurrence mismatch.' }
         # Include the actual null descriptor as a retained source occurrence.
         for ($entry=0;$entry -lt $bound.Used;$entry++) {

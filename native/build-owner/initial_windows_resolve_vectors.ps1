@@ -29,3 +29,22 @@ function Test-SlcliInitialWindowsImportSelectionVectors {
         if (-not $denied) { throw 'Missing/empty/ambiguous synthetic API-set host accepted.' }
     }
 }
+
+function Test-SlcliInitialWindowsBindingSpanVectors {
+    # Only synthetic overlap backing. No route, target, native mapping or issuer.
+    foreach ($case in @('duplicate','partial-overlap','relocation-first-byte','relocation-last-byte','outside','short-backing')) {
+        $mapping=[pscustomobject]@{ Expected=[byte[]]::new(32); BindingSeen=[byte[]]::new(4); RelocationSeen=[byte[]]::new(4) }
+        $slot=[Int64]8
+        switch ($case) {
+            'duplicate' { Assert-SlcliInitialWindowsBindingSpan -Mapping $mapping -Slot 8 }
+            'partial-overlap' { Assert-SlcliInitialWindowsBindingSpan -Mapping $mapping -Slot 15 }
+            'relocation-first-byte' { $mapping.RelocationSeen[1]=1 }
+            'relocation-last-byte' { $mapping.RelocationSeen[1]=128 }
+            'outside' { $slot=25 }
+            'short-backing' { $mapping.BindingSeen=[byte[]]::new(3) }
+        }
+        $denied=$false
+        try { Assert-SlcliInitialWindowsBindingSpan -Mapping $mapping -Slot $slot } catch { $denied=$true }
+        if (-not $denied) { throw 'Ambiguous/outside synthetic binding effect accepted.' }
+    }
+}

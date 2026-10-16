@@ -116,7 +116,8 @@ function Read-SlcliInitialWindowsImportRoutes {
                         [Object]::ReferenceEquals($route.Hops[$prior].Export,$function)) { throw 'Actual export forwarder cycle.' }
                 }
                 if ($null -eq $hop.Captured.Forwarder) {
-                    $route.Target=[UInt64]$hop.Captured.Target
+                    $route.Target=[UInt64]($hop.Module.Base+$function.Rva)
+                    if ($route.Target -ne [UInt64]$hop.Captured.Target) { throw 'Actual direct export address differs from source-derived RVA/base.' }
                     if ($route.Target -eq 0) { throw 'Actual direct export target is null.' }
                     $route.State=if ($route.Actual -eq $route.Target) {'AddressMatches'} else {'AddressUnresolved'}
                     break
@@ -143,5 +144,70 @@ function Read-SlcliInitialWindowsImportRoutes {
     $Owner.PriorTick=$walk.RouteAfter.Tick;$walk.RouteBytesObserved=$true
     # AddressMatches is correspondence only, not source/loader/ROOT authority.
     # TargetNotLoaded/AddressUnresolved remain explicit unfinished loader states.
+    return $walk
+}
+
+function Assert-SlcliInitialWindowsBindingSpan {
+    param([Parameter(Mandatory)][object]$Mapping,[Parameter(Mandatory)][Int64]$Slot)
+    if ($Slot -lt 0 -or $Slot -gt $Mapping.Expected.Length-8 -or
+        $Mapping.BindingSeen.Length -ne [Math]::Floor(([Int64]$Mapping.Expected.Length+7)/8) -or
+        $Mapping.RelocationSeen.Length -ne $Mapping.BindingSeen.Length) { throw 'Incomplete binding effect span/overlap backing.' }
+    for ($offset=0;$offset -lt 8;$offset++) {
+        $bit=$Slot+$offset;$cell=[Int32][Math]::Floor($bit/8);$mask=1 -shl ($bit%8)
+        if (($Mapping.BindingSeen[$cell] -band $mask) -ne 0 -or ($Mapping.RelocationSeen[$cell] -band $mask) -ne 0) {
+            throw 'Binding effect overlaps another binding/relocation; no ambiguous byte attribution.'
+        }
+        $Mapping.BindingSeen[$cell]=[byte]($Mapping.BindingSeen[$cell] -bor $mask)
+    }
+}
+
+function Complete-SlcliInitialWindowsImageCorrespondence {
+    param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Birth)
+    $walk=$Birth.Modules
+    if (-not $walk.ImagesCaptured -or -not $walk.RouteBytesObserved -or -not $walk.BoundBytesObserved -or
+        -not $walk.DelayBytesObserved -or $walk.ImageBytesComplete -or $null -ne $Birth.PendingEvent.Continue -or
+        -not [Object]::ReferenceEquals($Birth.PendingEvent,$Birth.Child.Event)) {
+        throw 'Final source/effect correspondence requires SAME stopped full graph.'
+    }
+    $walk.EffectBefore=Read-SlcliInitialWindowsClock -Owner $Owner
+    for ($moduleIndex=0;$moduleIndex -lt $walk.ImagesUsed;$moduleIndex++) {
+        $module=$walk.Images[$moduleIndex];$mapping=$module.Mapping
+        if (-not $mapping.CapturedComplete -or -not $mapping.ExpectedComplete -or $mapping.Complete) {
+            throw 'Final source/effect mapping is absent/already consumed.'
+        }
+        for ($index=0;$index -lt $module.Source.Imports.Used;$index++) {
+            $route=$module.ImportRoutes[$index];$slot=$route.Import.Source.IatRva
+            if (-not [Object]::ReferenceEquals($route.Import.Mapping,$mapping) -or
+                -not [Object]::ReferenceEquals($route.Import.Source,$module.Source.Imports.Rows[$index]) -or
+                $slot -lt 0 -or $slot -gt $mapping.Expected.Length-8) { throw 'Import binding effect lost SAME source/slot occurrence.' }
+            # Unresolved/missing targets cannot explain a changed byte. Original
+            # source-relocated values remain subject to the final full compare.
+            if ($route.State -cne 'AddressMatches' -or $route.Actual -eq $route.Import.ExpectedInitial) { continue }
+            if ($mapping.BindingEffectsUsed -ge $mapping.BindingEffects.Length) { throw 'Finite binding-effect roster exhausted.' }
+            $effect=[pscustomobject]@{ Rule='PE32PlusImportAddressTable'; Source=$route.Import.Source;
+                Route=$route; Mapping=$mapping; Offset=$slot; Before=$route.Import.ExpectedInitial;
+                DerivedTarget=$route.Target; Bytes=[BitConverter]::GetBytes($route.Target); Applied=$false }
+            $mapping.BindingEffects[$mapping.BindingEffectsUsed]=$effect;$mapping.BindingEffectsUsed++
+            if ($effect.DerivedTarget -eq 0 -or $effect.DerivedTarget -ne $route.Actual -or
+                [BitConverter]::ToUInt64($mapping.Expected,$slot) -ne $effect.Before) {
+                throw 'Binding source/effect address is not independently derived from actual export route.'
+            }
+            Assert-SlcliInitialWindowsBindingSpan -Mapping $mapping -Slot $slot
+            # This vector comes from the held import declaration and the
+            # held export RVA plus actual observed module base. It is NEVER
+            # copied from the observed image or an input expected-value mask.
+            [Array]::Copy($effect.Bytes,0,$mapping.Expected,$slot,8)
+            $effect.Applied=$true
+        }
+    }
+    $walk.EffectAfter=Read-SlcliInitialWindowsClock -Owner $Owner
+    if ($walk.EffectAfter.Tick -lt $walk.EffectBefore.Tick) { throw 'Actual binding-effect clock regressed.' }
+    $Owner.PriorTick=$walk.EffectAfter.Tick
+    for ($moduleIndex=0;$moduleIndex -lt $walk.ImagesUsed;$moduleIndex++) {
+        $null=Compare-SlcliInitialWindowsRemoteImage -Owner $Owner -Original $walk.Images[$moduleIndex].Mapping
+    }
+    # Full byte correspondence, including individually derived ordinary IAT
+    # effects, is still NOT complete actual loader/source/initial ROOT authority.
+    $walk.ImageBytesComplete=$true
     return $walk
 }

@@ -84,12 +84,12 @@ function Read-SlcliInitialWindowsCapturedAscii {
 function Read-SlcliInitialWindowsMappedExports {
     param([Parameter(Mandatory)][object]$Owner,[Parameter(Mandatory)][object]$Birth)
     $walk=$Birth.Modules
-    if (-not $walk.ImageBytesComplete -or $walk.ExportBytesObserved -or $null -ne $Birth.PendingEvent.Continue -or
+    if (-not $walk.ImagesCaptured -or $walk.ExportBytesObserved -or $null -ne $Birth.PendingEvent.Continue -or
         -not [Object]::ReferenceEquals($Birth.PendingEvent,$Birth.Child.Event)) { throw 'Actual export bytes require SAME stopped mapped images.' }
     $walk.ExportBefore=Read-SlcliInitialWindowsClock -Owner $Owner
     for ($index=0;$index -lt $walk.ImagesUsed;$index++) {
         $module=$walk.Images[$index];$exports=$module.Source.Exports;$mapping=$module.Mapping
-        if (-not $mapping.Complete -or -not $exports.SourceComplete -or
+        if ((-not $mapping.CapturedComplete -or -not $mapping.ExpectedComplete) -or -not $exports.SourceComplete -or
             -not [Object]::ReferenceEquals($mapping.Held,$exports.Held)) { throw 'Actual export source/mapped occurrence mismatch.' }
         for ($entry=0;$entry -lt $exports.FunctionCount;$entry++) {
             $source=$exports.Functions[$entry]
