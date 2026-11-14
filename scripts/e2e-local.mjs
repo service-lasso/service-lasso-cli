@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { connect } from 'node:net';
 import { copyFile, mkdir, readFile, realpath, stat, symlink, writeFile, access } from 'node:fs/promises';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { delimiter, dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -40,7 +40,7 @@ export function portClosed(url) {
   });
 }
 function childEnvironment(home, extra = {}) {
-  return { PATH: process.env.PATH ?? '', ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}), HOME: home, USERPROFILE: home, LANG: 'C.UTF-8', ...extra };
+  return { PATH: dirname(process.execPath) + delimiter + (process.env.PATH ?? ''), ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}), HOME: home, USERPROFILE: home, LANG: 'C.UTF-8', ...extra };
 }
 export async function command(file, args, { cwd, env, timeout = 10000 } = {}) {
   const child = spawn(file, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
