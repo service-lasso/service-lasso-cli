@@ -159,7 +159,7 @@ export async function run(argv, deadlines = {}) {
         if (!(await portClosed(fixtureUrl))) throw new Error('Owned fixture port remains open or unknown.');
         record('owned-fixture-cleanup', 'PASS');
       } catch { cleanupError = true; record('owned-fixture-cleanup', 'FAIL'); report.status = 'FAIL'; }
-      finally { clearTimeout(timer); if (cleanupError) { const recovery = setTimeout(() => {}, 5000); await Promise.race([helperClose.catch(() => {}), new Promise(yes => setTimeout(yes, 5000))]); clearTimeout(recovery); } }
+      finally { clearTimeout(timer); if (cleanupError && helper.exitCode === null && helper.signalCode === null) { let recovery; try { await Promise.race([helperClose.catch(() => {}), new Promise(yes => { recovery = setTimeout(yes, 5000); })]); } finally { clearTimeout(recovery); } } }
     }
     await put(join(output, 'result.json'), report);
   }
