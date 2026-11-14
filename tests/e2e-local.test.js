@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { options, command } from '../scripts/e2e-local.mjs';
 
 test('E2E requires explicit exact Core identity and fresh absolute evidence destination', () => {
@@ -7,8 +9,12 @@ test('E2E requires explicit exact Core identity and fresh absolute evidence dest
   assert.throws(() => options(['--core-dir', '/tmp/core', '--core-revision', 'develop', '--output-dir', '/tmp/proof']));
   assert.throws(() => options(['--core-dir', '/tmp/core', '--core-revision', 'a'.repeat(40), '--output-dir', 'relative']));
   assert.throws(() => options(['--core-dir', '/tmp/core', '--core-dir', '/tmp/other']));
-  const selected = options(['--core-dir', '/tmp/core', '--core-revision', 'a'.repeat(40), '--output-dir', '/tmp/proof']);
-  assert.equal(selected['core-fixture-helper'], '/tmp/core/scripts/operator-e2e-fixture.mjs');
+  const core = resolve(tmpdir(), 'core'), proof = resolve(tmpdir(), 'proof');
+  const selected = options(['--core-dir', core, '--core-revision', 'a'.repeat(40), '--output-dir', proof]);
+  assert.equal(selected['core-fixture-helper'], join(core, 'scripts', 'operator-e2e-fixture.mjs'));
+  assert.equal(selected.suite, 'source');
+  assert.equal(options(['--core-dir', core, '--core-revision', 'a'.repeat(40), '--output-dir', proof, '--suite', 'portable']).suite, 'portable');
+  assert.throws(() => options(['--core-dir', core, '--core-revision', 'a'.repeat(40), '--output-dir', proof, '--suite', 'native']));
 });
 test('bounded command preserves real exit and stdout/stderr without changing parent environment', async () => {
   const result = await command(process.execPath, ['-e', 'process.stdout.write("output");process.stderr.write("diagnostic");process.exitCode=7'], { env: {} });
