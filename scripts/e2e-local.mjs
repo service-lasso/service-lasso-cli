@@ -68,7 +68,9 @@ export async function run(argv) {
     const buildResult = await command(process.execPath, [compiler, '--target', 'ES2022', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', '--rootDir', 'src', '--outDir', 'dist', '--strict', '--esModuleInterop', '--skipLibCheck', '--types', 'node', ...sources], { cwd: build, env, timeout: 30000 });
     await put(join(output, 'cli-build.log'), buildResult.stdout + buildResult.stderr);
     if (buildResult.code !== 0 || buildResult.timedOut || buildResult.exceeded) throw new Error('CLI explicit ordinary source build failed.');
-    report.identity = { cliRevision, coreRevision, nodeVersion, compilerSHA256: digest(compilerBytes), sources: hashes, cliArtifactSHA256: digest(await readFile(join(build, 'dist/index.js'))) };
+    const packages = {};
+    for (const name of ['typescript', 'commander', '@types/node']) packages[name] = JSON.parse(await readFile(join(root, 'node_modules', name, 'package.json'), 'utf8')).version;
+    report.identity = { cliRevision, coreRevision, nodeVersion, packages, packageLockSHA256: digest(await readFile(join(root, 'package-lock.json'))), compilerSHA256: digest(compilerBytes), sources: hashes, cliArtifactSHA256: digest(await readFile(join(build, 'dist/index.js'))) };
     record('cli-source-build', 'PASS');
     const fixtureOutput = join(output, 'core-fixture');
     helper = spawn(process.execPath, [selected['core-fixture-helper'], '--core-dir', selected['core-dir'], '--expected-core-revision', coreRevision, '--output-dir', fixtureOutput, '--build-core'], { env, stdio: ['pipe', 'pipe', 'pipe'] });
@@ -106,7 +108,7 @@ export async function run(argv) {
     report.status = 'PASS';
   } catch (error) {
     report.status = report.identity ? 'FAIL' : 'BLOCKED';
-    record('runner', report.status, { reason: error instanceof Error ? error.message.replaceAll(token || '\0', '[REDACTED]') : 'Runner failed.' });
+    record('runner', report.status, { reason: error instanceof SyntaxError ? 'Invalid JSON in required fixture or CLI record.' : error instanceof Error ? error.message.replaceAll(token || '\0', '[REDACTED]') : 'Runner failed.' });
   } finally {
     if (helper) {
       let timer;
