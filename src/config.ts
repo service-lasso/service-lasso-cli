@@ -88,7 +88,7 @@ export async function loadConfig(path = configPath()): Promise<CliConfig> {
       }
     }
     const defaultConnection = config.defaultConnection ? validateConnectionName(config.defaultConnection) : undefined;
-    if (defaultConnection && !connections[defaultConnection]) throw new CliError("invalid_config", "CLI configuration is invalid.");
+    if (defaultConnection && !Object.hasOwn(connections, defaultConnection)) throw new CliError("invalid_config", "CLI configuration is invalid.");
     return { ...(coreUrl ? { coreUrl: normalizeCoreUrl(coreUrl) } : {}), ...(defaultConnection ? { defaultConnection } : {}), ...(Object.keys(connections).length ? { connections } : {}) };
   } catch (error) {
     if (typeof error === "object" && error && "code" in error && (error as { code: string }).code === "ENOENT") return {};
@@ -109,7 +109,7 @@ export async function saveConfig(config: CliConfig, path = configPath()): Promis
   }
   if (config.defaultConnection) {
     normalized.defaultConnection = validateConnectionName(config.defaultConnection);
-    if (!normalized.connections?.[normalized.defaultConnection]) throw new CliError("invalid_config", "Default connection must name a saved connection.");
+    if ((!normalized.connections || !Object.hasOwn(normalized.connections, normalized.defaultConnection))) throw new CliError("invalid_config", "Default connection must name a saved connection.");
   }
   await mkdir(dirname(path), { recursive: true });
   const temporary = `${path}.tmp`;
@@ -126,7 +126,7 @@ export function resolveCoreUrl(options: { cliValue?: string; connection?: string
   const explicitOrigin = options.cliValue ?? options.environment?.SERVICE_LASSO_CORE_URL;
   if (explicitOrigin) return normalizeCoreUrl(explicitOrigin);
   const connection = resolveConnectionName({ cliValue: options.connection, environment: options.environment, config: options.config });
-  if (connection && !options.config.connections?.[connection]) throw new CliError("unknown_connection", "The selected Core connection is not saved locally.");
+  if (connection && (!options.config.connections || !Object.hasOwn(options.config.connections, connection))) throw new CliError("unknown_connection", "The selected Core connection is not saved locally.");
   const candidate = (connection ? options.config.connections?.[connection]?.coreUrl : undefined) ?? options.config.coreUrl ?? DEFAULT_CORE_URL;
   return normalizeCoreUrl(candidate);
 }

@@ -238,3 +238,7 @@ SP1/BQ/issuer/native/credential source or target execution before coherent whole
 DIFFERENT review AND exact human choice. Ordinary approved PA1/N2 source remains
 separate and unfinished. Final ENTIRE product SOURCE GO/new authentic input admission,
 native qualification/Core/operator/publication/release remain separate open gates.
+
+## CLI #45 explicit saved-connection membership
+
+Active SPEC-CLI-CONNECTION-MEMBERSHIP corrects inherited dictionary membership in src/config.ts and tests/config.test.js. Preserve URL precedence and valid explicit constructor profiles. Focused proof is limited to exact copied config/errors sources and config tests after distinct source review; no CLI39 source/execution/native/publication authority changes.
