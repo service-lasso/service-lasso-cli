@@ -257,3 +257,8 @@ Active SPEC-CLI-RESPONSE-READ maps CLI-CONNECTION/CLI-AUTOMATION to stable secre
 ## CLI #51 isolated real-Core E2E
 
 SPEC-CLI-LOCAL-E2E maps explicit exact-Core ordinary CLI source builds/read/auth-error smoke, bounded owned fixture cleanup and machine evidence. Packaged/native authoring and full create-to-lifecycle remain separately gated; missing prerequisites BLOCKED, never skipped PASS. Shared fixture contract awaiting root coordination before runtime implementation.
+
+
+## CLI #53 portable archive E2E
+
+SPEC-CLI-PORTABLE-E2E maps build-once ordinary7source packaging, hash-bound clean Node22 consumer and genuine Core reads/cleanup, automatic Linux PR proof. Exact portable Node archive only; native39/SEA/publication/lifecycle gates unchanged.
