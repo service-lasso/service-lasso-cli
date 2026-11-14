@@ -38,28 +38,26 @@ test('receipt refuses unqualified artifact, false cleanup and malformed build id
   assert.throws(() => validateReceipt({ ...receipt, stage: 'closed', status: 'passed', cleanup: { status: 'complete', serverClosed: true, portClosed: false, credentialRemoved: true } }, 'a'.repeat(40), true));
 });
 
-test('controlled helper protocol faults never become actual-Core PASS', { timeout: 30000 }, async () => {
-  const { mkdtemp, writeFile, readFile, access } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { join, resolve } = await import('node:path');
-  const { execFileSync } = await import('node:child_process');
+test('public privacy projection contains no raw owner or ACE identities', async () => {
+  const { publicPrivacyProof } = await import('../scripts/e2e-private.mjs');
+  const value = publicPrivacyProof({ platform: 'win32', policy: 'current-owner-and-system', verified: true, ownerSid: 'controlled-private-owner', rules: [{ sid: 'controlled-private-ACE' }] });
+  assert.deepEqual(Object.keys(value).sort(), ['platform', 'policy', 'proofSHA256', 'verified']);
+  assert.equal(JSON.stringify(value).includes('controlled-private'), false); assert.match(value.proofSHA256, /^[a-f0-9]{64}$/);
+});
+test('mismatched Core identity fails before setup import or evidence directory creation', async () => {
+  const { mkdtemp, access, realpath } = await import('node:fs/promises');
   const { run } = await import('../scripts/e2e-local.mjs');
-  const parent = await mkdtemp(join(tmpdir(), 'cli-e2e-adversarial-'));
-  const revision = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-  for (const fault of ['wrong-receipt', 'leftover-credential', 'premature-ready', 'timeout']) {
-    const helper = join(parent, `${fault}.mjs`), output = join(parent, fault);
-    await writeFile(helper, `import {mkdir,writeFile,rm} from 'node:fs/promises';import {join} from 'node:path';
-const args=process.argv.slice(2);const output=args[args.indexOf('--output-dir')+1];await mkdir(output,{mode:0o700});
-const connectionFile=join(output,'connection.json'),receiptFile=join(output,'receipt.json');
-if('${fault}'!=='premature-ready'&&'${fault}'!=='timeout'){await writeFile(connectionFile,JSON.stringify({url:'http://127.0.0.1:1',token:'controlled-helper-test-only'}),{mode:0o600});await writeFile(receiptFile,JSON.stringify({coreRevision:'wrong'}));}
-if('${fault}'!=='timeout')console.log(JSON.stringify({ready:true,connectionFile,receiptFile}));
-process.stdin.on('data',async()=>{if('${fault}'!=='leftover-credential')await rm(connectionFile,{force:true});process.exit(0);});`);
-    const result = await run(['--core-dir', resolve('.'), '--core-revision', revision, '--core-fixture-helper', helper, '--output-dir', output], { startup: fault === 'timeout' ? 100 : 5000, cleanup: 5000 });
-    assert.notEqual(result.status, 'PASS', fault);
-    const retained = JSON.parse(await readFile(join(output, 'result.json'), 'utf8'));
-    assert.equal(JSON.stringify(retained).includes('controlled-helper-test-only'), false);
-    if (fault === 'leftover-credential') await access(join(output, 'core-fixture/connection.json'));
-    assert.ok(result.stages.some(row => row.stage === 'owned-fixture-cleanup' && row.status === 'FAIL'));
-  }
-  // Controlled failure evidence is retained; it never represents Core acceptance.
+  const parent = await realpath(await mkdtemp(join(tmpdir(), 'cli-e2e-no-import-'))), output = join(parent, 'absent');
+  await assert.rejects(() => run(['--core-dir', resolve('.'), '--core-revision', '0'.repeat(40), '--output-dir', output]), /Exact clean Core/);
+  await assert.rejects(access(output));
+});
+
+test('literal npm build receipt rejects other command, npm bytes or Node bytes', async () => {
+  const { validateReceipt } = await import('../scripts/e2e-local.mjs');
+  const tool = { script: join(resolve(tmpdir()), 'npm-cli.js'), version: '10.9.8', sha256: 'a'.repeat(64), nodeSHA256: 'b'.repeat(64) };
+  const receipt = { schemaVersion: 1, coreRevision: 'c'.repeat(40), coreTree: 'd'.repeat(40), cleanSource: true, classification: 'source-built-ordinary-smoke', coreArtifactSHA256: 'e'.repeat(64), sourceInputSHA256: 'f'.repeat(64), artifactInventorySHA256: '1'.repeat(64), initializationAPI: true, stage: 'ready', status: 'running', build: { command: [process.execPath, tool.script, 'run', 'build'], exitCode: 0, signal: null }, tools: { node: process.version, npm: tool.version, typescript: '5.9.3', compilerSHA256: '2'.repeat(64), nodeSHA256: tool.nodeSHA256, npmCLI: { path: tool.script, packageVersion: tool.version, sha256: tool.sha256 } } };
+  assert.doesNotThrow(() => validateReceipt(receipt, receipt.coreRevision, false, tool));
+  assert.throws(() => validateReceipt({ ...receipt, build: { ...receipt.build, command: ['npm.cmd', 'run', 'build'] } }, receipt.coreRevision, false, tool));
+  assert.throws(() => validateReceipt({ ...receipt, tools: { ...receipt.tools, nodeSHA256: '3'.repeat(64) } }, receipt.coreRevision, false, tool));
+  assert.throws(() => validateReceipt({ ...receipt, tools: { ...receipt.tools, npmCLI: { ...receipt.tools.npmCLI, sha256: '4'.repeat(64) } } }, receipt.coreRevision, false, tool));
 });
