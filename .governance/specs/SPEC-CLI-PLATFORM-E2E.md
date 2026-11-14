@@ -36,3 +36,7 @@ or silently fall back if an export is missing. Dedicated platform integration
 consumes the actual pinned shared utility; generic tests exercise only projections
 and source/tool rejection. Checked-out private module and PowerShell bytes must
 match selected Git blobs before import; Core LF attributes preserve this on Windows.
+
+## Frozen shared dependency
+
+Core PR1926 merged develop f32270731ff42f2a2f6dbcbc02f188b3fdd8813b supplies the reviewed private-writer and literal Windows npm launch API. Actual matching-host CLI results remain pending until this delivery runs them; dependency proof is not CLI proof.
