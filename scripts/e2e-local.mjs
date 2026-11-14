@@ -45,7 +45,7 @@ export function portClosed(url) {
   });
 }
 function childEnvironment(home, extra = {}) {
-  return { PATH: dirname(process.execPath) + delimiter + (process.env.PATH ?? ''), ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}), HOME: home, USERPROFILE: home, APPDATA: join(home, 'appdata'), LOCALAPPDATA: join(home, 'localappdata'), XDG_CONFIG_HOME: join(home, 'config'), XDG_CACHE_HOME: join(home, 'cache'), TMPDIR: join(home, 'tmp'), TEMP: join(home, 'tmp'), TMP: join(home, 'tmp'), npm_config_cache: join(home, 'npm-cache'), LANG: 'C.UTF-8', ...extra };
+  return { PATH: dirname(process.execPath) + delimiter + (process.env.PATH ?? ''), ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}), HOME: home, USERPROFILE: home, ...(process.platform === 'win32' ? { HOMEDRIVE: home.slice(0, 2), HOMEPATH: home.slice(2), WINDIR: process.env.SystemRoot, ComSpec: join(process.env.SystemRoot, 'System32', 'cmd.exe') } : {}), APPDATA: join(home, 'appdata'), LOCALAPPDATA: join(home, 'localappdata'), XDG_CONFIG_HOME: join(home, 'config'), XDG_CACHE_HOME: join(home, 'cache'), TMPDIR: join(home, 'tmp'), TEMP: join(home, 'tmp'), TMP: join(home, 'tmp'), npm_config_cache: join(home, 'npm-cache'), LANG: 'C.UTF-8', ...extra };
 }
 export async function command(file, args, { cwd, env, timeout = 10000 } = {}) {
   const child = spawn(file, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
