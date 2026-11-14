@@ -64,3 +64,37 @@ test("selects saved named connections after flags and environment without persis
   await writeFile(path, JSON.stringify({ connections: { remote: { coreUrl: "https://core.example", token: "secret" } } }), "utf8");
   await assert.rejects(() => loadConfig(path), { code: "invalid_config" });
 });
+
+
+test("requires an own saved connection before selecting a Core origin", () => {
+  const config = { connections: {}, coreUrl: "https://fallback.example" };
+  for (const selection of [
+    { connection: "constructor", config },
+    { environment: { SERVICE_LASSO_CONNECTION: "constructor" }, config },
+    { config: { ...config, defaultConnection: "constructor" } },
+  ]) {
+    assert.throws(() => resolveCoreUrl(selection), { code: "unknown_connection" });
+  }
+  assert.equal(resolveCoreUrl({ connection: "constructor", cliValue: "https://flag.example", config }), "https://flag.example");
+  assert.equal(resolveCoreUrl({ connection: "constructor", environment: { SERVICE_LASSO_CORE_URL: "https://env.example" }, config }), "https://env.example");
+});
+
+test("rejects inherited defaults on load/save and preserves explicitly saved constructor", async () => {
+  const home = await mkdtemp(join(tmpdir(), "lasso-cli-membership-"));
+  const path = configPath(home);
+  await saveConfig({}, path);
+  for (const config of [
+    { defaultConnection: "constructor" },
+    { defaultConnection: "constructor", connections: {} },
+  ]) {
+    await writeFile(path, JSON.stringify(config), "utf8");
+    await assert.rejects(() => loadConfig(path), { code: "invalid_config" });
+    await assert.rejects(() => saveConfig(config, path), { code: "invalid_config" });
+  }
+  const config = { connections: { constructor: { coreUrl: "https://saved.example" } }, defaultConnection: "constructor" };
+  await saveConfig(config, path);
+  const saved = await loadConfig(path);
+  assert.deepEqual(saved, config);
+  assert.equal(resolveCoreUrl({ config: saved }), "https://saved.example");
+  assert.equal(resolveCoreUrl({ connection: "constructor", config: saved }), "https://saved.example");
+});
