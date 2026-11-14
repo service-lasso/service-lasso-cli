@@ -241,3 +241,8 @@ Active SPEC-CLI-CONNECTION-MEMBERSHIP corrects inherited dictionary membership i
 ## CLI #47 Core URL update
 
 CLI #47 (child #1/#8): SPEC-CLI-CONFIG-UPDATE / CLI-CONNECTION; preserve profiles/default on core-url updates, absent-file and invalid-write proofs; active bounded delivery.
+
+
+## CLI #49 safe response-body errors
+
+Active SPEC-CLI-RESPONSE-READ maps CLI-CONNECTION/CLI-AUTOMATION to stable secret-safe transport errors when response body reads fail, with no retry. Exact isolated Node22 tests and actual ordinary CLI read regression; native/publication gates unchanged.

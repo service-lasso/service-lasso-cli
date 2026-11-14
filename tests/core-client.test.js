@@ -86,3 +86,28 @@ test("turns failed Core responses into safe errors without echoing the body", as
     (error) => error.code === "core_api_error" && error.message === "Core returned HTTP 400.",
   );
 });
+
+
+test("classifies response body read failure as secret-safe transport failure without retry", async () => {
+  const sentinel = "response-body-secret-sentinel";
+  let calls = 0;
+  const client = new CoreClient({ baseUrl: "http://127.0.0.1:17883", fetch: async () => {
+    calls += 1;
+    return new Response(new ReadableStream({ start(controller) { controller.error(new Error(sentinel)); } }));
+  } });
+  await assert.rejects(() => client.health(), (error) => {
+    assert.equal(error.code, "core_unreachable");
+    assert.equal(error.message, "Could not reach Service Lasso Core.");
+    assert.equal(error.hint, "Set SERVICE_LASSO_CORE_URL or run `service-lassoctl config set core-url <url>`.");
+    assert.equal(String(error).includes(sentinel), false);
+    return true;
+  });
+  assert.equal(calls, 1);
+});
+
+test("keeps valid JSON and invalid JSON response classification after body read", async () => {
+  const valid = new CoreClient({ baseUrl: "http://127.0.0.1:17883", fetch: async () => new Response('{"status":"ok"}') });
+  assert.deepEqual(await valid.health(), { status: "ok" });
+  const invalid = new CoreClient({ baseUrl: "http://127.0.0.1:17883", fetch: async () => new Response("not-json") });
+  await assert.rejects(() => invalid.health(), (error) => error.code === "invalid_core_response" && error.message === "Core returned a non-JSON response.");
+});
