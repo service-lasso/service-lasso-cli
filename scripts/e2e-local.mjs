@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { connect } from 'node:net';
 import { preparePortable, npmTool } from './e2e-portable.mjs';
 import { loadPrivateSetup, publicPrivacyProof } from './e2e-private.mjs';
-import { copyFile, mkdir, readFile, realpath, stat, symlink, writeFile, access } from 'node:fs/promises';
+import { copyFile, readFile, realpath, symlink, access } from 'node:fs/promises';
 import { basename, delimiter, dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -31,7 +31,7 @@ export function validateReceipt(receipt, revision, final = false, expectedTools)
     || !/^[a-f0-9]{40}$/.test(receipt.coreTree ?? '') || !['coreArtifactSHA256', 'sourceInputSHA256', 'artifactInventorySHA256'].every(key => /^[a-f0-9]{64}$/.test(receipt[key] ?? ''))
     || !receipt.tools || !['node', 'npm', 'typescript'].every(key => typeof receipt.tools[key] === 'string' && receipt.tools[key].length > 0) || !/^[a-f0-9]{64}$/.test(receipt.tools.compilerSHA256 ?? '') || receipt.initializationAPI !== true
     || receipt.build?.exitCode !== 0 || receipt.build?.signal != null || JSON.stringify(receipt.build?.command) !== JSON.stringify(expectedTools ? [process.execPath, expectedTools.script, 'run', 'build'] : ['npm', 'run', 'build'])) throw new Error('Fixture receipt lacks qualified clean fresh source-build binding.');
-  if (expectedTools && (receipt.tools.npmCLI?.sha256 !== expectedTools.sha256 || receipt.tools.npmCLI?.path !== expectedTools.script || receipt.tools.npmCLI?.packageVersion !== expectedTools.version)) throw new Error('Fixture literal npm tool binding mismatch.');
+  if (expectedTools && (receipt.tools.npmCLI?.sha256 !== expectedTools.sha256 || receipt.tools.npmCLI?.path !== expectedTools.script || receipt.tools.npmCLI?.packageVersion !== expectedTools.version || receipt.tools.node !== process.version || receipt.tools.nodeSHA256 !== expectedTools.nodeSHA256)) throw new Error('Fixture literal npm tool binding mismatch.');
   if (final ? receipt.stage !== 'closed' || receipt.status !== 'passed' || !receipt.cleanup || !['serverClosed', 'portClosed', 'credentialRemoved'].every(key => receipt.cleanup[key] === true) || receipt.cleanup.status !== 'complete' : receipt.stage !== 'ready' || receipt.status !== 'running') throw new Error('Fixture receipt stage or cleanup evidence is invalid.');
 }
 export function portClosed(url) {
@@ -66,7 +66,6 @@ async function checked(file, args, settings) {
   if (result.code !== 0 || result.timedOut || result.exceeded) throw new Error('Required build or source-binding command failed (private stage output retained).');
   return result;
 }
-async function put(path, value) { await writeFile(path, typeof value === 'string' ? value : JSON.stringify(value, null, 2) + '\n', { mode: 0o600 }); }
 export async function run(argv, deadlines = {}) {
   const selected = options(argv);
   selected['core-dir'] = await realpath(selected['core-dir']);
@@ -114,7 +113,7 @@ export async function run(argv, deadlines = {}) {
     const fixtureOutput = join(output, 'core-fixture');
     connectionFile = join(fixtureOutput, 'connection.json'); receiptFile = join(fixtureOutput, 'receipt.json');
     const fixtureArgs = [selected['core-fixture-helper'], '--core-dir', selected['core-dir'], '--expected-core-revision', coreRevision, '--output-dir', fixtureOutput, '--build-core'];
-    const fixtureNpm = process.platform === 'win32' ? await npmTool(env) : undefined;
+    const fixtureNpm = process.platform === 'win32' ? { ...await npmTool(env), nodeSHA256: digest(await readFile(process.execPath)) } : undefined;
     if (fixtureNpm) fixtureArgs.push('--npm-cli', fixtureNpm.script);
     helper = spawn(process.execPath, fixtureArgs, { env, stdio: ['pipe', 'pipe', 'pipe'] });
     helperClose = new Promise((yes, no) => { helper.once('error', no); helper.once('close', (code, signal) => yes({ code, signal })); });
@@ -178,7 +177,7 @@ export async function run(argv, deadlines = {}) {
         if (connectionFile) { try { await access(connectionFile); throw new Error('Fixture credential remained after shutdown.'); } catch (error) { if (error.code !== 'ENOENT') throw error; } }
         if (!receiptFile || !fixtureUrl) throw new Error('No authenticated fixture readiness to verify cleanup.');
         const finalReceipt = JSON.parse(await readFile(receiptFile, 'utf8'));
-        validateReceipt(finalReceipt, selected['core-revision'], true, process.platform === 'win32' ? await npmTool(env) : undefined);
+        validateReceipt(finalReceipt, selected['core-revision'], true, process.platform === 'win32' ? { ...await npmTool(env), nodeSHA256: digest(await readFile(process.execPath)) } : undefined);
         if (!(await portClosed(fixtureUrl))) throw new Error('Owned fixture port remains open or unknown.');
         record('owned-fixture-cleanup', 'PASS');
       } catch { cleanupError = true; record('owned-fixture-cleanup', 'FAIL'); report.status = 'FAIL'; }
