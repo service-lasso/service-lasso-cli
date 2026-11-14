@@ -2,6 +2,7 @@
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { connect } from 'node:net';
+import { preparePortable } from './e2e-portable.mjs';
 import { copyFile, mkdir, readFile, realpath, stat, symlink, writeFile, access } from 'node:fs/promises';
 import { delimiter, dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -11,13 +12,15 @@ const sources = ['index', 'config', 'errors', 'core-client', 'scaffold', 'templa
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 export function options(argv) {
   const result = {};
-  const names = new Set(['core-dir', 'core-revision', 'core-fixture-helper', 'output-dir']);
+  const names = new Set(['core-dir', 'core-revision', 'core-fixture-helper', 'output-dir', 'suite']);
   for (let i = 0; i < argv.length; i += 2) {
     const name = argv[i]?.replace(/^--/, '');
     if (!argv[i]?.startsWith('--') || !names.has(name) || !argv[i + 1] || argv[i + 1].startsWith('--') || name in result) throw new Error('Expected unique --core-dir, --core-revision, --output-dir and optional --core-fixture-helper values.');
     result[name] = argv[i + 1];
   }
   if (!result['core-dir'] || !/^[a-f0-9]{40}$/.test(result['core-revision'] ?? '') || !isAbsolute(result['output-dir'] ?? '')) throw new Error('Explicit Core directory, full lowercase revision and absolute fresh output directory required.');
+  result.suite ??= 'source';
+  if (!['source', 'portable'].includes(result.suite)) throw new Error('Suite must be source or portable.');
   result['core-dir'] = resolve(result['core-dir']);
   result['core-fixture-helper'] = resolve(result['core-fixture-helper'] ?? join(result['core-dir'], 'scripts/operator-e2e-fixture.mjs'));
   return result;
@@ -65,7 +68,7 @@ async function put(path, value) { await writeFile(path, typeof value === 'string
 export async function run(argv, deadlines = {}) {
   const selected = options(argv), output = selected['output-dir'];
   await mkdir(output, { mode: 0o700 }); // Exclusive: never reuse an earlier run.
-  const report = { schemaVersion: 1, lane: 'ordinary-source-cli', status: 'FAIL', stages: [], fullLifecycle: { status: 'BLOCKED', reason: 'Authentic admitted template/native authoring and complete lifecycle dependencies are separately required.' } };
+  const report = { schemaVersion: 1, lane: selected.suite === 'portable' ? 'portable-node-archive-cli' : 'ordinary-source-cli', status: 'FAIL', stages: [], fullLifecycle: { status: 'BLOCKED', reason: 'Authentic admitted template/native authoring and complete lifecycle dependencies are separately required.' } };
   let helper, helperClose, connectionFile, receiptFile, fixtureUrl, token = '', helperText = '', helperError = '', cleanupError;
   const record = (stage, status, details = {}) => report.stages.push({ stage, status, ...details });
   const home = join(output, 'home'); await mkdir(home, { mode: 0o700 });
@@ -92,6 +95,12 @@ export async function run(argv, deadlines = {}) {
     for (const name of ['typescript', 'commander', '@types/node']) packages[name] = JSON.parse(await readFile(join(root, 'node_modules', name, 'package.json'), 'utf8')).version;
     report.identity = { cliRevision, coreRevision, nodeVersion, packages, packageLockSHA256: digest(await readFile(join(root, 'package-lock.json'))), compilerSHA256: digest(compilerBytes), sources: hashes, cliArtifactSHA256: digest(await readFile(join(build, 'dist/index.js'))) };
     record('cli-source-build', 'PASS');
+    let cliExecutable = join(build, 'dist/index.js'), portableVersion;
+    if (selected.suite === 'portable') {
+      const portable = await preparePortable({ build, output, root, revision: cliRevision, environment: env, execute: command });
+      cliExecutable = portable.executable; portableVersion = portable.version; report.distribution = portable.identity;
+      record('portable-archive-install', 'PASS', { archiveSHA256: portable.identity.archiveSHA256 });
+    }
     const fixtureOutput = join(output, 'core-fixture');
     connectionFile = join(fixtureOutput, 'connection.json'); receiptFile = join(fixtureOutput, 'receipt.json');
     helper = spawn(process.execPath, [selected['core-fixture-helper'], '--core-dir', selected['core-dir'], '--expected-core-revision', coreRevision, '--output-dir', fixtureOutput, '--build-core'], { env, stdio: ['pipe', 'pipe', 'pipe'] });
@@ -134,10 +143,11 @@ export async function run(argv, deadlines = {}) {
     record('backend-bearer-identity-contract', 'PASS', { positiveActor: positive.auth.actor.kind, negativeActor: negative.auth?.actor?.kind ?? null, completePermissionsProof: false, actualCLICommand: false });
     const invocations = [ ['help', ['--help']], ['version', ['--version']], ['status', ['instance', 'status', '--json']], ['inspect', ['instance', 'inspect', '--json']], ['services', ['service', 'list', '--json']] ];
     for (const [name, args] of invocations) {
-      const result = await command(process.execPath, [join(build, 'dist/index.js'), '--core-url', url.origin, ...args], { cwd: build, env: childEnvironment(home, { SERVICE_LASSO_CORE_TOKEN: token }) });
+      const result = await command(process.execPath, [cliExecutable, '--core-url', url.origin, ...args], { cwd: build, env: childEnvironment(home, { SERVICE_LASSO_CORE_TOKEN: token }) });
       if ((result.stdout + result.stderr).includes(token)) throw new Error('CLI output contained fixture credential.');
       await put(join(output, `${name}.stdout`), result.stdout); await put(join(output, `${name}.stderr`), result.stderr);
       if (result.code !== 0 || result.stderr || result.timedOut || result.exceeded) throw new Error(`CLI ${name} command failed.`);
+      if (name === 'version' && portableVersion && result.stdout.trim() !== portableVersion) throw new Error('Installed portable CLI reports a different version.');
       if (!['help', 'version'].includes(name)) JSON.parse(result.stdout);
       record(name, 'PASS', { exitCode: result.code, stdoutSHA256: digest(result.stdout) });
     }

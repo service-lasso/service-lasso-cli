@@ -25,7 +25,8 @@
     "assemble:protected-candidate": "node scripts/assemble-protected-candidate.mjs",
     "verify:protected-candidate": "node scripts/verify-protected-candidate.mjs",
     "publish:protected-candidate": "node scripts/publish-protected-candidate.mjs",
-    "e2e:local": "node scripts/e2e-local.mjs"
+    "e2e:local": "node scripts/e2e-local.mjs",
+    "e2e:portable": "node scripts/e2e-local.mjs --suite portable"
   },
   "files": [
     "dist",

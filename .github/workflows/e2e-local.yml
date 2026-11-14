@@ -2,7 +2,7 @@ name: Isolated ordinary CLI real-Core E2E
 on:
   pull_request:
     branches: [develop]
-    paths: ['src/**', 'scripts/e2e-local.mjs', 'tests/e2e-local.test.js', 'package*.json', '.github/workflows/e2e-local.yml']
+    paths: ['src/**', 'scripts/e2e-*.mjs', 'tests/e2e-*.test.js', 'package*.json', '.github/workflows/e2e-local.yml']
   workflow_dispatch:
     inputs:
       core_revision:
@@ -14,6 +14,21 @@ env:
 permissions:
   contents: read
 jobs:
+  source-contracts:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 22.23.2
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node --test tests/e2e-local.test.js tests/e2e-portable.test.js
   ordinary-cli:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -48,4 +63,40 @@ jobs:
         with:
           name: ordinary-cli-e2e-${{ github.sha }}
           path: ${{ runner.temp }}/cli-e2e-${{ github.run_id }}-${{ github.run_attempt }}/result.json
+          if-no-files-found: error
+
+  portable-cli:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 22.23.2
+          cache: npm
+      - name: Validate explicit Core source revision
+        env:
+          CORE_REVISION: ${{ inputs.core_revision || '85a94a131f488faee55dc36efcfb04827a267442' }}
+        run: '[[ "$CORE_REVISION" =~ ^[a-f0-9]{40}$ ]]'
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          repository: service-lasso/service-lasso
+          ref: ${{ inputs.core_revision || '85a94a131f488faee55dc36efcfb04827a267442' }}
+          path: core
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Prepare exact fresh Core locked dependencies
+        working-directory: core
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Run bounded helper and failure-path tests
+        run: node --test tests/e2e-local.test.js tests/e2e-portable.test.js
+      - name: Build current CLI and fresh exact Core, then run owned smoke
+        env:
+          CORE_REVISION: ${{ inputs.core_revision || '85a94a131f488faee55dc36efcfb04827a267442' }}
+          EVIDENCE_PATH: ${{ runner.temp }}/cli-portable-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+        run: npm run e2e:portable -- --core-dir "$GITHUB_WORKSPACE/core" --core-revision "$CORE_REVISION" --output-dir "$EVIDENCE_PATH"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: portable-node-cli-e2e-${{ github.sha }}
+          path: ${{ runner.temp }}/cli-portable-e2e-${{ github.run_id }}-${{ github.run_attempt }}/result.json
           if-no-files-found: error
