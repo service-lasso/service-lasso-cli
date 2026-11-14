@@ -246,3 +246,8 @@ CLI #47 (child #1/#8): SPEC-CLI-CONFIG-UPDATE / CLI-CONNECTION; preserve profile
 ## CLI #49 safe response-body errors
 
 Active SPEC-CLI-RESPONSE-READ maps CLI-CONNECTION/CLI-AUTOMATION to stable secret-safe transport errors when response body reads fail, with no retry. Exact isolated Node22 tests and actual ordinary CLI read regression; native/publication gates unchanged.
+
+
+## CLI #51 isolated real-Core E2E
+
+SPEC-CLI-LOCAL-E2E maps explicit exact-Core ordinary CLI source builds/read/auth-error smoke, bounded owned fixture cleanup and machine evidence. Packaged/native authoring and full create-to-lifecycle remain separately gated; missing prerequisites BLOCKED, never skipped PASS. Shared fixture contract awaiting root coordination before runtime implementation.
