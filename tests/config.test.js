@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { assertCoreTokenTransport, configPath, loadConfig, normalizeCoreUrl, resolveConnectionName, resolveCoreToken, resolveCoreUrl, saveConfig } from "../dist/config.js";
+import { assertCoreTokenTransport, configPath, loadConfig, normalizeCoreUrl, resolveConnectionName, resolveCoreToken, resolveCoreUrl, saveConfig, updateCoreUrl } from "../dist/config.js";
 import { asCliError } from "../dist/errors.js";
 
 test("normalizes a safe Core origin", () => {
@@ -97,4 +97,26 @@ test("rejects inherited defaults on load/save and preserves explicitly saved con
   assert.deepEqual(saved, config);
   assert.equal(resolveCoreUrl({ config: saved }), "https://saved.example");
   assert.equal(resolveCoreUrl({ connection: "constructor", config: saved }), "https://saved.example");
+});
+
+
+test("updating core-url preserves named profiles, their default, and URL precedence", async () => {
+  const path = join(await mkdtemp(join(tmpdir(), "lasso-config-update-")), "config.json");
+  const profiles = { local: { coreUrl: "http://127.0.0.1:17883" }, remote: { coreUrl: "https://core.example" } };
+  await saveConfig({ coreUrl: "https://old.example", connections: profiles, defaultConnection: "remote" }, path);
+  await updateCoreUrl("https://new.example/", path);
+  const config = await loadConfig(path);
+  assert.deepEqual(config, { coreUrl: "https://new.example", connections: profiles, defaultConnection: "remote" });
+  assert.equal(resolveCoreUrl({ config }), "https://core.example");
+  assert.equal(resolveCoreUrl({ config, environment: { SERVICE_LASSO_CORE_URL: "https://env.example" } }), "https://env.example");
+  assert.equal(resolveCoreUrl({ config, cliValue: "https://flag.example" }), "https://flag.example");
+});
+
+test("updating core-url creates missing configuration and leaves existing bytes intact on invalid input", async () => {
+  const path = join(await mkdtemp(join(tmpdir(), "lasso-config-update-")), "nested", "config.json");
+  await updateCoreUrl("https://new.example/", path);
+  assert.deepEqual(await loadConfig(path), { coreUrl: "https://new.example" });
+  const before = await readFile(path);
+  await assert.rejects(() => updateCoreUrl("https://user:secret@example.com", path), (error) => error.code === "invalid_core_url");
+  assert.deepEqual(await readFile(path), before);
 });

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { configPath, loadConfig, resolveCoreToken, resolveCoreUrl, resolveLocalAdminToken, saveConfig, validateConnectionName } from "./config.js";
+import { configPath, loadConfig, resolveCoreToken, resolveCoreUrl, resolveLocalAdminToken, saveConfig, updateCoreUrl, validateConnectionName } from "./config.js";
 import { CoreClient } from "./core-client.js";
 import { asCliError, CliError } from "./errors.js";
 import { createServiceScaffold } from "./scaffold.js";
@@ -50,7 +50,7 @@ export function createProgram(): Command {
   });
   config.command("set").argument("<key>", "configuration key (core-url)").argument("<value>", "configuration value").option("--json", "print JSON").action(async (key: string, value: string, options: { json?: boolean }) => {
     if (key !== "core-url") throw new CliError("unknown_config_key", `Unknown configuration key: ${key}`);
-    await saveConfig({ coreUrl: value });
+    await updateCoreUrl(value);
     print({ key, value: (await loadConfig()).coreUrl, path: configPath() }, Boolean(options.json));
   });
 

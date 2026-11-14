@@ -117,6 +117,13 @@ export async function saveConfig(config: CliConfig, path = configPath()): Promis
   await rename(temporary, path);
 }
 
+/** Update one configuration key while preserving saved connection profiles. */
+export async function updateCoreUrl(value: string, path = configPath()): Promise<void> {
+  const coreUrl = normalizeCoreUrl(value);
+  const saved = await loadConfig(path);
+  await saveConfig({ ...saved, coreUrl }, path);
+}
+
 export function resolveConnectionName(options: { cliValue?: string; environment?: NodeJS.ProcessEnv; config: CliConfig }): string | undefined {
   const candidate = options.cliValue ?? options.environment?.SERVICE_LASSO_CONNECTION ?? options.config.defaultConnection;
   return candidate ? validateConnectionName(candidate) : undefined;
