@@ -25,3 +25,14 @@ identity remains mandatory. Controlled adapter tests cover sequencing/mismatch a
 redaction, never Windows ACL proof. Full native39/SEA/publication/permissions and
 complete authoring/lifecycle gates remain separate and visible. Distinct review,
 signed pushes, normal merge, postmerge proof and clean closure govern this issue.
+
+## Additive raw-writer contract
+
+The frozen shared API additionally requires writePrivateFile(path,bytesOrString)
+for finalized exclusive raw evidence (8MiB bound); writePrivateJsonFile remains its
+1MiB JSON wrapper. Both use the Core-owned empty-file TokenUser/ACL preparation,
+held write and privacy/identity recheck. Clients do not duplicate that preparation
+or silently fall back if an export is missing. Dedicated platform integration
+consumes the actual pinned shared utility; generic tests exercise only projections
+and source/tool rejection. Checked-out private module and PowerShell bytes must
+match selected Git blobs before import; Core LF attributes preserve this on Windows.
