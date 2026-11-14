@@ -104,7 +104,7 @@ export async function run(argv, deadlines = {}) {
     });
     helper.stderr.on('data', bytes => { helperError = (helperError + bytes).slice(0, 1024 * 1024); });
     let timer;
-    const hello = await Promise.race([ready, helperClose.then(() => { throw new Error('Fixture exited before readiness.'); }), new Promise((_, no) => { timer = setTimeout(() => no(new Error('Fixture startup deadline exceeded.')), 180000); })]).finally(() => clearTimeout(timer));
+    const hello = await Promise.race([ready, helperClose.then(() => { throw new Error('Fixture exited before readiness.'); }), new Promise((_, no) => { timer = setTimeout(() => no(new Error('Fixture startup deadline exceeded.')), deadlines.startup ?? 180000); })]).finally(() => clearTimeout(timer));
     const expectedConnection = join(fixtureOutput, 'connection.json');
     if (resolve(hello.connectionFile ?? '') !== expectedConnection || resolve(hello.receiptFile ?? '') !== join(fixtureOutput, 'receipt.json')) throw new Error('Fixture readiness paths do not match owned fixture directory.');
     connectionFile = expectedConnection; receiptFile = hello.receiptFile;
