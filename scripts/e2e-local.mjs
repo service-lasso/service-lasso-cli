@@ -92,13 +92,14 @@ export async function run(argv, deadlines = {}) {
     report.identity = { cliRevision, coreRevision, nodeVersion, packages, packageLockSHA256: digest(await readFile(join(root, 'package-lock.json'))), compilerSHA256: digest(compilerBytes), sources: hashes, cliArtifactSHA256: digest(await readFile(join(build, 'dist/index.js'))) };
     record('cli-source-build', 'PASS');
     const fixtureOutput = join(output, 'core-fixture');
+    connectionFile = join(fixtureOutput, 'connection.json'); receiptFile = join(fixtureOutput, 'receipt.json');
     helper = spawn(process.execPath, [selected['core-fixture-helper'], '--core-dir', selected['core-dir'], '--expected-core-revision', coreRevision, '--output-dir', fixtureOutput, '--build-core'], { env, stdio: ['pipe', 'pipe', 'pipe'] });
     helperClose = new Promise((yes, no) => { helper.once('error', no); helper.once('close', (code, signal) => yes({ code, signal })); });
     let settleReady, rejectReady;
     const ready = new Promise((yes, no) => { settleReady = yes; rejectReady = no; });
     helper.stdout.on('data', bytes => {
       helperText += bytes;
-      if (helperText.length > 1024 * 1024) { helper.kill('SIGKILL'); rejectReady(new Error('Fixture readiness output exceeded bound.')); return; }
+      if (helperText.length > 1024 * 1024) { helper.kill('SIGTERM'); rejectReady(new Error('Fixture readiness output exceeded bound.')); return; }
       for (const line of helperText.split('\n')) { try { const value = JSON.parse(line); if (value.ready === true) settleReady(value); } catch {} }
     });
     helper.stderr.on('data', bytes => { helperError = (helperError + bytes).slice(0, 1024 * 1024); });
@@ -116,6 +117,16 @@ export async function run(argv, deadlines = {}) {
     validateReceipt(initialReceipt, coreRevision);
     if (initialReceipt.url !== url.origin) throw new Error('Fixture receipt URL mismatch.');
     record('core-fixture-ready', 'PASS', { coreArtifactSHA256: initialReceipt.coreArtifactSHA256 });
+    // Separate backend transport-contract probe: these are not additional CLI commands.
+    const security = async credential => {
+      const response = await fetch(new URL('/api/runtime/security', url), { headers: { authorization: `Bearer ${credential}` }, redirect: 'error', signal: AbortSignal.timeout(5000) });
+      if (!response.ok) throw new Error('Backend bearer identity probe did not return a supported security record.');
+      return response.json();
+    };
+    const positive = await security(token), negative = await security('invalid-e2e-credential-not-an-authority');
+    if (positive.auth?.actor?.kind !== 'local-token' || positive.auth?.authenticated !== true || positive.policy?.localTokenConfigured !== true) throw new Error('Backend did not identify genuine CLI Bearer transport as local-token.');
+    if (negative.auth?.actor?.kind === 'local-token') throw new Error('Backend accepted invalid Bearer credential as local-token.');
+    record('backend-bearer-identity-contract', 'PASS', { positiveActor: positive.auth.actor.kind, negativeActor: negative.auth?.actor?.kind ?? null, completePermissionsProof: false, actualCLICommand: false });
     const invocations = [ ['help', ['--help']], ['version', ['--version']], ['status', ['instance', 'status', '--json']], ['inspect', ['instance', 'inspect', '--json']], ['services', ['service', 'list', '--json']] ];
     for (const [name, args] of invocations) {
       const result = await command(process.execPath, [join(build, 'dist/index.js'), '--core-url', url.origin, ...args], { cwd: build, env: childEnvironment(home, { SERVICE_LASSO_CORE_TOKEN: token }) });
