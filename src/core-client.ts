@@ -152,6 +152,7 @@ export class CoreClient {
 
   private async request(path: string, init?: RequestInit, acceptConflict = false, useLocalAdminToken = false): Promise<unknown> {
     let response: Response;
+    let raw: string;
     try {
       response = await this.requestFetch(new URL(path, this.options.baseUrl), {
         ...init,
@@ -165,12 +166,12 @@ export class CoreClient {
           ...init?.headers,
         },
       });
+      raw = await response.text();
     } catch (error) {
       // Fetch implementations can include request headers in their errors. Do
       // not expose their detail because it may contain the configured token.
       throw new CliError("core_unreachable", "Could not reach Service Lasso Core.", "Set SERVICE_LASSO_CORE_URL or run `service-lassoctl config set core-url <url>`.");
     }
-    const raw = await response.text();
     if (!response.ok && !(acceptConflict && response.status === 409)) {
       // Core response bodies can include operator-specific or sensitive detail.
       // Keep the CLI's public error contract to status metadata only.
