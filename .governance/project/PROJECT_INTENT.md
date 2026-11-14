@@ -242,3 +242,8 @@ native qualification/Core/operator/publication/release remain separate open gate
 ## CLI #45 explicit saved-connection membership
 
 Active SPEC-CLI-CONNECTION-MEMBERSHIP corrects inherited dictionary membership in src/config.ts and tests/config.test.js. Preserve URL precedence and valid explicit constructor profiles. Focused proof is limited to exact copied config/errors sources and config tests after distinct source review; no CLI39 source/execution/native/publication authority changes.
+
+
+## CLI #47 Core URL update
+
+CLI #47 preserves saved named connections/default when config set core-url updates the fallback origin. Active SPEC-CLI-CONFIG-UPDATE; isolated config proof only, both entry callsites source-reviewed; CLI39 gates unchanged.
