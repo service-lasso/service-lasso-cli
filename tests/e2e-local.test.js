@@ -51,3 +51,13 @@ test('mismatched Core identity fails before setup import or evidence directory c
   await assert.rejects(() => run(['--core-dir', resolve('.'), '--core-revision', '0'.repeat(40), '--output-dir', output]), /Exact clean Core/);
   await assert.rejects(access(output));
 });
+
+test('literal npm build receipt rejects other command, npm bytes or Node bytes', async () => {
+  const { validateReceipt } = await import('../scripts/e2e-local.mjs');
+  const tool = { script: join(resolve(tmpdir()), 'npm-cli.js'), version: '10.9.8', sha256: 'a'.repeat(64), nodeSHA256: 'b'.repeat(64) };
+  const receipt = { schemaVersion: 1, coreRevision: 'c'.repeat(40), coreTree: 'd'.repeat(40), cleanSource: true, classification: 'source-built-ordinary-smoke', coreArtifactSHA256: 'e'.repeat(64), sourceInputSHA256: 'f'.repeat(64), artifactInventorySHA256: '1'.repeat(64), initializationAPI: true, stage: 'ready', status: 'running', build: { command: [process.execPath, tool.script, 'run', 'build'], exitCode: 0, signal: null }, tools: { node: process.version, npm: tool.version, typescript: '5.9.3', compilerSHA256: '2'.repeat(64), nodeSHA256: tool.nodeSHA256, npmCLI: { path: tool.script, packageVersion: tool.version, sha256: tool.sha256 } } };
+  assert.doesNotThrow(() => validateReceipt(receipt, receipt.coreRevision, false, tool));
+  assert.throws(() => validateReceipt({ ...receipt, build: { ...receipt.build, command: ['npm.cmd', 'run', 'build'] } }, receipt.coreRevision, false, tool));
+  assert.throws(() => validateReceipt({ ...receipt, tools: { ...receipt.tools, nodeSHA256: '3'.repeat(64) } }, receipt.coreRevision, false, tool));
+  assert.throws(() => validateReceipt({ ...receipt, tools: { ...receipt.tools, npmCLI: { ...receipt.tools.npmCLI, sha256: '4'.repeat(64) } } }, receipt.coreRevision, false, tool));
+});
