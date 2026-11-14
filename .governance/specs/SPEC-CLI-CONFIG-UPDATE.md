@@ -18,3 +18,16 @@ cover saved profile/default retention and resolution precedence, absent file,
 and invalid-input byte preservation. Source review binds both real callsites;
 full index/help/native graph execution is not admitted by this issue. No CLI39,
 publication, release, provider, Core lifecycle or deployment authority follows.
+
+## Focused proof — 2026-11-14
+
+Distinct reviewer local_test_review accepted cumulative candidate 200bac0 and
+explicit copied config/errors/test execution. Node22.23.2 + TypeScript5.9.3
+strict ES2022 NodeNext isolated compile PASS; exact candidate config tests PASS
+10/10, zero skipped. Private evidence /tmp/cli-local-validation-20261114/issue47/
+green/{compile.log,test.log}. Scratch-only controlled reproduction of the old
+command write effect (baseline config plus a named adapter calling
+saveConfig({coreUrl:value},path)) failed precisely the profile-retention assertion
+9/10. This is not execution of the historical CLI command. Both real callsites
+were source-reviewed; full entrypoint/native graph execution remains unperformed.
+Source copies were compared after proof; no native/publication claim follows.
