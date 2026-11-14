@@ -262,3 +262,8 @@ SPEC-CLI-LOCAL-E2E maps explicit exact-Core ordinary CLI source builds/read/auth
 ## CLI #53 portable archive E2E
 
 SPEC-CLI-PORTABLE-E2E maps build-once ordinary7source packaging, hash-bound clean Node22 consumer and genuine Core reads/cleanup, automatic Linux PR proof. Exact portable Node archive only; native39/SEA/publication/lifecycle gates unchanged.
+
+
+## CLI #55 matching-host ordinary E2E
+
+SPEC-CLI-PLATFORM-E2E maps shared verified platform-private setup before raw writes, literal Node/npm CLI and controlled private environment, actual source+portable Windows/macOS/Linux CI. Core1925 exact merged pin pending; no native/GA adoption or publication authority.
