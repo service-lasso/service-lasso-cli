@@ -25,7 +25,8 @@ export function options(argv) {
 export function validateReceipt(receipt, revision, final = false) {
   if (receipt.schemaVersion !== 1 || receipt.coreRevision !== revision || receipt.cleanSource !== true || receipt.classification !== 'source-built-ordinary-smoke'
     || !/^[a-f0-9]{40}$/.test(receipt.coreTree ?? '') || !['coreArtifactSHA256', 'sourceInputSHA256', 'artifactInventorySHA256'].every(key => /^[a-f0-9]{64}$/.test(receipt[key] ?? ''))
-    || !receipt.tools || !receipt.initializationAPI) throw new Error('Fixture receipt lacks qualified clean fresh source-build binding.');
+    || !receipt.tools || !['node', 'npm', 'typescript'].every(key => typeof receipt.tools[key] === 'string' && receipt.tools[key].length > 0) || !/^[a-f0-9]{64}$/.test(receipt.tools.compilerSHA256 ?? '') || receipt.initializationAPI !== true
+    || receipt.build?.exitCode !== 0 || receipt.build?.signal != null || JSON.stringify(receipt.build?.command) !== JSON.stringify(['npm', 'run', 'build'])) throw new Error('Fixture receipt lacks qualified clean fresh source-build binding.');
   if (final ? receipt.stage !== 'closed' || receipt.status !== 'passed' || !receipt.cleanup || !['serverClosed', 'portClosed', 'credentialRemoved'].every(key => receipt.cleanup[key] === true) || receipt.cleanup.status !== 'complete' : receipt.stage !== 'ready' || receipt.status !== 'running') throw new Error('Fixture receipt stage or cleanup evidence is invalid.');
 }
 export function portClosed(url) {
@@ -116,7 +117,11 @@ export async function run(argv, deadlines = {}) {
     const initialReceipt = JSON.parse(await readFile(hello.receiptFile, 'utf8'));
     validateReceipt(initialReceipt, coreRevision);
     if (initialReceipt.url !== url.origin) throw new Error('Fixture receipt URL mismatch.');
-    record('core-fixture-ready', 'PASS', { coreArtifactSHA256: initialReceipt.coreArtifactSHA256 });
+    for (const [file, field] of [['source-inputs.json', 'sourceInputSHA256'], ['artifact-inventory.json', 'artifactInventorySHA256']]) {
+      if (digest(JSON.stringify(JSON.parse(await readFile(join(fixtureOutput, file), 'utf8')))) !== initialReceipt[field]) throw new Error('Fixture inventory readback digest mismatch.');
+    }
+    if (digest(await readFile(join(selected['core-dir'], 'dist/server/index.js'))) !== initialReceipt.coreArtifactSHA256) throw new Error('Fixture Core entry artifact readback mismatch.');
+    record('core-fixture-ready', 'PASS', { coreArtifactSHA256: initialReceipt.coreArtifactSHA256, sourceInputSHA256: initialReceipt.sourceInputSHA256, artifactInventorySHA256: initialReceipt.artifactInventorySHA256 });
     // Separate backend transport-contract probe: these are not additional CLI commands.
     const security = async credential => {
       const response = await fetch(new URL('/api/runtime/security', url), { headers: { authorization: `Bearer ${credential}` }, redirect: 'error', signal: AbortSignal.timeout(5000) });

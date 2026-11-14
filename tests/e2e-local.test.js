@@ -25,7 +25,7 @@ test('output bound terminates actual overflowing child', async () => {
 
 test('receipt refuses unqualified artifact, false cleanup and malformed build identities', async () => {
   const { validateReceipt } = await import('../scripts/e2e-local.mjs');
-  const receipt = { schemaVersion: 1, coreRevision: 'a'.repeat(40), coreTree: 'b'.repeat(40), cleanSource: true, classification: 'source-built-ordinary-smoke', coreArtifactSHA256: 'c'.repeat(64), sourceInputSHA256: 'd'.repeat(64), artifactInventorySHA256: 'e'.repeat(64), tools: {}, initializationAPI: 'fixture', stage: 'ready', status: 'running' };
+  const receipt = { schemaVersion: 1, coreRevision: 'a'.repeat(40), coreTree: 'b'.repeat(40), cleanSource: true, classification: 'source-built-ordinary-smoke', coreArtifactSHA256: 'c'.repeat(64), sourceInputSHA256: 'd'.repeat(64), artifactInventorySHA256: 'e'.repeat(64), tools: { node: '22', npm: '11', typescript: '5.9', compilerSHA256: 'f'.repeat(64) }, build: { command: ['npm', 'run', 'build'], exitCode: 0, signal: null }, initializationAPI: true, stage: 'ready', status: 'running' };
   assert.doesNotThrow(() => validateReceipt(receipt, 'a'.repeat(40)));
   assert.throws(() => validateReceipt({ ...receipt, classification: 'unqualified-artifact' }, 'a'.repeat(40)));
   assert.throws(() => validateReceipt({ ...receipt, sourceInputSHA256: null }, 'a'.repeat(40)));
