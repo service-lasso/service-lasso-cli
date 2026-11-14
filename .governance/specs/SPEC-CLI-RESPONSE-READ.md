@@ -16,3 +16,13 @@ Proof: distinct exact-source review, then explicit copied core-client/config/
 errors compile with Node22.23.2/TypeScript5.9.3 and copied config/CoreClient tests.
 Exact historical source plus new regression provides RED; exact candidate GREEN.
 No native authoring/SEA/package/compiler admission or release authority changes.
+
+## Focused proof — 2026-11-14
+
+Distinct source review accepted candidate93bd92c exact three-source/two-test scope.
+Both isolated compilations PASS with Node22.23.2/TypeScript5.9.3 strict ES2022
+NodeNext and typings22.20.4. Actual develop10d461c core-client baseline with exact
+new tests fails only rejecting-body regression (16/17; undefined code instead of
+core_unreachable). Exact candidate GREEN17/17, zero skipped. Logs retained under
+/tmp/cli-local-validation-20261114/issue49/{red,green}/{compile.log,test.log}.
+No adapters/stubs/native execution in this proof; copies verified byte-identical.
