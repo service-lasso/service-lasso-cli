@@ -1,7 +1,7 @@
 // Client adapter only: platform privacy policy is owned by the selected Core.
 import { createHash } from 'node:crypto';
-import { open, readFile, lstat, unlink } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 export function publicPrivacyProof(proof) {
@@ -22,21 +22,7 @@ export async function loadPrivateSetup({ coreDir, revision, environment, execute
     files[file] = hash(actual);
   }
   const api = await import(pathToFileURL(join(coreDir, 'scripts/operator-e2e-fixture-private.mjs')).href);
-  for (const name of ['createPrivateDirectory', 'verifyPrivateDirectory', 'verifyPrivateFile', 'writePrivateJsonFile']) if (typeof api[name] !== 'function') throw new Error('Selected Core private setup API is unavailable.');
-  const writeEvidence = async (file, value) => {
-    await api.verifyPrivateDirectory(dirname(file));
-    let handle, identity;
-    try {
-      handle = await open(file, 'wx', 0o600); identity = await handle.stat();
-      await api.verifyPrivateFile(file); // Empty-file privacy precedes any raw data.
-      await handle.writeFile(typeof value === 'string' ? value : JSON.stringify(value, null, 2) + '\n'); await handle.sync();
-      const current = await lstat(file);
-      if (current.isSymbolicLink() || current.dev !== identity.dev || current.ino !== identity.ino) throw new Error('Private evidence file identity changed.');
-      await api.verifyPrivateFile(file);
-    } catch (error) {
-      if (identity) { const current = await lstat(file).catch(() => null); if (current?.dev === identity.dev && current?.ino === identity.ino) await unlink(file).catch(() => {}); }
-      throw error;
-    } finally { await handle?.close(); }
-  };
+  for (const name of ['createPrivateDirectory', 'verifyPrivateDirectory', 'verifyPrivateFile', 'writePrivateFile', 'writePrivateJsonFile']) if (typeof api[name] !== 'function') throw new Error('Selected Core private setup API is unavailable.');
+  const writeEvidence = (file, value) => api.writePrivateFile(file, typeof value === 'string' ? value : JSON.stringify(value, null, 2) + '\n');
   return { api, files, writeEvidence };
 }
