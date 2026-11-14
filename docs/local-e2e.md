@@ -29,3 +29,18 @@ means the whole CLI or a packaged native binary is qualified. Native39 authoring
 SEA/platform packaging, publication, deployment and release remain separate gates.
 The dedicated workflow is manually dispatched with an exact Core revision; it
 builds fresh and publishes only the secret-free result projection.
+
+
+## Portable Node distribution suite
+
+Use `npm run e2e:portable --` with the same explicit Core inputs and fresh output.
+The seven ordinary modules compile once; packaging changes only the version marker
+and generated package metadata. Exactly one `.tgz` archive contains nine declared
+files (seven runtime modules, README and package metadata), with no tests/helpers/
+credential files. Its SHA256 is checked before and after scripts-disabled install
+into a new private consumer. Every installed package file is compared against its
+staged byte digest; the executable and Commander resolve inside that consumer.
+Installed help/version and real Core reads reuse the same owned fixture checks.
+Archive, installed metadata and private evidence are retained for audit; no consumer
+process remains running. This portable archive requires Node22; it is never labeled
+a standalone SEA/native binary or a native authoring qualification.

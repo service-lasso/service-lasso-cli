@@ -58,7 +58,13 @@ export async function preparePortable({ build, output, root, revision, environme
   for (const path of [executable, commanderEntry]) if (isAbsolute(relative(consumer, path)) || relative(consumer, path).startsWith('..')) throw new Error('Portable consumer resolved an executable or dependency outside its own installation.');
   const installedCommander = JSON.parse(await readFile(join(consumer, 'node_modules/commander/package.json'), 'utf8'));
   if (installedCommander.version !== '15.0.0' || hash(await readFile(executable)) !== hash(await readFile(entry))) throw new Error('Portable installed byte or dependency identity mismatch.');
-  const identity = { classification: 'portable-node-archive', standaloneNative: false, sourceRevision: revision, version, archiveSHA256: sha256, archiveBytes: (await readFile(archive)).length, inventory: expectedFiles, npm: { version: tool.version, cliSHA256: tool.sha256 }, installedPackage: { name: installedManifest.name, version, bin: installedManifest.bin, entrySHA256: hash(await readFile(executable)), commanderVersion: installedCommander.version, commanderEntrySHA256: hash(await readFile(commanderEntry)) }, consumedArchiveSHA256: hash(await readFile(archive)), consumerDisposition: 'retained-private-evidence-no-live-process' };
+  const installedInventory = {};
+  for (const file of expectedFiles) {
+    const stagedSHA256 = hash(await readFile(join(stage, file))), installedSHA256 = hash(await readFile(join(installed, file)));
+    if (stagedSHA256 !== installedSHA256) throw new Error('Installed portable inventory bytes differ from staged archive input.');
+    installedInventory[file] = { stagedSHA256, installedSHA256 };
+  }
+  const identity = { classification: 'portable-node-archive', standaloneNative: false, sourceRevision: revision, version, archiveSHA256: sha256, archiveBytes: (await readFile(archive)).length, inventory: expectedFiles, installedInventory, npm: { version: tool.version, cliSHA256: tool.sha256 }, installedPackage: { name: installedManifest.name, version, bin: installedManifest.bin, entrySHA256: hash(await readFile(executable)), commanderVersion: installedCommander.version, commanderEntrySHA256: hash(await readFile(commanderEntry)) }, consumedArchiveSHA256: hash(await readFile(archive)), consumerDisposition: 'retained-private-evidence-no-live-process' };
   await save(join(output, 'portable-identity.json'), identity);
   return { executable, version, identity };
 }
