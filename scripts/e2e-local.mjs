@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { connect } from 'node:net';
 import { copyFile, mkdir, readFile, realpath, stat, symlink, writeFile, access } from 'node:fs/promises';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -20,6 +21,22 @@ export function options(argv) {
   result['core-dir'] = resolve(result['core-dir']);
   result['core-fixture-helper'] = resolve(result['core-fixture-helper'] ?? join(result['core-dir'], 'scripts/operator-e2e-fixture.mjs'));
   return result;
+}
+export function validateReceipt(receipt, revision, final = false) {
+  if (receipt.schemaVersion !== 1 || receipt.coreRevision !== revision || receipt.cleanSource !== true || receipt.classification !== 'source-built-ordinary-smoke'
+    || !/^[a-f0-9]{40}$/.test(receipt.coreTree ?? '') || !['coreArtifactSHA256', 'sourceInputSHA256', 'artifactInventorySHA256'].every(key => /^[a-f0-9]{64}$/.test(receipt[key] ?? ''))
+    || !receipt.tools || !receipt.initializationAPI) throw new Error('Fixture receipt lacks qualified clean fresh source-build binding.');
+  if (final ? receipt.stage !== 'closed' || receipt.status !== 'passed' || !receipt.cleanup || !['serverClosed', 'portClosed', 'credentialRemoved'].every(key => receipt.cleanup[key] === true) || receipt.cleanup.status !== 'complete' : receipt.stage !== 'ready' || receipt.status !== 'running') throw new Error('Fixture receipt stage or cleanup evidence is invalid.');
+}
+export function portClosed(url) {
+  return new Promise(resolveClosed => {
+    const address = new URL(url), socket = connect({ host: address.hostname, port: Number(address.port) });
+    let done = false;
+    const finish = value => { if (!done) { done = true; socket.destroy(); resolveClosed(value); } };
+    socket.setTimeout(1500, () => finish(false));
+    socket.once('connect', () => finish(false));
+    socket.once('error', error => finish(error.code === 'ECONNREFUSED'));
+  });
 }
 function childEnvironment(home, extra = {}) {
   return { PATH: process.env.PATH ?? '', ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}), HOME: home, USERPROFILE: home, LANG: 'C.UTF-8', ...extra };
@@ -44,11 +61,11 @@ async function checked(file, args, settings) {
   return result;
 }
 async function put(path, value) { await writeFile(path, typeof value === 'string' ? value : JSON.stringify(value, null, 2) + '\n', { mode: 0o600 }); }
-export async function run(argv) {
+export async function run(argv, deadlines = {}) {
   const selected = options(argv), output = selected['output-dir'];
   await mkdir(output, { mode: 0o700 }); // Exclusive: never reuse an earlier run.
   const report = { schemaVersion: 1, lane: 'ordinary-source-cli', status: 'FAIL', stages: [], fullLifecycle: { status: 'BLOCKED', reason: 'Authentic admitted template/native authoring and complete lifecycle dependencies are separately required.' } };
-  let helper, helperClose, connectionFile, token = '', helperText = '', helperError = '', cleanupError;
+  let helper, helperClose, connectionFile, receiptFile, fixtureUrl, token = '', helperText = '', helperError = '', cleanupError;
   const record = (stage, status, details = {}) => report.stages.push({ stage, status, ...details });
   const home = join(output, 'home'); await mkdir(home, { mode: 0o700 });
   const env = childEnvironment(home);
@@ -56,6 +73,8 @@ export async function run(argv) {
     const nodeVersion = process.versions.node;
     if (!nodeVersion.startsWith('22.')) throw new Error('Node22 is required.');
     const cliRevision = (await checked('git', ['-C', root, 'rev-parse', 'HEAD'], { env })).stdout.trim();
+    const clean = (await checked('git', ['-C', root, 'status', '--porcelain', '--untracked-files=no'], { env })).stdout;
+    if (clean.trim()) throw new Error('CLI checkout tracked source is dirty.');
     const coreRevision = (await checked('git', ['-C', selected['core-dir'], 'rev-parse', 'HEAD'], { env })).stdout.trim();
     if (coreRevision !== selected['core-revision']) throw new Error('Core revision does not match explicit input.');
     const hashes = {};
@@ -87,14 +106,15 @@ export async function run(argv) {
     const hello = await Promise.race([ready, helperClose.then(() => { throw new Error('Fixture exited before readiness.'); }), new Promise((_, no) => { timer = setTimeout(() => no(new Error('Fixture startup deadline exceeded.')), 180000); })]).finally(() => clearTimeout(timer));
     const expectedConnection = join(fixtureOutput, 'connection.json');
     if (resolve(hello.connectionFile ?? '') !== expectedConnection || resolve(hello.receiptFile ?? '') !== join(fixtureOutput, 'receipt.json')) throw new Error('Fixture readiness paths do not match owned fixture directory.');
-    connectionFile = expectedConnection;
+    connectionFile = expectedConnection; receiptFile = hello.receiptFile;
     if (process.platform !== 'win32' && ((await stat(connectionFile)).mode & 0o077)) throw new Error('Fixture credentials are not private.');
     const connection = JSON.parse(await readFile(connectionFile, 'utf8'));
     const url = new URL(connection.url);
     if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || url.port === '17883' || url.pathname !== '/' || url.username || url.password || url.search || url.hash || typeof connection.token !== 'string' || !connection.token) throw new Error('Fixture connection must be private owned loopback with ephemeral credential.');
-    token = connection.token;
+    token = connection.token; fixtureUrl = url.origin;
     const initialReceipt = JSON.parse(await readFile(hello.receiptFile, 'utf8'));
-    if (initialReceipt.coreRevision !== coreRevision) throw new Error('Fixture receipt source revision mismatch.');
+    validateReceipt(initialReceipt, coreRevision);
+    if (initialReceipt.url !== url.origin) throw new Error('Fixture receipt URL mismatch.');
     record('core-fixture-ready', 'PASS', { coreArtifactSHA256: initialReceipt.coreArtifactSHA256 });
     const invocations = [ ['help', ['--help']], ['version', ['--version']], ['status', ['instance', 'status', '--json']], ['inspect', ['instance', 'inspect', '--json']], ['services', ['service', 'list', '--json']] ];
     for (const [name, args] of invocations) {
@@ -114,12 +134,16 @@ export async function run(argv) {
       let timer;
       helper.stdin.on('error', () => {}); helper.stdin.end('stop\n');
       try {
-        const closed = await Promise.race([helperClose, new Promise((_, no) => { timer = setTimeout(() => { helper.kill('SIGKILL'); no(new Error('Fixture cleanup deadline exceeded.')); }, 15000); })]);
+        const closed = await Promise.race([helperClose, new Promise((_, no) => { timer = setTimeout(() => { helper.kill('SIGTERM'); no(new Error('Fixture cleanup deadline exceeded; controller owns child recovery.')); }, deadlines.cleanup ?? 30000); })]);
         if (closed.code !== 0) throw new Error('Fixture cleanup exited unsuccessfully.');
         if (connectionFile) { try { await access(connectionFile); throw new Error('Fixture credential remained after shutdown.'); } catch (error) { if (error.code !== 'ENOENT') throw error; } }
+        if (!receiptFile || !fixtureUrl) throw new Error('No authenticated fixture readiness to verify cleanup.');
+        const finalReceipt = JSON.parse(await readFile(receiptFile, 'utf8'));
+        validateReceipt(finalReceipt, selected['core-revision'], true);
+        if (!(await portClosed(fixtureUrl))) throw new Error('Owned fixture port remains open or unknown.');
         record('owned-fixture-cleanup', 'PASS');
       } catch { cleanupError = true; record('owned-fixture-cleanup', 'FAIL'); report.status = 'FAIL'; }
-      finally { clearTimeout(timer); if (cleanupError) await helperClose.catch(() => {}); }
+      finally { clearTimeout(timer); if (cleanupError) { const recovery = setTimeout(() => {}, 5000); await Promise.race([helperClose.catch(() => {}), new Promise(yes => setTimeout(yes, 5000))]); clearTimeout(recovery); } }
     }
     await put(join(output, 'result.json'), report);
   }
