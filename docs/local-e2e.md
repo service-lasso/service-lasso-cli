@@ -44,3 +44,22 @@ Installed help/version and real Core reads reuse the same owned fixture checks.
 Archive, installed metadata and private evidence are retained for audit; no consumer
 process remains running. This portable archive requires Node22; it is never labeled
 a standalone SEA/native binary or a native authoring qualification.
+
+
+## Matching-host platform evidence
+
+The selected frozen Core must include the shared private setup API. The CLI checks
+its exact clean revision and private-module bytes before importing setup. Shared
+policy creates/verifies the fresh evidence root before raw writes; Windows uses
+current-owner+SYSTEM protected DACLs and owner-aware exclusive writes, while POSIX
+uses current-owner0700/0600. Raw owner/ACE proof is retained only in the private
+`privacy-proof.private.json`; public result contains policy/verification/hash only.
+Windows forwards a verified literal npm-cli.js under the same Node22 runtime.
+Child home, appdata, localappdata, config/cache and temporary paths are private.
+
+Automatic source and portable jobs run separately on actual Linux, Windows and
+macOS hosts. macOS results are exploratory/deferred ordinary evidence, not GA or
+protected native acceptance. No mocked policy replaces real host verification.
+The separate `scripts/e2e-platform.test.mjs` integration test requires explicit
+`SERVICE_LASSO_TEST_CORE_DIR` and `SERVICE_LASSO_TEST_CORE_REVISION` for the actual
+shared setup source; generic helper tests remain independent of Core dependencies.

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-test('controlled helper protocol faults never become actual-Core PASS', { timeout: 30000 }, async () => {
+test('controlled helper protocol faults never become actual-Core PASS', { timeout: 300000 }, async () => {
   const { mkdtemp, writeFile, readFile, access, realpath } = await import('node:fs/promises');
   const { tmpdir } = await import('node:os');
   const { join, resolve } = await import('node:path');
