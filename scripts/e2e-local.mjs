@@ -124,7 +124,7 @@ export async function run(argv, deadlines = {}) {
       return response.json();
     };
     const positive = await security(token), negative = await security('invalid-e2e-credential-not-an-authority');
-    if (positive.auth?.actor?.kind !== 'local-token' || positive.auth?.authenticated !== true || positive.policy?.localTokenConfigured !== true) throw new Error('Backend did not identify genuine CLI Bearer transport as local-token.');
+    if (positive.auth?.actor?.kind !== 'local-token' || positive.auth?.actor?.authenticated !== true || positive.auth?.policy?.localTokenConfigured !== true) throw new Error('Backend did not identify genuine CLI Bearer transport as local-token.');
     if (negative.auth?.actor?.kind === 'local-token') throw new Error('Backend accepted invalid Bearer credential as local-token.');
     record('backend-bearer-identity-contract', 'PASS', { positiveActor: positive.auth.actor.kind, negativeActor: negative.auth?.actor?.kind ?? null, completePermissionsProof: false, actualCLICommand: false });
     const invocations = [ ['help', ['--help']], ['version', ['--version']], ['status', ['instance', 'status', '--json']], ['inspect', ['instance', 'inspect', '--json']], ['services', ['service', 'list', '--json']] ];
