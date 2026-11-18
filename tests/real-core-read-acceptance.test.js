@@ -86,6 +86,7 @@ test("compiled CLI reads an autostart-eligible real Core service without startin
     await mkdir(path.join(servicesRoot, "read-only-service"), { recursive: true });
     await mkdir(workspaceRoot, { recursive: true });
     await mkdir(cliHome, { recursive: true });
+    await mkdir(path.join(root, 'registry'), { recursive: true });
     await writeFile(path.join(servicesRoot, "read-only-service", "service.json"), JSON.stringify({
       id: "read-only-service",
       name: "Read-only service",
@@ -115,6 +116,8 @@ process.once("SIGINT", () => { void shutdown(); });
         ...process.env,
         CORE_SERVICES_ROOT: servicesRoot,
         CORE_WORKSPACE_ROOT: workspaceRoot,
+        SERVICE_LASSO_INSTANCE_REGISTRY_PATH: path.join(root, 'registry', 'instances.json'),
+        SERVICE_LASSO_HOST_PORT_REGISTRY_PATH: path.join(root, 'registry', 'ports.json'),
       },
     });
     const coreUrl = await waitForCoreUrl(core.child, core.output);
