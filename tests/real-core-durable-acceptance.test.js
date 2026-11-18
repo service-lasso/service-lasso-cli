@@ -77,6 +77,9 @@ test("compiled external CLI exercises merged actual Core durable lifecycle contr
     await mkdir(servicesRoot, { recursive: true });
     await mkdir(workspaceRoot, { recursive: true });
     await mkdir(cliHome, { recursive: true });
+    await mkdir(path.join(root, 'registry'), { recursive: true });
+    process.env.SERVICE_LASSO_INSTANCE_REGISTRY_PATH = path.join(root, 'registry', 'instances.json');
+    process.env.SERVICE_LASSO_HOST_PORT_REGISTRY_PATH = path.join(root, 'registry', 'ports.json');
     await writeExecutableFixtureService(servicesRoot, "durable-cli-service", { healthcheck: { type: "process" } });
     await writeExecutableFixtureService(servicesRoot, "durable-unrelated-service", { healthcheck: { type: "process" } });
     const unrelatedManifest = await readFile(path.join(servicesRoot, "durable-unrelated-service", "service.json"), "utf8");

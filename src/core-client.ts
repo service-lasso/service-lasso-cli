@@ -186,7 +186,7 @@ export class CoreClient {
 
 export type LifecycleAction = "install" | "config" | "start" | "stop" | "restart";
 export interface LifecycleExecute { action: LifecycleAction; serviceId: string; idempotencyKey: string; confirmationId: string; confirmationPhrase: string; }
-type AvailabilityAction = LifecycleAction | "reload";
+type AvailabilityAction = LifecycleAction | "reload" | "update_check" | "update_download";
 export interface LifecycleAvailability { contractVersion: string; actions: Array<{ action: AvailabilityAction; available: boolean; cancellationSupported?: boolean }>; }
 function isAvailability(value: unknown): value is LifecycleAvailability {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
@@ -207,7 +207,7 @@ function isLifecycleAction(value: unknown): value is LifecycleAction {
 }
 
 function isAvailabilityAction(value: unknown): value is AvailabilityAction {
-  return isLifecycleAction(value) || value === "reload";
+  return isLifecycleAction(value) || value === "reload" || value === "update_check" || value === "update_download";
 }
 
 export interface LifecyclePreview {
