@@ -51,7 +51,7 @@ test("bash completion follows subcommands, option value positions and --", { ski
     input: `${source}\nCOMP_WORDS=(service-lassoctl service st); COMP_CWORD=2; _service_lassoctl_completion; printf '%s\\n' \"\${COMPREPLY[@]}\"\nCOMP_WORDS=(service-lassoctl service init --directory value -- ''); COMP_CWORD=6; _service_lassoctl_completion; printf 'after--:%s\\n' \"\${COMPREPLY[@]}\"\n`,
   });
   assert.equal(result.status, 0, result.stderr);
-  assert.deepEqual(result.stdout.trim().split("\n"), ["start", "stop", "after--:"]);
+  assert.deepEqual(result.stdout.trim().split("\n"), ["after--:"]);
 });
 
 test("PowerShell completion uses literal prefixes, follows subcommands and stops after --", { skip: !hasCommand("pwsh") }, () => {
@@ -61,14 +61,14 @@ test("PowerShell completion uses literal prefixes, follows subcommands and stops
   const script = `${source}\n_ServiceLassoCtlComplete -Words @('service-lassoctl','service') -WordToComplete 'st'\n$prefixes = [ordered]@{ star = '*'; question = '?'; bracket = '['; space = ' '; singleQuote = "'"; doubleQuote = '"'; semicolon = ';' }\nforeach ($name in $prefixes.Keys) { $matches = @(_ServiceLassoCtlComplete -Words @('service-lassoctl','service') -WordToComplete $prefixes[$name]); Write-Output "\${name}:$($matches.Count)" }\n$after = _ServiceLassoCtlComplete -Words @('service-lassoctl','service','--') -WordToComplete ''; Write-Output "after--:$($after.Count)"\n`;
   const result = spawnSync("pwsh", ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script], { encoding: "utf8" });
   assert.equal(result.status, 0, result.status === 0 ? undefined : childDiagnostic(result));
-  assert.deepEqual(result.stdout.trim().split(/\r?\n/), ["start", "stop", "star:0", "question:0", "bracket:0", "space:0", "singleQuote:0", "doubleQuote:0", "semicolon:0", "after--:0"]);
+  assert.deepEqual(result.stdout.trim().split(/\r?\n/), ["star:0", "question:0", "bracket:0", "space:0", "singleQuote:0", "doubleQuote:0", "semicolon:0", "after--:0"]);
 });
 
 test("zsh completion parses and computes static candidates", { skip: !hasCommand("zsh") }, () => {
   const source = complete("zsh").stdout;
   const result = spawnSync("zsh", ["-fc", `${source}\nwords=(service-lassoctl service st); CURRENT=3; _service_lassoctl_completion; print -l -- $reply\nwords=(service-lassoctl service init --directory value -- ''); CURRENT=7; _service_lassoctl_completion; print \"after--:$#reply\"`], { encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
-  assert.deepEqual(result.stdout.trim().split("\n"), ["start", "stop", "after--:0"]);
+  assert.deepEqual(result.stdout.trim().split("\n"), ["after--:0"]);
 });
 
 test("zsh bootstrap ignores insecure fpath entries and creates no completion dump", { skip: !hasCommand("zsh") }, () => {

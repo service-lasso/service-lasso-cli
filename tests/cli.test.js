@@ -28,8 +28,8 @@ test("installed package bin executes through the Unix-compatible entrypoint path
   assert.equal(result.stdout.trim(), "0.1.0");
 });
 
-test("mutations require explicit confirmation before Core is contacted", () => {
+test("direct service lifecycle mutations are removed from the CLI", () => {
   const result = spawnSync(cli[0], [...cli.slice(1), "service", "start", "example-service"], { encoding: "utf8" });
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /confirmation_required/);
+  assert.match(result.stderr, /unknown command/);
 });

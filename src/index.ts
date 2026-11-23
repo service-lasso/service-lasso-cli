@@ -185,13 +185,6 @@ export function createProgram(): Command {
     const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
     print(await (await client(coreUrl, connection)).services(), Boolean(options.json));
   });
-  for (const action of ["start", "stop", "restart"] as const) {
-    service.command(action).argument("<service-id>", "managed service id").option("--confirm", "confirm this mutation").option("--json", "print JSON").description(`${action[0].toUpperCase()}${action.slice(1)} a managed service.`).action(async (serviceId: string, options: { confirm?: boolean; json?: boolean }) => {
-      requireConfirmation(options);
-      const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
-      print(await (await client(coreUrl, connection)).lifecycle(serviceId, action), Boolean(options.json));
-    });
-  }
   service.command("init").argument("<service-id>", "lowercase service id").option("--directory <path>", "new package directory").option("--name <name>", "display name").option("--template-root <path>", "already-acquired accepted template bundle").option("--dry-run", "validate and list files without creating them").option("--json", "print JSON").description("Create from an accepted immutable service template.").action(async (serviceId: string, options: { directory?: string; name?: string; templateRoot?: string; dryRun?: boolean; json?: boolean }) => {
     const input = { id: serviceId, directory: options.directory ?? `lasso-${serviceId}`, name: options.name, templateRoot: options.templateRoot, dryRun: options.dryRun };
     const result = options.templateRoot ? await createServiceScaffold(input) : options.dryRun ? previewServiceScaffold(input) : await createServiceScaffold(input);
