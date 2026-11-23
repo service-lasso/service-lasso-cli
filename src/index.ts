@@ -34,32 +34,6 @@ function requireConfirmation(options: { confirm?: boolean }): void {
   if (!options.confirm) throw new CliError("confirmation_required", "This action changes a running Core instance. Re-run with --confirm after reviewing the target.");
 }
 
-const durableActions: LifecycleAction[] = ["install", "config", "start", "stop", "restart"];
-
-function operationOutcome(value: unknown): "accepted" | "succeeded" | "failed" | "cancelled" | "timeout" | "uncertain" {
-  const operation = value && typeof value === "object" && "operation" in value ? (value as { operation?: unknown }).operation : value;
-  const outcome = operation && typeof operation === "object" ? (operation as { outcome?: unknown }).outcome : undefined;
-  if (outcome === "succeeded" || outcome === "failed" || outcome === "cancelled") return outcome;
-  if (outcome === "skipped") return "failed";
-  if (outcome === "unknown_after_crash") return "uncertain";
-  return "accepted";
-}
-
-async function waitForOperation(core: CoreClient, operationId: string, waitMs: number): Promise<unknown> {
-  const deadline = Date.now() + waitMs;
-  for (;;) {
-    const result = await core.lifecycleOperation(operationId);
-    if (operationOutcome(result) !== "accepted") return result;
-    if (Date.now() >= deadline) return { operationId, outcome: "timeout", reconciliation: "read the operation by id; the client did not cancel or resubmit it" };
-    await new Promise((resolve) => setTimeout(resolve, Math.min(250, deadline - Date.now())));
-  }
-}
-
-function setOutcomeExit(value: unknown): void {
-  const code = operationOutcome(value);
-  process.exitCode = ({ accepted: 2, succeeded: 0, failed: 3, cancelled: 4, timeout: 5, uncertain: 6 } as const)[code];
-}
-
 export function createProgram(): Command {
   const program = new Command();
   program
