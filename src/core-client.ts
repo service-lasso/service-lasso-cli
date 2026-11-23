@@ -160,6 +160,15 @@ export class CoreClient {
     return this.operatorV2(`/operations/${encodeURIComponent(operationId)}`);
   }
 
+  public operatorV2Cancel(operationId: string): Promise<unknown> {
+    if (!/^[-A-Za-z0-9_]{8,200}$/.test(operationId)) throw new CliError("invalid_operation_id", "Operation id must be an opaque operation identifier.");
+    return this.operatorV2(`/operations/${encodeURIComponent(operationId)}/cancel`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+  }
+
   private serviceId(serviceId: string): string {
     if (!serviceId || serviceId.includes("/")) throw new CliError("invalid_service_id", "Service id is required and cannot contain a slash.");
     return encodeURIComponent(serviceId);

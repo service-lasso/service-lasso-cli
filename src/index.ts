@@ -154,6 +154,10 @@ export function createProgram(): Command {
     const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
     print(await (await client(coreUrl, connection)).operatorV2Operation(operationId), Boolean(options.json));
   });
+  operator.command("cancel").argument("<operation-id>").option("--json", "print JSON").description("Request cancellation of an operator/v2 durable operation.").action(async (operationId: string, options: { json?: boolean }) => {
+    const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
+    print(await (await client(coreUrl, connection)).operatorV2Cancel(operationId), Boolean(options.json));
+  });
 
   const service = program.command("service").description("Scaffold and manage services.");
   service.command("template")
