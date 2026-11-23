@@ -117,16 +117,21 @@ export function createProgram(): Command {
     print(await (await client(coreUrl, connection)).operatorV2LifecycleAvailability(serviceId), Boolean(options.json));
   });
   operator.command("preview").argument("<service-id>").argument("<action-id>")
-    .option("--definition-revision <revision>", "definition revision", "definition-1")
-    .option("--expected-revision <revision>", "expected revision", "definition-1")
+    .option("--definition-revision <revision>", "definition revision override")
+    .option("--expected-revision <revision>", "expected revision override")
     .option("--json", "print JSON")
     .description("Ask Core to preview an operator/v2 lifecycle action.")
-    .action(async (serviceId: string, actionId: string, options: { definitionRevision: string; expectedRevision: string; json?: boolean }) => {
+    .action(async (serviceId: string, actionId: string, options: { definitionRevision?: string; expectedRevision?: string; json?: boolean }) => {
       const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
-      print(await (await client(coreUrl, connection)).operatorV2Preview(serviceId, {
+      const core = await client(coreUrl, connection);
+      const availability = await core.operatorV2LifecycleAvailability(serviceId) as { definitionRevision?: unknown };
+      if (typeof availability.definitionRevision !== "string") throw new CliError("action_unavailable", "Core did not return a bound definition revision.");
+      const definitionRevision = options.definitionRevision ?? availability.definitionRevision;
+      const expectedRevision = options.expectedRevision ?? availability.definitionRevision;
+      print(await core.operatorV2Preview(serviceId, {
         actionId,
-        definitionRevision: options.definitionRevision,
-        expectedRevision: options.expectedRevision,
+        definitionRevision,
+        expectedRevision,
         input: {},
       }), Boolean(options.json));
     });
@@ -154,7 +159,8 @@ export function createProgram(): Command {
     const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
     print(await (await client(coreUrl, connection)).operatorV2Operation(operationId), Boolean(options.json));
   });
-  operator.command("cancel").argument("<operation-id>").option("--json", "print JSON").description("Request cancellation of an operator/v2 durable operation.").action(async (operationId: string, options: { json?: boolean }) => {
+  operator.command("cancel").argument("<operation-id>").option("--confirm", "confirm this mutation").option("--json", "print JSON").description("Request cancellation of an operator/v2 durable operation.").action(async (operationId: string, options: { confirm?: boolean; json?: boolean }) => {
+    requireConfirmation(options);
     const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
     print(await (await client(coreUrl, connection)).operatorV2Cancel(operationId), Boolean(options.json));
   });
