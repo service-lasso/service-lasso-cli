@@ -125,54 +125,61 @@ export function createProgram(): Command {
     print(await (await client(coreUrl, connection)).inspect(), Boolean(options.json));
   });
 
-  const operator = program.command("operator").description("Use the server-authoritative durable lifecycle contract.");
-  operator.command("status").option("--json", "print JSON").description("Read runtime status.").action(async (options: { json?: boolean }) => {
+  const operator = program.command("operator").description("Use the operator/v2 contract.");
+  operator.command("discovery").option("--json", "print JSON").description("Read operator/v2 discovery.").action(async (options: { json?: boolean }) => {
     const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
-    print(await (await client(coreUrl, connection)).operatorStatus(), Boolean(options.json));
+    print(await (await client(coreUrl, connection)).operatorV2Discovery(), Boolean(options.json));
   });
-  operator.command("setup").option("--json", "print JSON").description("Read Core setup state.").action(async (options: { json?: boolean }) => {
+  operator.command("services").option("--json", "print JSON").description("List services through operator/v2.").action(async (options: { json?: boolean }) => {
     const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
-    print(await (await client(coreUrl, connection)).setup(), Boolean(options.json));
+    print(await (await client(coreUrl, connection)).operatorV2Services(), Boolean(options.json));
   });
-  operator.command("health").argument("<service-id>").option("--json", "print JSON").description("Read service health.").action(async (serviceId: string, options: { json?: boolean }) => {
+  operator.command("detail").argument("<service-id>").option("--json", "print JSON").description("Read service detail through operator/v2.").action(async (serviceId: string, options: { json?: boolean }) => {
     const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
-    print(await (await client(coreUrl, connection)).serviceHealth(serviceId), Boolean(options.json));
+    print(await (await client(coreUrl, connection)).operatorV2Detail(serviceId), Boolean(options.json));
   });
-  operator.command("dependencies").argument("<service-id>").option("--json", "print JSON").description("Read service dependency state.").action(async (serviceId: string, options: { json?: boolean }) => {
+  operator.command("availability").argument("<service-id>").option("--json", "print JSON").description("Read operator/v2 lifecycle availability.").action(async (serviceId: string, options: { json?: boolean }) => {
     const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
-    print(await (await client(coreUrl, connection)).serviceDependencies(serviceId), Boolean(options.json));
+    print(await (await client(coreUrl, connection)).operatorV2LifecycleAvailability(serviceId), Boolean(options.json));
   });
-  operator.command("availability").argument("<service-id>").option("--json", "print JSON").description("Read supported durable lifecycle actions.").action(async (serviceId: string, options: { json?: boolean }) => {
-    const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
-    print(await (await client(coreUrl, connection)).availability(serviceId), Boolean(options.json));
-  });
-  operator.command("preview").argument("<action>", "install, config, start, stop, or restart").argument("<service-id>").option("--json", "print JSON").description("Ask Core to validate an action and issue a bound confirmation.").action(async (action: LifecycleAction, serviceId: string, options: { json?: boolean }) => {
-    if (!durableActions.includes(action)) throw new CliError("invalid_action", "Action must be install, config, start, stop, or restart.");
-    const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
-    print(await (await client(coreUrl, connection)).previewLifecycle(serviceId, action), Boolean(options.json));
-  });
-  operator.command("execute").argument("<action>", "install, config, start, stop, or restart").argument("<service-id>")
-    .requiredOption("--confirmation-id <id>", "server-issued confirmation id").requiredOption("--confirmation-phrase <phrase>", "server-issued bound confirmation phrase")
-    .requiredOption("--idempotency-key <key>", "caller-supplied opaque idempotency key")
-    .option("--wait-ms <milliseconds>", "bounded readback wait after acceptance", Number).option("--confirm", "record local execution intent; does not bypass Core").option("--json", "print JSON")
-    .description("Submit a server-confirmed durable lifecycle operation.").action(async (action: LifecycleAction, serviceId: string, options: { confirmationId: string; confirmationPhrase: string; idempotencyKey: string; waitMs?: number; confirm?: boolean; json?: boolean }) => {
-      if (!durableActions.includes(action)) throw new CliError("invalid_action", "Action must be install, config, start, stop, or restart.");
-      requireConfirmation(options);
-      if (options.waitMs !== undefined && (!Number.isSafeInteger(options.waitMs) || options.waitMs < 0 || options.waitMs > 120_000)) throw new CliError("invalid_wait", "Wait must be an integer from 0 to 120000 milliseconds.");
+  operator.command("preview").argument("<service-id>").argument("<action-id>")
+    .option("--definition-revision <revision>", "definition revision", "definition-1")
+    .option("--expected-revision <revision>", "expected revision", "definition-1")
+    .option("--json", "print JSON")
+    .description("Ask Core to preview an operator/v2 lifecycle action.")
+    .action(async (serviceId: string, actionId: string, options: { definitionRevision: string; expectedRevision: string; json?: boolean }) => {
       const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
-      const core = await client(coreUrl, connection);
-      let accepted: unknown;
-      try { accepted = await core.executeLifecycle({ action, serviceId, confirmationId: options.confirmationId, confirmationPhrase: options.confirmationPhrase, idempotencyKey: options.idempotencyKey }); }
-      catch (error) { if (error instanceof CliError && error.code === "core_unreachable") { const uncertain = { outcome: "uncertain", reconciliation: "read the operation by id if it was returned before disconnect; do not resubmit automatically" }; print(uncertain, Boolean(options.json)); setOutcomeExit(uncertain); return; } throw error; }
-      const operation = accepted && typeof accepted === "object" && "operation" in accepted ? (accepted as { operation?: { operationId?: unknown } }).operation : undefined;
-      const operationId = operation && typeof operation.operationId === "string" ? operation.operationId : undefined;
-      const result = options.waitMs && operationId ? await waitForOperation(core, operationId, options.waitMs) : accepted;
-      print(result, Boolean(options.json)); setOutcomeExit(result);
+      print(await (await client(coreUrl, connection)).operatorV2Preview(serviceId, {
+        actionId,
+        definitionRevision: options.definitionRevision,
+        expectedRevision: options.expectedRevision,
+        input: {},
+      }), Boolean(options.json));
     });
-  const operation = operator.command("operation").description("Inspect, wait for, or cancel a durable lifecycle operation.");
-  operation.command("get").argument("<operation-id>").option("--json", "print JSON").action(async (operationId: string, options: { json?: boolean }) => { const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>(); const result = await (await client(coreUrl, connection)).lifecycleOperation(operationId); print(result, Boolean(options.json)); setOutcomeExit(result); });
-  operation.command("wait").argument("<operation-id>").requiredOption("--wait-ms <milliseconds>", "bounded wait", Number).option("--json", "print JSON").action(async (operationId: string, options: { waitMs: number; json?: boolean }) => { if (!Number.isSafeInteger(options.waitMs) || options.waitMs < 0 || options.waitMs > 120_000) throw new CliError("invalid_wait", "Wait must be an integer from 0 to 120000 milliseconds."); const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>(); const result = await waitForOperation(await client(coreUrl, connection), operationId, options.waitMs); print(result, Boolean(options.json)); setOutcomeExit(result); });
-  operation.command("cancel").argument("<operation-id>").option("--json", "print JSON").action(async (operationId: string, options: { json?: boolean }) => { const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>(); const core = await client(coreUrl, connection); const current = await core.lifecycleOperation(operationId); const result = await core.cancelLifecycleOperation(operationId, current.operation.cancellationSupported); print(result, Boolean(options.json)); });
+  operator.command("execute").argument("<service-id>")
+    .requiredOption("--plan-id <id>", "server-issued plan id")
+    .requiredOption("--idempotency-key <key>", "opaque idempotency key")
+    .requiredOption("--confirmation-id <id>", "server-issued confirmation id")
+    .requiredOption("--confirmation-response <phrase>", "server-issued confirmation phrase")
+    .requiredOption("--expected-revision <revision>", "expected revision")
+    .option("--confirm", "confirm this mutation")
+    .option("--json", "print JSON")
+    .description("Execute an operator/v2 lifecycle action.")
+    .action(async (serviceId: string, options: { planId: string; idempotencyKey: string; confirmationId: string; confirmationResponse: string; expectedRevision: string; confirm?: boolean; json?: boolean }) => {
+      requireConfirmation(options);
+      const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
+      print(await (await client(coreUrl, connection)).operatorV2Execute(serviceId, {
+        planId: options.planId,
+        idempotencyKey: options.idempotencyKey,
+        confirmationId: options.confirmationId,
+        confirmationResponse: options.confirmationResponse,
+        expectedRevision: options.expectedRevision,
+      }), Boolean(options.json));
+    });
+  operator.command("operation").argument("<operation-id>").option("--json", "print JSON").description("Read an operator/v2 durable operation.").action(async (operationId: string, options: { json?: boolean }) => {
+    const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
+    print(await (await client(coreUrl, connection)).operatorV2Operation(operationId), Boolean(options.json));
+  });
 
   const service = program.command("service").description("Scaffold and manage services.");
   service.command("template")
@@ -181,9 +188,9 @@ export function createProgram(): Command {
     .action((options: { json?: boolean }) => {
       print(previewServiceScaffold({ id: "template-preview", directory: "service-template-preview", dryRun: true }), Boolean(options.json));
     });
-  service.command("list").description("List services from Core.").option("--json", "print JSON").action(async (options: { json?: boolean }) => {
+  service.command("list").description("List services through operator/v2.").option("--json", "print JSON").action(async (options: { json?: boolean }) => {
     const { coreUrl, connection } = program.opts<{ coreUrl?: string; connection?: string }>();
-    print(await (await client(coreUrl, connection)).services(), Boolean(options.json));
+    print(await (await client(coreUrl, connection)).operatorV2Services(), Boolean(options.json));
   });
   service.command("init").argument("<service-id>", "lowercase service id").option("--directory <path>", "new package directory").option("--name <name>", "display name").option("--template-root <path>", "already-acquired accepted template bundle").option("--dry-run", "validate and list files without creating them").option("--json", "print JSON").description("Create from an accepted immutable service template.").action(async (serviceId: string, options: { directory?: string; name?: string; templateRoot?: string; dryRun?: boolean; json?: boolean }) => {
     const input = { id: serviceId, directory: options.directory ?? `lasso-${serviceId}`, name: options.name, templateRoot: options.templateRoot, dryRun: options.dryRun };
