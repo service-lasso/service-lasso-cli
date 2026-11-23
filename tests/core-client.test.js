@@ -134,6 +134,7 @@ test("consumes the operator/v2 envelope for discovery, services, preview, execut
   await client.operatorV2Preview("root", { actionId: "service_start" });
   await client.operatorV2Execute("root", { planId: "plan-1" });
   await client.operatorV2Operation("mcp-operation-12345678-1234-1234-1234-123456789abc");
+  await client.operatorV2Cancel("mcp-operation-12345678-1234-1234-1234-123456789abc");
   assert.deepEqual(calls.map(call => call.url), [
     "http://127.0.0.1:17883/api/operator/v2/discovery",
     "http://127.0.0.1:17883/api/operator/v2/services",
@@ -142,11 +143,14 @@ test("consumes the operator/v2 envelope for discovery, services, preview, execut
     "http://127.0.0.1:17883/api/operator/v2/services/root/preview",
     "http://127.0.0.1:17883/api/operator/v2/services/root/execute",
     "http://127.0.0.1:17883/api/operator/v2/operations/mcp-operation-12345678-1234-1234-1234-123456789abc",
+    "http://127.0.0.1:17883/api/operator/v2/operations/mcp-operation-12345678-1234-1234-1234-123456789abc/cancel",
   ]);
   assert.equal(calls[4].init.method, "POST");
   assert.equal(calls[4].init.body, '{"actionId":"service_start"}');
   assert.equal(calls[5].init.method, "POST");
   assert.equal(calls[5].init.body, '{"planId":"plan-1"}');
+  assert.equal(calls[7].init.method, "POST");
+  assert.equal(calls[7].init.body, "{}");
   assert.ok(calls.every(call => call.init.redirect === "error"));
 });
 
