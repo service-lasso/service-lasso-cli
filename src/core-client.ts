@@ -111,6 +111,55 @@ export class CoreClient {
     return operationPayload(await this.request(`/api/operator/lifecycle/operations/${encodeURIComponent(operationId)}/cancel`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }));
   }
 
+  private async operatorV2(path: string, init?: RequestInit): Promise<unknown> {
+    const value = await this.request(`/api/operator/v2${path}`, init);
+    if (!value || typeof value !== "object" || Array.isArray(value) ||
+        (value as { contractVersion?: unknown }).contractVersion !== "service-lasso-operator.v2" ||
+        typeof (value as { requestId?: unknown }).requestId !== "string" ||
+        typeof (value as { generatedAt?: unknown }).generatedAt !== "string" ||
+        !("data" in value)) {
+      throw new CliError("invalid_core_response", "Core returned an invalid operator/v2 response.");
+    }
+    return (value as { data: unknown }).data;
+  }
+
+  public operatorV2Discovery(): Promise<unknown> {
+    return this.operatorV2("/discovery");
+  }
+
+  public operatorV2Services(): Promise<unknown> {
+    return this.operatorV2("/services");
+  }
+
+  public operatorV2Detail(serviceId: string): Promise<unknown> {
+    return this.operatorV2(`/services/${this.serviceId(serviceId)}`);
+  }
+
+  public operatorV2LifecycleAvailability(serviceId: string): Promise<unknown> {
+    return this.operatorV2(`/services/${this.serviceId(serviceId)}/lifecycle-availability`);
+  }
+
+  public operatorV2Preview(serviceId: string, body: unknown): Promise<unknown> {
+    return this.operatorV2(`/services/${this.serviceId(serviceId)}/preview`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  }
+
+  public operatorV2Execute(serviceId: string, body: unknown): Promise<unknown> {
+    return this.operatorV2(`/services/${this.serviceId(serviceId)}/execute`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  }
+
+  public operatorV2Operation(operationId: string): Promise<unknown> {
+    if (!/^[-A-Za-z0-9_]{8,200}$/.test(operationId)) throw new CliError("invalid_operation_id", "Operation id must be an opaque operation identifier.");
+    return this.operatorV2(`/operations/${encodeURIComponent(operationId)}`);
+  }
+
   private serviceId(serviceId: string): string {
     if (!serviceId || serviceId.includes("/")) throw new CliError("invalid_service_id", "Service id is required and cannot contain a slash.");
     return encodeURIComponent(serviceId);

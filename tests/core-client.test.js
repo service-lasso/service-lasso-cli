@@ -87,7 +87,6 @@ test("turns failed Core responses into safe errors without echoing the body", as
   );
 });
 
-
 test("classifies response body read failure as secret-safe transport failure without retry", async () => {
   const sentinel = "response-body-secret-sentinel";
   let calls = 0;
@@ -110,4 +109,54 @@ test("keeps valid JSON and invalid JSON response classification after body read"
   assert.deepEqual(await valid.health(), { status: "ok" });
   const invalid = new CoreClient({ baseUrl: "http://127.0.0.1:17883", fetch: async () => new Response("not-json") });
   await assert.rejects(() => invalid.health(), (error) => error.code === "invalid_core_response" && error.message === "Core returned a non-JSON response.");
+});
+
+test("consumes the operator/v2 envelope for discovery, services, preview, execute and readback", async () => {
+  const calls = [];
+  const envelope = data => JSON.stringify({
+    contractVersion: "service-lasso-operator.v2",
+    requestId: "request-v2",
+    generatedAt: "2026-11-20T12:00:00.000Z",
+    data,
+  });
+  const client = new CoreClient({
+    baseUrl: "http://127.0.0.1:17883",
+    token: "ci-token",
+    fetch: async (url, init) => {
+      calls.push({ url: String(url), init });
+      return new Response(envelope({ ok: true }), { status: 200 });
+    },
+  });
+  assert.deepEqual(await client.operatorV2Discovery(), { ok: true });
+  assert.deepEqual(await client.operatorV2Services(), { ok: true });
+  await client.operatorV2Detail("root");
+  await client.operatorV2LifecycleAvailability("root");
+  await client.operatorV2Preview("root", { actionId: "service_start" });
+  await client.operatorV2Execute("root", { planId: "plan-1" });
+  await client.operatorV2Operation("mcp-operation-12345678-1234-1234-1234-123456789abc");
+  assert.deepEqual(calls.map(call => call.url), [
+    "http://127.0.0.1:17883/api/operator/v2/discovery",
+    "http://127.0.0.1:17883/api/operator/v2/services",
+    "http://127.0.0.1:17883/api/operator/v2/services/root",
+    "http://127.0.0.1:17883/api/operator/v2/services/root/lifecycle-availability",
+    "http://127.0.0.1:17883/api/operator/v2/services/root/preview",
+    "http://127.0.0.1:17883/api/operator/v2/services/root/execute",
+    "http://127.0.0.1:17883/api/operator/v2/operations/mcp-operation-12345678-1234-1234-1234-123456789abc",
+  ]);
+  assert.equal(calls[4].init.method, "POST");
+  assert.equal(calls[4].init.body, '{"actionId":"service_start"}');
+  assert.equal(calls[5].init.method, "POST");
+  assert.equal(calls[5].init.body, '{"planId":"plan-1"}');
+  assert.ok(calls.every(call => call.init.redirect === "error"));
+});
+
+test("rejects a malformed operator/v2 response", async () => {
+  const client = new CoreClient({
+    baseUrl: "http://127.0.0.1:17883",
+    fetch: async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+  });
+  await assert.rejects(
+    () => client.operatorV2Discovery(),
+    error => error.code === "invalid_core_response",
+  );
 });
