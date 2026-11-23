@@ -35,6 +35,15 @@ test("compiled CLI uses operator/v2 preview, execute and readback", async () => 
     let raw = "";
     for await (const chunk of request) raw += chunk;
     calls.push({ method: request.method, path: url.pathname, body: raw ? JSON.parse(raw) : null });
+    if (url.pathname === "/api/operator/v2/services/demo/lifecycle-availability") return send({
+      serviceId: "demo",
+      definitionRevision: "definition-1",
+      generation: "generation-1",
+      modelEpoch: "operator-v2-epoch-1",
+      capabilities: [],
+      mutationBindings: [],
+      availability: { supported: true, available: true, reasonCode: null },
+    });
     if (url.pathname === "/api/operator/v2/services/demo/preview") return send({
       planId: "plan-1", serviceId: "demo", actionId: "service_start",
       definitionRevision: "definition-1", expectedRevision: "definition-1",
