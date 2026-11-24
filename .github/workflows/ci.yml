@@ -26,7 +26,7 @@ jobs:
             expected_platform: linux
             expected_architecture: x64
           - name: macOS arm64
-            os: macos-14
+            os: macos-15
             expected_platform: darwin
             expected_architecture: arm64
     steps:
