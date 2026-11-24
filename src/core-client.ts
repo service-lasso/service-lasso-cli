@@ -22,10 +22,6 @@ export class CoreClient {
     return this.request("/api/health");
   }
 
-  public async services(): Promise<unknown> {
-    return this.request("/api/services");
-  }
-
   public async inspect(): Promise<unknown> {
     const [health, instance, capabilities] = await Promise.all([
       this.health(),
@@ -35,80 +31,11 @@ export class CoreClient {
     return { health, instance, capabilities };
   }
 
-  public async lifecycle(serviceId: string, action: "start" | "stop" | "restart"): Promise<unknown> {
-    if (!serviceId) throw new CliError("invalid_service_id", "Service id is required.");
-    return this.request(`/api/services/${encodeURIComponent(serviceId)}/${action}`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ confirm: true }),
-    });
-  }
-
   public async operatorStatus(): Promise<OperatorStatus> { return operatorStatusRecord(await this.request("/api/runtime/instance")); }
   public async setup(): Promise<SetupStatus> { return setupStatusRecord(await this.request("/api/setup/status")); }
   public async serviceHealth(serviceId: string): Promise<ServiceHealthStatus> { return serviceHealthRecord(await this.request(`/api/services/${this.serviceId(serviceId)}/health`)); }
   public async serviceDependencies(serviceId: string): Promise<ServiceDependencies> {
     return serviceDependenciesRecord(this.serviceId(serviceId), await this.request("/api/dependencies"));
-  }
-
-  public async availability(serviceId: string): Promise<LifecycleAvailability> {
-    const result = await this.request(`/api/operator/lifecycle/services/${this.serviceId(serviceId)}/availability`);
-    if (!isAvailability(result)) throw new CliError("invalid_core_response", "Core returned an invalid durable lifecycle availability response.");
-    if (result.contractVersion !== "service-lasso-durable-lifecycle-operation.v1") {
-      throw new CliError("unsupported_core_contract", "Core advertised an unsupported durable lifecycle contract version.");
-    }
-    // Core may add server-only availability metadata. Return only the public
-    // contract fields so the CLI never prints an unreviewed response field.
-    return {
-      contractVersion: result.contractVersion,
-      actions: result.actions.map((entry) => ({
-        action: entry.action,
-        available: entry.available,
-        ...(entry.cancellationSupported === undefined ? {} : { cancellationSupported: entry.cancellationSupported }),
-      })),
-    };
-  }
-
-  public async previewLifecycle(serviceId: string, action: LifecycleAction): Promise<LifecyclePreview> {
-    await this.assertActionAvailable(serviceId, action);
-    return previewRecord(await this.request("/api/operator/lifecycle/operations", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ action, serviceId }),
-    }));
-  }
-
-  public async executeLifecycle(input: LifecycleExecute): Promise<LifecycleOperationPayload> {
-    // Preview performs availability/version gating. Do not repeat that read
-    // here: a successful start can make a same-key replay unavailable while
-    // Core must still reconcile the identical durable submission.
-    if (!input.confirmationId || !input.confirmationPhrase || !/^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(input.idempotencyKey)) {
-      throw new CliError("invalid_durable_operation", "A confirmation id, confirmation phrase, and opaque 8-128 character idempotency key are required.");
-    }
-    return operationPayload(await this.request("/api/operator/lifecycle/operations", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        action: input.action,
-        serviceId: input.serviceId,
-        execute: true,
-        idempotencyKey: input.idempotencyKey,
-        confirmationId: input.confirmationId,
-        confirmationPhrase: input.confirmationPhrase,
-      }),
-    }));
-  }
-
-  public async lifecycleOperation(operationId: string): Promise<LifecycleOperationPayload> {
-    if (!/^[-A-Za-z0-9_]{8,200}$/.test(operationId)) throw new CliError("invalid_operation_id", "Operation id must be an opaque operation identifier.");
-    return operationPayload(await this.request(`/api/operator/lifecycle/operations/${encodeURIComponent(operationId)}`));
-  }
-
-  public async cancelLifecycleOperation(operationId: string, cancellationSupported: boolean): Promise<LifecycleOperationPayload> {
-    if (!cancellationSupported) {
-      return { operation: { operationId, cancellationSupported: false }, cancellation: { result: "unsupported", terminal: false } };
-    }
-    return operationPayload(await this.request(`/api/operator/lifecycle/operations/${encodeURIComponent(operationId)}/cancel`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }));
   }
 
   private async operatorV2(path: string, init?: RequestInit): Promise<unknown> {
@@ -172,15 +99,6 @@ export class CoreClient {
   private serviceId(serviceId: string): string {
     if (!serviceId || serviceId.includes("/")) throw new CliError("invalid_service_id", "Service id is required and cannot contain a slash.");
     return encodeURIComponent(serviceId);
-  }
-
-  private async assertActionAvailable(serviceId: string, action: LifecycleAction): Promise<void> {
-    this.assertAvailable(await this.availability(serviceId), action);
-  }
-
-  private assertAvailable(availability: LifecycleAvailability, action: LifecycleAction): void {
-    const advertised = availability.actions.find((entry) => entry.action === action);
-    if (!advertised?.available) throw new CliError("action_unavailable", "Core does not advertise this durable lifecycle action as available.");
   }
 
   public async registerReleasedService(input: ReleasedServiceRegistration): Promise<ReleasedServiceOperation> {

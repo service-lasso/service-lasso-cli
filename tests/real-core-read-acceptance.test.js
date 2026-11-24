@@ -144,10 +144,11 @@ process.once("SIGINT", () => { void shutdown(); });
     const listExit = await once(listCommand.child, "exit");
     const listOutput = listCommand.output();
     assert.equal(listExit[0], 0, listOutput.stderr);
-    const services = JSON.parse(listOutput.stdout).services;
-    assert.deepEqual(services.map((service) => service.id), ["read-only-service"]);
-    assert.equal(services[0].enabled, true);
-    assert.equal(services[0].lifecycle.running, false);
+    const page = JSON.parse(listOutput.stdout);
+    const services = page.rows;
+    assert.deepEqual(services.map((service) => service.serviceId), ["read-only-service"]);
+    assert.equal(services[0].installed, "yes");
+    assert.equal(services[0].running, "no");
   } catch (error) {
     failure = error;
   }
