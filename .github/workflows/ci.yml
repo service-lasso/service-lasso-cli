@@ -204,7 +204,7 @@ jobs:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
           repository: service-lasso/service-lasso
-          ref: f32270731ff42f2a2f6dbcbc02f188b3fdd8813b
+          ref: 47fa280da53f48aa4615d19be64eda792c2723ec
           path: core
       - name: Build pinned Core runtime
         working-directory: core
@@ -214,14 +214,14 @@ jobs:
       - name: Run direct source-built CLI acceptance
         env:
           SERVICE_LASSO_CORE_DIR: ${{ github.workspace }}/core
-          SERVICE_LASSO_CORE_EXPECTED_REVISION: f32270731ff42f2a2f6dbcbc02f188b3fdd8813b
+          SERVICE_LASSO_CORE_EXPECTED_REVISION: 47fa280da53f48aa4615d19be64eda792c2723ec
         run: |
           npm run build
           node --test tests/real-core-read-acceptance.test.js tests/real-core-durable-acceptance.test.js
       - name: Run direct native CLI durable acceptance with Node absent from the child PATH
         env:
           SERVICE_LASSO_CORE_DIR: ${{ github.workspace }}/core
-          SERVICE_LASSO_CORE_EXPECTED_REVISION: f32270731ff42f2a2f6dbcbc02f188b3fdd8813b
+          SERVICE_LASSO_CORE_EXPECTED_REVISION: 47fa280da53f48aa4615d19be64eda792c2723ec
         run: |
           set -euo pipefail
           source_sha="$(git rev-parse HEAD)"
