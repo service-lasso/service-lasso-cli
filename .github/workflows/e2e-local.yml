@@ -10,7 +10,7 @@ on:
         required: true
         type: string
 env:
-  PINNED_CORE_REVISION: f32270731ff42f2a2f6dbcbc02f188b3fdd8813b
+  PINNED_CORE_REVISION: 38c6e927ceafb4e1049e993fdd985b188d1fa993
 permissions:
   contents: read
 jobs:

@@ -74,11 +74,9 @@ const versionResult = await run(executable, ["--version"], withoutNode);
 assert.equal(versionResult.status, 0, versionResult.stderr);
 assert.equal(versionResult.stdout.trim(), expectedVersion, "native executable must report the exact frozen candidate version");
 for (const args of [
-  ["--help"], ["operator", "--help"], ["operator", "status", "--help"],
-  ["operator", "setup", "--help"], ["operator", "health", "--help"], ["operator", "dependencies", "--help"],
+  ["--help"], ["operator", "--help"], ["operator", "services", "--help"], ["operator", "detail", "--help"],
   ["operator", "availability", "--help"], ["operator", "preview", "--help"], ["operator", "execute", "--help"],
-  ["operator", "operation", "--help"], ["operator", "operation", "get", "--help"], ["operator", "operation", "wait", "--help"],
-  ["operator", "operation", "cancel", "--help"],
+  ["operator", "operation", "--help"], ["operator", "cancel", "--help"], ["instance", "status", "--help"],
 ]) {
   const result = await run(executable, args, withoutNode);
   assert.equal(result.status, 0, result.stderr);
@@ -91,8 +89,17 @@ async function requestJson(request) {
   for await (const chunk of request) body += chunk;
   return body ? JSON.parse(body) : {};
 }
+function envelope(data) {
+  return { contractVersion: "service-lasso-operator.v2", requestId: "native-request-0001", generatedAt: "2030-01-01T00:00:00.000Z", data };
+}
 function operation() {
-  return { contractVersion: "service-lasso-mcp-operation.v1", operation: { operationId: fixture.operationId, action: "service_start", status: "succeeded", phase: "completed", progress: 100, summary: "started", targetIds: ["demo"], cancellationSupported: false, outcome: "succeeded" } };
+  return { operationId: fixture.operationId, actionId: "service_start", serviceId: "demo", targets: ["demo"], status: "succeeded", phase: "completed", progress: 100, summary: "started", cancellationSupported: false, outcome: "succeeded" };
+}
+function availability() {
+  return { serviceId: "demo", definitionRevision: "native-definition-1", generation: "native-generation-1", modelEpoch: "native-epoch-1", capabilities: [], mutationBindings: [], availability: { supported: true, available: true, reasonCode: null } };
+}
+function preview(planId) {
+  return { planId, serviceId: "demo", actionId: "service_start", definitionRevision: "native-definition-1", expectedRevision: "native-definition-1", generation: "native-generation-1", modelEpoch: "native-epoch-1", targets: ["demo"], effects: ["start_runtime"], availability: { supported: true, available: true, reasonCode: null }, confirmation: { required: true, id: `native-confirmation-${planId}`, phraseKey: `confirm service-start ${"a".repeat(32)}`, expiresAt: "2030-01-01T00:10:00.000Z" }, expiresAt: "2030-01-01T00:10:00.000Z" };
 }
 const server = createServer(async (request, response) => {
   if (request.headers.authorization !== `Bearer ${sentinel}`) {
@@ -103,30 +110,26 @@ const server = createServer(async (request, response) => {
   response.setHeader("content-type", "application/json");
   const path = new URL(request.url, "http://127.0.0.1").pathname;
   if (path === "/api/health") return response.end(JSON.stringify({ status: "ok" }));
-  if (path === "/api/runtime/instance") return response.end(JSON.stringify({
-    instance: { instanceId: "native-instance", generationId: "native-generation", phase: "running", status: "active", version: "1.2.3", startedAt: "2030-01-01T00:00:00.000Z", updatedAt: "2030-01-01T00:00:01.000Z" },
-    registry: { activeCount: 1, staleCount: 0, unknownCount: 0 }, privateCredential: sentinel,
-  }));
-  if (path === "/api/setup/status") return response.end(JSON.stringify({ setup: { contractVersion: "service-lasso.setup-status.v1", state: "setup_complete", setupMode: false, vault: { required: true, ready: true } }, privateCredential: sentinel }));
-  if (path === "/api/services/demo/health") return response.end(JSON.stringify({ serviceId: "demo", health: { type: "process", healthy: true, checks: [{ id: "native-check", type: "process", required: true, healthy: true, attempts: 1 }] }, privateCredential: sentinel }));
-  if (path === "/api/dependencies") return response.end(JSON.stringify({ dependencies: { nodes: [{ id: "demo" }, { id: "database" }], edges: [{ from: "database", to: "demo" }] }, privateCredential: sentinel }));
-  if (path === "/api/operator/lifecycle/services/demo/availability") return response.end(JSON.stringify({ contractVersion: "service-lasso-durable-lifecycle-operation.v1", actions: [{ action: "start", available: true }], privateCredential: sentinel }));
-  if (path === "/api/operator/lifecycle/operations" && request.method === "POST") {
+  if (path === "/api/operator/v2/services/demo/lifecycle-availability") return response.end(JSON.stringify(envelope(availability())));
+  if (path === "/api/operator/v2/services/demo/preview" && request.method === "POST") {
     const body = await requestJson(request);
-    if (body.execute !== true) {
-      fixture.preview += 1;
-      const changed = fixture.preview === 1;
-      return response.end(JSON.stringify({ contractVersion: "service-lasso-mcp-guarded-action.v1", action: "service_start", confirmation: { status: "pending", id: changed ? "native-confirmation-stale" : "native-confirmation-current", expiresAt: "2030-01-01T00:10:00.000Z", confirmationPhrase: changed ? "confirm service-start stale" : "confirm service-start current" }, preflight: { targets: ["demo"], effects: ["start demo"], executable: true, skippedReason: null, requiredProfile: "operator" }, privateCredential: sentinel }));
-    }
-    if (body.confirmationId === "native-confirmation-stale") {
-      response.statusCode = 409;
-      return response.end(JSON.stringify({ error: "changed_context", privateCredential: sentinel }));
-    }
-    assert.deepEqual(body, { action: "start", serviceId: "demo", execute: true, idempotencyKey: "native-durable-key-0001", confirmationId: "native-confirmation-current", confirmationPhrase: "confirm service-start current" });
-    fixture.effect = "running";
-    return response.end(JSON.stringify(operation()));
+    assert.equal(body.actionId, "service_start");
+    fixture.preview += 1;
+    const planId = fixture.preview === 1 ? "native-plan-stale" : "native-plan-current";
+    return response.end(JSON.stringify(envelope(preview(planId))));
   }
-  if (path === `/api/operator/lifecycle/operations/${fixture.operationId}` && request.method === "GET") return response.end(JSON.stringify(operation()));
+  if (path === "/api/operator/v2/services/demo/execute" && request.method === "POST") {
+    const body = await requestJson(request);
+    if (body.planId === "native-plan-stale") {
+      response.statusCode = 409;
+      return response.end(JSON.stringify({ error: "revision_conflict", privateCredential: sentinel }));
+    }
+    assert.equal(body.expectedRevision, "native-definition-1");
+    fixture.effect = "running";
+    return response.end(JSON.stringify(envelope({ kind: "accepted", operation: operation() })));
+  }
+  if (path === `/api/operator/v2/operations/${fixture.operationId}` && request.method === "GET") return response.end(JSON.stringify(envelope({ operation: operation() })));
+  if (path === `/api/operator/v2/operations/${fixture.operationId}/cancel` && request.method === "POST") return response.end(JSON.stringify(envelope({ status: "unsupported", operation: operation() })));
   response.statusCode = 404;
   response.end(JSON.stringify({ error: "not_found" }));
 });
@@ -138,11 +141,9 @@ try {
   const read = await run(executable, ["instance", "status", "--json"], environment);
   assert.equal(read.status, 0, read.stderr);
   assert.deepEqual(JSON.parse(read.stdout), { status: "ok" });
-  for (const args of [["operator", "status", "--json"], ["operator", "setup", "--json"], ["operator", "health", "demo", "--json"], ["operator", "dependencies", "demo", "--json"], ["operator", "availability", "demo", "--json"]]) {
-    const operatorRead = await run(executable, args, environment);
-    assert.equal(operatorRead.status, 0, operatorRead.stderr);
-    assert.equal(`${operatorRead.stdout}${operatorRead.stderr}`.includes(sentinel), false);
-  }
+  const availabilityRead = await run(executable, ["operator", "availability", "demo", "--json"], environment);
+  assert.equal(availabilityRead.status, 0, availabilityRead.stderr);
+  assert.equal(`${availabilityRead.stdout}${availabilityRead.stderr}`.includes(sentinel), false);
   const invalid = await run(executable, ["service", "start"], environment);
   assert.notEqual(invalid.status, 0);
   assert.doesNotMatch(`${read.stdout}${read.stderr}${invalid.stdout}${invalid.stderr}`, new RegExp(sentinel));
@@ -150,17 +151,33 @@ try {
   assert.equal(denied.status, 1);
   assert.match(denied.stderr, /Error \[core_api_error\]: Core returned HTTP 401\./);
   assert.equal(`${denied.stdout}${denied.stderr}`.includes("native-invalid-token"), false);
-  const stalePreview = await run(executable, ["operator", "preview", "start", "demo", "--json"], environment);
+  const stalePreview = await run(executable, ["operator", "preview", "demo", "service_start", "--json"], environment);
   assert.equal(stalePreview.status, 0, stalePreview.stderr);
   const stale = JSON.parse(stalePreview.stdout);
-  const changed = await run(executable, ["operator", "execute", "start", "demo", "--confirm", "--confirmation-id", stale.confirmation.id, "--confirmation-phrase", stale.confirmation.phrase, "--idempotency-key", "native-durable-key-0001", "--json"], environment);
+  const changed = await run(executable, [
+    "operator", "execute", "demo",
+    "--plan-id", stale.planId,
+    "--idempotency-key", "native-durable-key-0001",
+    "--confirmation-id", stale.confirmation.id,
+    "--confirmation-response", stale.confirmation.phraseKey,
+    "--expected-revision", stale.expectedRevision,
+    "--confirm", "--json",
+  ], environment);
   assert.equal(changed.status, 1);
   assert.match(changed.stderr, /Error \[core_api_error\]: Core returned HTTP 409\./);
-  assert.equal(`${changed.stdout}${changed.stderr}`.includes(stale.confirmation.phrase), false);
-  const currentPreview = await run(executable, ["operator", "preview", "start", "demo", "--json"], environment);
+  assert.equal(`${changed.stdout}${changed.stderr}`.includes(stale.confirmation.phraseKey), false);
+  const currentPreview = await run(executable, ["operator", "preview", "demo", "service_start", "--json"], environment);
   assert.equal(currentPreview.status, 0, currentPreview.stderr);
   const current = JSON.parse(currentPreview.stdout);
-  const executeArgs = ["operator", "execute", "start", "demo", "--confirm", "--confirmation-id", current.confirmation.id, "--confirmation-phrase", current.confirmation.phrase, "--idempotency-key", "native-durable-key-0001", "--wait-ms", "10000", "--json"];
+  const executeArgs = [
+    "operator", "execute", "demo",
+    "--plan-id", current.planId,
+    "--idempotency-key", "native-durable-key-0001",
+    "--confirmation-id", current.confirmation.id,
+    "--confirmation-response", current.confirmation.phraseKey,
+    "--expected-revision", current.expectedRevision,
+    "--confirm", "--json",
+  ];
   const execute = await run(executable, executeArgs, environment);
   assert.equal(execute.status, 0, execute.stderr);
   const accepted = JSON.parse(execute.stdout);
@@ -169,13 +186,11 @@ try {
   const replay = await run(executable, executeArgs, environment);
   assert.equal(replay.status, 0, replay.stderr);
   assert.equal(JSON.parse(replay.stdout).operation.operationId, fixture.operationId);
-  const inspected = await run(executable, ["operator", "operation", "get", fixture.operationId, "--json"], environment);
+  const inspected = await run(executable, ["operator", "operation", fixture.operationId, "--json"], environment);
   assert.equal(inspected.status, 0, inspected.stderr);
-  const waited = await run(executable, ["operator", "operation", "wait", fixture.operationId, "--wait-ms", "10000", "--json"], environment);
-  assert.equal(waited.status, 0, waited.stderr);
-  const cancellation = await run(executable, ["operator", "operation", "cancel", fixture.operationId, "--json"], environment);
+  const cancellation = await run(executable, ["operator", "cancel", fixture.operationId, "--confirm", "--json"], environment);
   assert.equal(cancellation.status, 0, cancellation.stderr);
-  assert.equal(JSON.parse(cancellation.stdout).cancellation.result, "unsupported");
+  assert.equal(JSON.parse(cancellation.stdout).status, "unsupported");
 } finally {
   await new Promise((resolveClose, rejectClose) => server.close((error) => error ? rejectClose(error) : resolveClose()));
 }

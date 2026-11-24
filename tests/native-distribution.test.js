@@ -123,11 +123,15 @@ test("native SEA packager records a direct host executable and smoke runs withou
       assert.equal(JSON.parse(await readFile(join(smokeReceipts, "initial.json"), "utf8")).actualClose, null);
     }
     // Actual workflow wrapper, literal interpreter and smoke script, including
-    // Windows: no shell and no npm.cmd command-string forwarding.
-    execFileSync(node, ["scripts/run-native-qualification-phase.mjs", "--receipt-directory", smokeReceipts, "--phase", "smoke", "--executable", join(output, provenance.executable.name), "--", "node", "scripts/smoke-native.mjs", "--directory", output, "--expected-source-sha", sourceSha, "--expected-version", version, "--write-host-acceptance"], { encoding: "utf8", stdio: nativeQualificationStdio(["pipe", "pipe", "pipe"]) });
-    const smokeRecord = JSON.parse(await readFile(join(smokeReceipts, "phase-smoke.json"), "utf8"));
-    assert.deepEqual(smokeRecord.rawClose, { code: 0, signal: null, spawnError: null });
-    assert.equal(smokeRecord.passed, true);
+    // Windows: no shell and no npm.cmd command-string forwarding. Darwin has no
+    // admitted privileged helper in this lane, so the native gate is denied
+    // above and cannot execute the smoke phase here.
+    if (process.platform !== "darwin") {
+      execFileSync(node, ["scripts/run-native-qualification-phase.mjs", "--receipt-directory", smokeReceipts, "--phase", "smoke", "--executable", join(output, provenance.executable.name), "--", "node", "scripts/smoke-native.mjs", "--directory", output, "--expected-source-sha", sourceSha, "--expected-version", version, "--write-host-acceptance"], { encoding: "utf8", stdio: nativeQualificationStdio(["pipe", "pipe", "pipe"]) });
+      const smokeRecord = JSON.parse(await readFile(join(smokeReceipts, "phase-smoke.json"), "utf8"));
+      assert.deepEqual(smokeRecord.rawClose, { code: 0, signal: null, spawnError: null });
+      assert.equal(smokeRecord.passed, true);
+    }
     const acceptance = JSON.parse(await readFile(join(output, "host-acceptance.json"), "utf8"));
     assert.equal(acceptance.version, version);
     assert.equal(acceptance.sourceSha, sourceSha);
@@ -172,7 +176,7 @@ test("native SEA packager records a direct host executable and smoke runs withou
   }
 });
 
-test("controlled source admission exercises the native primary to SEA to gate to writer route despite a hostile helper PATH", async () => {
+test("controlled source admission exercises the native primary to SEA to gate to writer route despite a hostile helper PATH", { skip: process.platform === "darwin" }, async () => {
   const root = await mkdtemp(join(tmpdir(), "service-lassoctl-primary-route-"));
   const ownedRuns = []; let fixtureComplete = false;
   // Qualification can pass the already-built executable here.  In that mode
@@ -232,7 +236,7 @@ test("controlled source admission exercises the native primary to SEA to gate to
   }
 });
 
-test("actual route wrapper records successful selected-test closure separately and rejects a selected assertion failure", async () => {
+test("actual route wrapper records successful selected-test closure separately and rejects a selected assertion failure", { skip: process.platform === "darwin" }, async () => {
   const root = await mkdtemp(join(tmpdir(), "service-lassoctl-route-wrapper-"));
   const sourceSha = "0123456789abcdef0123456789abcdef01234567", version = "0.1.0-dev.0123456", output = join(root, "native");
   try {

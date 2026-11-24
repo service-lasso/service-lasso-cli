@@ -6,18 +6,17 @@ test("uses public read routes, carries an environment token and URL-encodes life
   const calls = [];
   const fetch = async (url, init) => {
     calls.push({ url: String(url), init });
-    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    const payload = String(url).includes("/api/operator/v2/")
+      ? { contractVersion: "service-lasso-operator.v2", requestId: "request-v2", generatedAt: "2026-11-20T12:00:00.000Z", data: { rows: [] } }
+      : { ok: true };
+    return new Response(JSON.stringify(payload), { status: 200 });
   };
   const client = new CoreClient({ baseUrl: "http://127.0.0.1:17883", token: "ci-token", fetch });
   await client.health();
-  await client.services();
-  await client.lifecycle("service/a", "restart");
+  await client.operatorV2Services();
   assert.equal(calls[0].url, "http://127.0.0.1:17883/api/health");
-  assert.equal(calls[1].url, "http://127.0.0.1:17883/api/services");
-  assert.equal(calls[2].url, "http://127.0.0.1:17883/api/services/service%2Fa/restart");
-  assert.equal(calls[2].init.method, "POST");
-  assert.equal(calls[2].init.body, '{"confirm":true}');
-  assert.equal(calls[2].init.headers.authorization, "Bearer ci-token");
+  assert.equal(calls[1].url, "http://127.0.0.1:17883/api/operator/v2/services");
+  assert.equal(calls[1].init.headers.authorization, "Bearer ci-token");
   assert.equal(calls.every((call) => call.init.redirect === "error"), true);
 });
 
@@ -34,13 +33,13 @@ test("rejects redirects before a lifecycle mutation can be replayed at another o
   });
 
   await assert.rejects(
-    () => client.lifecycle("service-a", "restart"),
+    () => client.operatorV2Execute("service-a", { planId: "plan-1" }),
     (error) => error.code === "core_unreachable"
       && error.message === "Could not reach Service Lasso Core."
       && !error.message.includes(token),
   );
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, "https://core.example/api/services/service-a/restart");
+  assert.equal(calls[0].url, "https://core.example/api/operator/v2/services/service-a/execute");
   assert.equal(calls[0].init.redirect, "error");
   assert.equal(calls[0].init.headers.authorization, `Bearer ${token}`);
 });
@@ -82,7 +81,7 @@ test("inspects Core health, instance identity and capabilities without mutation"
 test("turns failed Core responses into safe errors without echoing the body", async () => {
   const client = new CoreClient({ baseUrl: "http://127.0.0.1:17883", fetch: async () => new Response("bad request", { status: 400 }) });
   await assert.rejects(
-    () => client.services(),
+    () => client.operatorV2Services(),
     (error) => error.code === "core_api_error" && error.message === "Core returned HTTP 400.",
   );
 });

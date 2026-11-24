@@ -23,7 +23,7 @@ async function withAuthenticatedCoreFixture(run) {
       "/api/health": { status: "healthy" },
       "/api/runtime/instance": { id: "fixture-core", apiVersion: "v1" },
       "/api/runtime/capabilities": { reads: ["health", "services"] },
-      "/api/services": { services: [{ id: "fixture-service", state: "ready" }] },
+      "/api/operator/v2/services": { contractVersion: "service-lasso-operator.v2", requestId: "fixture-request", generatedAt: "2026-11-24T00:00:00.000Z", data: { snapshotId: "fixture-snapshot", sourceRevision: "fixture-source", rows: [], nextCursor: null, expiresAt: "2026-11-24T00:01:00.000Z", truncated: false } },
     };
     const payload = payloads[request.url];
     if (!payload) {
@@ -54,21 +54,21 @@ async function invoke(url, args, token = fixtureToken) {
 test("compiled CLI performs authenticated read-only operator inspection and service discovery against a Core-shaped fixture", async () => {
   await withAuthenticatedCoreFixture(async ({ url, requests }) => {
     const inspect = await invoke(url, ["instance", "inspect", "--json"]);
-    const services = await invoke(url, ["service", "list", "--json"]);
+    const services = await invoke(url, ["operator", "services", "--json"]);
 
     assert.deepEqual(JSON.parse(inspect.stdout), {
       health: { status: "healthy" },
       instance: { id: "fixture-core", apiVersion: "v1" },
       capabilities: { reads: ["health", "services"] },
     });
-    assert.deepEqual(JSON.parse(services.stdout), { services: [{ id: "fixture-service", state: "ready" }] });
+    assert.deepEqual(JSON.parse(services.stdout), { snapshotId: "fixture-snapshot", sourceRevision: "fixture-source", rows: [], nextCursor: null, expiresAt: "2026-11-24T00:01:00.000Z", truncated: false });
     assert.equal(inspect.stderr, "");
     assert.equal(services.stderr, "");
     assert.deepEqual(requests.map((request) => request.path).sort(), [
       "/api/health",
+      "/api/operator/v2/services",
       "/api/runtime/capabilities",
       "/api/runtime/instance",
-      "/api/services",
     ]);
     assert.equal(requests.every((request) => request.authorization === `Bearer ${fixtureToken}`), true);
     assert.equal(`${inspect.stdout}${inspect.stderr}${services.stdout}${services.stderr}`.includes(fixtureToken), false);

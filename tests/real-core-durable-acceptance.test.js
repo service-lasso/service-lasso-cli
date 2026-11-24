@@ -110,13 +110,14 @@ test("compiled external CLI exercises merged actual Core durable lifecycle contr
     });
     const environment = { HOME: cliHome, USERPROFILE: cliHome, SERVICE_LASSO_CORE_URL: server.url, SERVICE_LASSO_CORE_TOKEN: token };
 
-    const preview = await run(["operator", "preview", "start", "durable-cli-service", "--json"], environment);
+    const preview = await run(["operator", "preview", "durable-cli-service", "service_start", "--json"], environment);
     assert.equal(preview.code, 0, preview.stderr);
     const plan = JSON.parse(preview.stdout);
-    assert.equal(plan.contractVersion, "service-lasso-mcp-guarded-action.v1");
-    assert.equal(plan.action, "service_start");
+    assert.equal(plan.serviceId, "durable-cli-service");
+    assert.equal(plan.actionId, "service_start");
+    assert.equal(typeof plan.planId, "string");
     assert.equal(typeof plan.confirmation.id, "string");
-    assert.match(plan.confirmation.phrase, /^confirm service-start /);
+    assert.match(plan.confirmation.phraseKey, /^confirm service-start /);
     assert.equal(preview.stdout.includes(token), false);
 
     const rejected = await run(["operator", "availability", "durable-cli-service", "--json"], { ...environment, SERVICE_LASSO_CORE_TOKEN: "invalid-token-must-never-appear" });
@@ -125,30 +126,50 @@ test("compiled external CLI exercises merged actual Core durable lifecycle contr
     assert.equal(rejected.stderr.includes("invalid-token-must-never-appear"), false);
 
     await writeExecutableFixtureService(servicesRoot, "durable-cli-service", { healthcheck: { type: "process" }, env: { DURABLE_CONTEXT: "changed" } });
-    const changed = await run(["operator", "execute", "start", "durable-cli-service", "--confirm", "--confirmation-id", plan.confirmation.id, "--confirmation-phrase", plan.confirmation.phrase, "--idempotency-key", "cli-durable-context-key-0001", "--json"], environment);
+    const changed = await run([
+      "operator", "execute", "durable-cli-service",
+      "--plan-id", plan.planId,
+      "--idempotency-key", "cli-durable-context-key-0001",
+      "--confirmation-id", plan.confirmation.id,
+      "--confirmation-response", plan.confirmation.phraseKey,
+      "--expected-revision", plan.expectedRevision,
+      "--confirm", "--json",
+    ], environment);
     assert.equal(changed.code, 1);
     assert.match(changed.stderr, /Error \[core_api_error\]: Core returned HTTP 409\./);
-    assert.equal(changed.stderr.includes(plan.confirmation.phrase), false);
+    assert.equal(changed.stderr.includes(plan.confirmation.phraseKey), false);
     await writeExecutableFixtureService(servicesRoot, "durable-cli-service", { healthcheck: { type: "process" } });
 
-    const acceptedPreview = await run(["operator", "preview", "start", "durable-cli-service", "--json"], environment);
+    const acceptedPreview = await run(["operator", "preview", "durable-cli-service", "service_start", "--json"], environment);
     assert.equal(acceptedPreview.code, 0, acceptedPreview.stderr);
     const acceptedPlan = JSON.parse(acceptedPreview.stdout);
-    const executeArgs = ["operator", "execute", "start", "durable-cli-service", "--confirm", "--confirmation-id", acceptedPlan.confirmation.id, "--confirmation-phrase", acceptedPlan.confirmation.phrase, "--idempotency-key", "cli-durable-replay-key-0001", "--wait-ms", "10000", "--json"];
+    const executeArgs = [
+      "operator", "execute", "durable-cli-service",
+      "--plan-id", acceptedPlan.planId,
+      "--idempotency-key", "cli-durable-replay-key-0001",
+      "--confirmation-id", acceptedPlan.confirmation.id,
+      "--confirmation-response", acceptedPlan.confirmation.phraseKey,
+      "--expected-revision", acceptedPlan.expectedRevision,
+      "--confirm", "--json",
+    ];
     const execute = await run(executeArgs, environment);
     assert.equal(execute.code, 0, execute.stderr);
-    const completed = JSON.parse(execute.stdout);
-    assert.equal(completed.operation.outcome, "succeeded");
-    const operationId = completed.operation.operationId;
+    const operationId = JSON.parse(execute.stdout).operation.operationId;
+    let readback;
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      const inspected = await run(["operator", "operation", operationId, "--json"], environment);
+      assert.equal(inspected.code, 0, inspected.stderr);
+      readback = JSON.parse(inspected.stdout);
+      if (!["queued", "running", "cancelling"].includes(readback.operation.status)) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    assert.equal(readback.operation.status, "succeeded");
     const replay = await run(executeArgs, environment);
-    assert.ok(replay.code === 0 || replay.code === 2, replay.stderr);
+    assert.equal(replay.code, 0, replay.stderr);
     assert.equal(JSON.parse(replay.stdout).operation.operationId, operationId);
-    const inspected = await run(["operator", "operation", "get", operationId, "--json"], environment);
-    assert.equal(inspected.code, 0, inspected.stderr);
-    assert.equal(JSON.parse(inspected.stdout).operation.operationId, operationId);
-    const cancellation = await run(["operator", "operation", "cancel", operationId, "--json"], environment);
+    const cancellation = await run(["operator", "cancel", operationId, "--confirm", "--json"], environment);
     assert.equal(cancellation.code, 0, cancellation.stderr);
-    assert.equal(JSON.parse(cancellation.stdout).cancellation.result, "unsupported");
+    assert.ok(["requested", "unsupported", "too_late"].includes(JSON.parse(cancellation.stdout).status));
     assert.equal(await readFile(path.join(servicesRoot, "durable-unrelated-service", "service.json"), "utf8"), unrelatedManifest);
   } finally {
     await server?.stop().catch(() => undefined);
