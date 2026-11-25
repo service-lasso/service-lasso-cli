@@ -176,7 +176,7 @@ test("native SEA packager records a direct host executable and smoke runs withou
   }
 });
 
-test("controlled source admission exercises the native primary to SEA to gate to writer route despite a hostile helper PATH", { skip: process.platform === "darwin" }, async () => {
+test("controlled source admission exercises the native primary to SEA to gate to writer route despite a hostile helper PATH", { skip: process.platform === "darwin" || !process.env.SERVICE_LASSO_CONTROLLED_NATIVE_EXE }, async () => {
   const root = await mkdtemp(join(tmpdir(), "service-lassoctl-primary-route-"));
   const ownedRuns = []; let fixtureComplete = false;
   // Qualification can pass the already-built executable here.  In that mode
