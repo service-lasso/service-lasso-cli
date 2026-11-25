@@ -125,6 +125,19 @@ test("compiled external CLI exercises merged actual Core durable lifecycle contr
     assert.match(rejected.stderr, /Error \[core_api_error\]: Core returned HTTP 401\./);
     assert.equal(rejected.stderr.includes("invalid-token-must-never-appear"), false);
 
+    const readOnlyToken = await new SignJWT({ client_id: "cli-durable-read-client", scope: "service-lasso:read" })
+      .setProtectedHeader({ alg: "RS256", kid: "cli-durable-acceptance-key" })
+      .setIssuer("https://cli-durable-issuer.example")
+      .setAudience("cli-durable-audience")
+      .setSubject("cli-durable-read-actor")
+      .setIssuedAt(now)
+      .setExpirationTime(now + 300)
+      .sign(jwks.privateKey);
+    const denied = await run(["operator", "preview", "durable-cli-service", "service_start", "--json"], { ...environment, SERVICE_LASSO_CORE_TOKEN: readOnlyToken });
+    assert.equal(denied.code, 1);
+    assert.match(denied.stderr, /Error \[core_api_error\]: Core returned HTTP 403\./);
+    assert.equal(denied.stderr.includes(readOnlyToken), false);
+
     await writeExecutableFixtureService(servicesRoot, "durable-cli-service", { healthcheck: { type: "process" }, env: { DURABLE_CONTEXT: "changed" } });
     const changed = await run([
       "operator", "execute", "durable-cli-service",
