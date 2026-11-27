@@ -8,3 +8,5 @@ Issue #67; dependency Core #1992. Development source and fixture-only proof.
 - CLI67-PROOF: no-publish fixture assembly/verifier proves exact native selection and rejects a rehashed manifest with wrong tag, archive digest, command, platform, role or portable fallback. Fixture native bytes are not native availability qualification.
 
 Existing release.yml already assembles, verifies and publishes every closed inventory member. Adding service.json to that inventory ports the template release-manifest model without changing producer authority or scheduling.
+
+Schema 2 adds the mandatory service-manifest asset. Historical schema 1 keeps its original closed inventory and held-byte verification, while new publication requires schema 2 before any provider call.

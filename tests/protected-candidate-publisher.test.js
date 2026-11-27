@@ -140,7 +140,7 @@ test("CLI30 archive and identity boundaries fail closed after checksum rebinding
 
 test("CLI30 schema rejects duplicates, unexpected fields and forged source identity", () => {
   const assets = expectedAssets(version).map((asset) => ({ ...asset, sha256: "b".repeat(64), size: 1 }));
-  const valid = { schemaVersion: 1, version, candidateTag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}`, source: { repository: "service-lasso/service-lasso-cli", commit: sourceSha }, checksums: { algorithm: "sha256", file: "SHA256SUMS.txt", entries: ["development-candidate.json", ...assets.map((asset) => asset.name)].sort() }, assets };
+  const valid = { schemaVersion: 2, version, candidateTag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}`, source: { repository: "service-lasso/service-lasso-cli", commit: sourceSha }, checksums: { algorithm: "sha256", file: "SHA256SUMS.txt", entries: ["development-candidate.json", ...assets.map((asset) => asset.name)].sort() }, assets };
   validateManifest(valid, version, sourceSha);
   assert.throws(() => validateManifest({ ...valid, attacker: true }, version, sourceSha));
   assert.throws(() => validateManifest({ ...valid, assets: [...assets, assets[0]] }, version, sourceSha));
@@ -739,5 +739,23 @@ test("CLI67 release manifest binds only exact native archives and immutable cand
       await rebindCandidate(directory);
       await assert.rejects(verifyCandidateDirectory(directory, version, sourceSha), /release service manifest does not bind/);
     }
+  });
+});
+
+
+test("CLI67 historical schema 1 stays verifiable but cannot be newly published", async () => {
+  await withCandidate(async (_root, directory) => {
+    const path = join(directory, "development-candidate.json");
+    const manifest = JSON.parse(await readFile(path, "utf8"));
+    manifest.schemaVersion = 1;
+    manifest.assets = manifest.assets.filter((asset) => asset.name !== "service.json");
+    manifest.checksums.entries = manifest.checksums.entries.filter((name) => name !== "service.json");
+    await rm(join(directory, "service.json"));
+    await writeFile(path, JSON.stringify(manifest));
+    await rebindCandidate(directory);
+    assert.equal((await verifyCandidateDirectory(directory, version, sourceSha)).manifest.schemaVersion, 1);
+    await assert.rejects(publishProtectedCandidate({ directory, version, sourceSha, token: "fixture", fetchImpl: () => { throw new Error("unexpected provider call"); } }), /manifest-bearing schema 2/);
+    manifest.schemaVersion = 2;
+    assert.throws(() => validateManifest(manifest, version, sourceSha), /inventory/);
   });
 });

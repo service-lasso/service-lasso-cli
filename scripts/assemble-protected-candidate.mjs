@@ -24,7 +24,7 @@ for (const item of expected.filter((item) => item.kind !== "service-manifest")) 
 const serviceBytes = Buffer.from(`${JSON.stringify(releaseServiceManifest(version, sourceSha, assets), null, 2)}\n`);
 await writeFile(join(output, "service.json"), serviceBytes);
 assets.unshift({ name: "service.json", kind: "service-manifest", target: null, sha256: sha256(serviceBytes), size: serviceBytes.length });
-const manifest = { schemaVersion: 1, version, candidateTag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}`, source: { repository: "service-lasso/service-lasso-cli", commit: sourceSha }, checksums: { algorithm: "sha256", file: "SHA256SUMS.txt", entries: ["development-candidate.json", ...assets.map((asset) => asset.name)].sort() }, assets };
+const manifest = { schemaVersion: 2, version, candidateTag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}`, source: { repository: "service-lasso/service-lasso-cli", commit: sourceSha }, checksums: { algorithm: "sha256", file: "SHA256SUMS.txt", entries: ["development-candidate.json", ...assets.map((asset) => asset.name)].sort() }, assets };
 const manifestBytes = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
 await writeFile(join(output, "development-candidate.json"), manifestBytes);
 await writeFile(join(output, "SHA256SUMS.txt"), [{ name: "development-candidate.json", sha256: sha256(manifestBytes) }, ...assets].sort((a, b) => a.name.localeCompare(b.name)).map((asset) => `${asset.sha256}  ${asset.name}\n`).join(""));
