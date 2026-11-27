@@ -2,13 +2,18 @@ name: Publish protected CLI development candidate
 
 on:
   workflow_dispatch:
+    inputs:
+      operator_preflight_sha:
+        description: Exact develop SHA whose administrator-only protection was independently verified
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   identity:
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/develop' && inputs.operator_preflight_sha == github.sha
     name: Freeze exact develop candidate identity
     runs-on: ubuntu-latest
     outputs:
@@ -73,8 +78,6 @@ jobs:
             target: win32-x64
           - os: ubuntu-latest
             target: linux-x64
-          - os: macos-14
-            target: darwin-arm64
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
@@ -106,12 +109,6 @@ jobs:
           npm run package:native -- --output native-assets --source-sha "${{ needs.identity.outputs.source_sha }}" --version "${{ needs.identity.outputs.candidate_version }}"
           node scripts/write-native-ci-context.mjs --directory native-assets --event-name workflow_dispatch --source-sha "${{ needs.identity.outputs.source_sha }}" --tested-base-sha "" --merge-context-sha "${{ needs.identity.outputs.source_sha }}"
           node scripts/verify-native-ci-provenance.mjs --directory native-assets --expected-source-sha "${{ needs.identity.outputs.source_sha }}" --expected-event workflow_dispatch --expected-base-sha "" --expected-merge-context-sha "${{ needs.identity.outputs.source_sha }}" --expected-platform "${{ runner.os == 'Windows' && 'win32' || runner.os == 'Linux' && 'linux' || 'darwin' }}" --expected-architecture "${{ matrix.target == 'darwin-arm64' && 'arm64' || 'x64' }}"
-      - name: Retain blocked Darwin external qualification prerequisite
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          set -euo pipefail
-          node scripts/record-darwin-qualification-block.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --directory native-assets
       - name: Record actual native smoke close result
         shell: bash
         run: |
@@ -119,12 +116,6 @@ jobs:
           executable="native-assets/service-lassoctl"
           if [[ "$RUNNER_OS" == "Windows" ]]; then executable+=".exe"; fi
           node scripts/run-native-qualification-phase.mjs --receipt-directory "$SERVICE_LASSO_NATIVE_QUALIFICATION_RECEIPTS" --phase smoke --executable "$executable" -- node scripts/smoke-native.mjs --directory native-assets --expected-source-sha "${{ needs.identity.outputs.source_sha }}" --expected-version "${{ needs.identity.outputs.candidate_version }}" --write-host-acceptance
-      - name: Compile and exercise Darwin process-exit rejection source checks
-        if: matrix.target == 'darwin-arm64'
-        shell: bash
-        run: |
-          set -euo pipefail
-          (cd native/primary-gate && go test ./...)
       - name: Record expected unavailable controlled primary-route result
         shell: bash
         run: |
@@ -136,7 +127,7 @@ jobs:
         if: matrix.target == 'linux-x64'
         with:
           repository: service-lasso/service-lasso
-          ref: 9bef20259e5b43f6bcd2e9796da0f35396305425
+          ref: 1f6ca2126099fa14cce18ede0afeb98b802570ab
           path: core
           persist-credentials: false
       - name: Run the separately named direct Linux native CLI to Core journey
@@ -144,7 +135,7 @@ jobs:
         shell: bash
         env:
           SERVICE_LASSO_CORE_DIR: ${{ github.workspace }}/core
-          SERVICE_LASSO_CORE_EXPECTED_REVISION: 9bef20259e5b43f6bcd2e9796da0f35396305425
+          SERVICE_LASSO_CORE_EXPECTED_REVISION: 1f6ca2126099fa14cce18ede0afeb98b802570ab
         run: |
           set -euo pipefail
           (cd core && npm ci && npm run build)
@@ -207,16 +198,12 @@ jobs:
         with:
           name: native-linux-x64-${{ needs.identity.outputs.source_sha }}
           path: native-linux-x64
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: native-darwin-arm64-${{ needs.identity.outputs.source_sha }}
-          path: native-darwin-arm64
       - name: Create the manifest and checksums from accepted bytes only
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${{ needs.identity.outputs.source_sha }}"
-          npm run assemble:protected-candidate -- --output release-assets --portable portable-assets --version "${{ needs.identity.outputs.candidate_version }}" --source-sha "${{ needs.identity.outputs.source_sha }}" --native "win32-x64=native-win32-x64" --native "linux-x64=native-linux-x64" --native "darwin-arm64=native-darwin-arm64"
+          npm run assemble:protected-candidate -- --output release-assets --portable portable-assets --version "${{ needs.identity.outputs.candidate_version }}" --source-sha "${{ needs.identity.outputs.source_sha }}" --native "win32-x64=native-win32-x64" --native "linux-x64=native-linux-x64" --scope windows-linux
           npm run verify:protected-candidate -- --directory release-assets --version "${{ needs.identity.outputs.candidate_version }}" --source-sha "${{ needs.identity.outputs.source_sha }}"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -233,6 +220,8 @@ jobs:
       name: development-candidate
     permissions:
       contents: write
+      actions: read
+      checks: read
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
@@ -250,9 +239,9 @@ jobs:
       - name: Preflight and write only accepted immutable bytes
         shell: bash
         env:
-          DEVELOPMENT_CANDIDATE_TOKEN: ${{ secrets.DEVELOPMENT_CANDIDATE_TOKEN }}
-          DEVELOPMENT_CANDIDATE_RELEASES_IMMUTABLE: ${{ vars.DEVELOPMENT_CANDIDATE_RELEASES_IMMUTABLE }}
+          GH_TOKEN: ${{ github.token }}
+          OPERATOR_PREFLIGHT_SHA: ${{ inputs.operator_preflight_sha }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${{ needs.identity.outputs.source_sha }}"
-          npm run publish:protected-candidate -- --directory release-assets --version "${{ needs.identity.outputs.candidate_version }}" --source-sha "${{ needs.identity.outputs.source_sha }}" --repository service-lasso/service-lasso-cli
+          npm run publish:protected-candidate -- --directory release-assets --version "${{ needs.identity.outputs.candidate_version }}" --source-sha "${{ needs.identity.outputs.source_sha }}" --repository service-lasso/service-lasso-cli --policy-mode actions --operator-preflight-sha "$OPERATOR_PREFLIGHT_SHA"

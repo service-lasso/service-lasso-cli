@@ -43,11 +43,12 @@ async function rebindCandidate(directory) {
   await writeFile(join(directory, "SHA256SUMS.txt"), sums);
 }
 
-async function candidateDirectory(root) {
+async function candidateDirectory(root, scope) {
   const portable = join(root, "portable");
   execFileSync(node, ["scripts/package-candidate.mjs", "--output", portable, "--version", version, "--source-sha", sourceSha], { encoding: "utf8" });
   const args = ["scripts/assemble-protected-candidate.mjs", "--output", join(root, "candidate"), "--portable", portable, "--version", version, "--source-sha", sourceSha];
-  for (const target of [{ id: "win32-x64", platform: "win32", architecture: "x64", confinedWriter: "service-lasso-confined-scaffold.exe" }, { id: "linux-x64", platform: "linux", architecture: "x64", confinedWriter: "service-lasso-confined-scaffold" }, { id: "darwin-arm64", platform: "darwin", architecture: "arm64", confinedWriter: "service-lasso-confined-scaffold" }]) args.push("--native", `${target.id}=${await nativeDirectory(root, target)}`);
+  for (const target of [{ id: "win32-x64", platform: "win32", architecture: "x64", confinedWriter: "service-lasso-confined-scaffold.exe" }, { id: "linux-x64", platform: "linux", architecture: "x64", confinedWriter: "service-lasso-confined-scaffold" }, { id: "darwin-arm64", platform: "darwin", architecture: "arm64", confinedWriter: "service-lasso-confined-scaffold" }].filter(target => scope !== "windows-linux" || target.platform !== "darwin")) args.push("--native", `${target.id}=${await nativeDirectory(root, target)}`);
+  if (scope) args.push("--scope", scope);
   execFileSync(node, args, { encoding: "utf8" });
   return join(root, "candidate");
 }
@@ -754,8 +755,92 @@ test("CLI67 historical schema 1 stays verifiable but cannot be newly published",
     await writeFile(path, JSON.stringify(manifest));
     await rebindCandidate(directory);
     assert.equal((await verifyCandidateDirectory(directory, version, sourceSha)).manifest.schemaVersion, 1);
-    await assert.rejects(publishProtectedCandidate({ directory, version, sourceSha, token: "fixture", fetchImpl: () => { throw new Error("unexpected provider call"); } }), /manifest-bearing schema 2/);
+    await assert.rejects(publishProtectedCandidate({ directory, version, sourceSha, token: "fixture", fetchImpl: url => {
+      const path = new URL(url).pathname, policy = providerPolicy();
+      if (path.endsWith("/immutable-releases")) return json(policy.immutable);
+      if (path.endsWith("/branches/develop")) return json(policy.branch);
+      if (path.endsWith("/branches/develop/protection")) return json(policy.protection);
+      if (path.endsWith("/environments/development-candidate")) return json(policy.environment);
+      if (path.endsWith("/deployment-branch-policies")) return json(policy.policies);
+      return json({}, 404);
+    } }), /manifest-bearing schema 2/);
     manifest.schemaVersion = 2;
     assert.throws(() => validateManifest(manifest, version, sourceSha), /inventory/);
   });
+});
+
+function actionsPolicy() {
+  return {
+    branch: { name: "develop", protected: true, commit: { sha: sourceSha }, protection: { enabled: true, required_status_checks: { enforcement_level: "everyone", checks: ACTIONS_REQUIRED_CHECKS.map(context => ({ context, app_id: 15368 })) } } },
+    environment: providerPolicy().environment,
+    branchPolicies: { total_count: 1, branch_policies: [{ name: "develop", type: "branch" }] },
+    checks: { total_count: ACTIONS_REQUIRED_CHECKS.length, check_runs: ACTIONS_REQUIRED_CHECKS.map(name => ({ name, app: { id: 15368 }, head_sha: sourceSha, status: "completed", conclusion: "success" })) },
+  };
+}
+
+import { ACTIONS_REQUIRED_CHECKS, assertActionsCandidatePolicy } from "../scripts/actions-candidate-policy.mjs";
+
+test("CLI69 visible Actions policy binds complete exact-source checks and custom develop-only environment", () => {
+  const good = actionsPolicy();
+  assert.doesNotThrow(() => assertActionsCandidatePolicy(good, sourceSha, sourceSha));
+  for (const mutate of [
+    p => { p.branch.commit.sha = "f".repeat(40); }, p => { p.branch.protected = false; },
+    p => { p.branch.protection.required_status_checks.enforcement_level = "non_admins"; },
+    p => { p.branch.protection.required_status_checks.checks[0].app_id = 1; },
+    p => { p.branchPolicies.branch_policies.push({ name: "other", type: "branch" }); },
+    p => { p.branchPolicies.branch_policies[0].type = "tag"; },
+    p => { p.environment.deployment_branch_policy.protected_branches = true; },
+    p => { p.environment.protection_rules[0].wait_timer = 0; },
+    p => { p.checks.total_count = 101; }, p => { p.checks.check_runs[0].head_sha = "f".repeat(40); },
+    p => { p.checks.check_runs[0].conclusion = "failure"; }, p => { p.checks.check_runs[0].app.id = 1; },
+    p => { p.checks.check_runs.push(p.checks.check_runs[0]); p.checks.total_count++; },
+  ]) { const value = structuredClone(good); mutate(value); assert.throws(() => assertActionsCandidatePolicy(value, sourceSha, sourceSha)); }
+  assert.throws(() => assertActionsCandidatePolicy(good, sourceSha, "f".repeat(40)));
+});
+
+test("CLI69 actual scoped package assembly publishes only selected retained bytes after repeated Actions policy", async () => {
+  const root = await mkdtemp(join(tmpdir(), "cli69-scoped-"));
+  try {
+    const directory = await candidateDirectory(root, "windows-linux");
+    const verified = await verifyCandidateDirectory(directory, version, sourceSha), tag = verified.manifest.candidateTag;
+    assert.equal(verified.manifest.schemaVersion, 3);
+    assert.equal(verified.manifest.assets.some(asset => asset.name.includes("darwin")), false);
+    const service = JSON.parse(verified.held.get("service.json"));
+    assert.deepEqual(Object.keys(service.artifact.platforms), ["win32-x64", "linux-x64"]);
+    assert.equal(service.id, "@cli");
+    for (const scenario of ["success", "unavailable", "drift", "wrong-sha"]) {
+      const events = [], assets = [...verified.held].map(([name, bytes], index) => ({ id: index + 1, name, bytes, browser_download_url: `https://github.com/service-lasso/service-lasso-cli/releases/download/${tag}/${encodeURIComponent(name)}` }));
+      let writes = 0, policyReads = 0, draft = true;
+      const fetchImpl = async (url, init) => {
+        const parsed = new URL(url), path = parsed.pathname; events.push({ url, method: init.method, authorization: init.headers?.authorization });
+        const policy = actionsPolicy();
+        if (path.endsWith("/branches/develop")) { policyReads++; if (scenario === "drift" && writes > 0) policy.environment.protection_rules[0].wait_timer = 2; return json(policy.branch, scenario === "unavailable" ? 403 : 200); }
+        if (path.endsWith("/environments/development-candidate")) { if (scenario === "drift" && writes > 0) policy.environment.protection_rules[0].wait_timer = 2; return json(policy.environment); }
+        if (path.endsWith("/deployment-branch-policies")) return json(policy.branchPolicies);
+        if (path.endsWith("/check-runs")) return json(policy.checks);
+        if (init.method !== "GET") writes++;
+        if (path.includes("/releases/tags/") || path.includes("/git/ref/tags/")) return json({}, 404);
+        if (path.endsWith("/git/tags")) return json({ sha: "a".repeat(40) }, 201);
+        if (path.endsWith("/git/refs")) return json({}, 201);
+        if (path.endsWith("/releases") && init.method === "POST") return json(emptyPrivateRelease(77, tag), 201);
+        if (parsed.hostname === "uploads.github.com") { assert.deepEqual(init.body, verified.held.get(parsed.searchParams.get("name"))); return json({}, 201); }
+        if (path.endsWith("/releases/77") && init.method === "GET") return json({ id: 77, tag_name: tag, draft, prerelease: true, target_commitish: sourceSha, assets });
+        if (path.endsWith("/releases/77") && init.method === "PATCH") { draft = false; return json({ id: 77, immutable: true, tag_name: tag, draft, prerelease: true, target_commitish: sourceSha, assets }); }
+        const privateId = /\/releases\/assets\/(\d+)$/.exec(path); if (privateId) return responseBytes(assets[Number(privateId[1]) - 1].bytes);
+        const publicAsset = assets.find(asset => asset.browser_download_url === url); if (publicAsset) return responseBytes(publicAsset.bytes);
+        throw new Error("unexpected provider route");
+      };
+      const execute = () => publishProtectedCandidate({ directory, version, sourceSha, token: "secret-sentinel", policyMode: "actions", operatorPreflightSHA: scenario === "wrong-sha" ? "f".repeat(40) : sourceSha, fetchImpl });
+      if (scenario === "success") {
+        assert.equal((await execute()).result, "published");
+        assert.equal(policyReads, writes + 1);
+        assert.ok(events.filter(event => event.url.includes("/releases/download/")).every(event => event.authorization === undefined));
+        assert.equal(events.some(event => event.url.includes("immutable-releases") || event.url.includes("/branches/develop/protection")), false);
+      } else { await assert.rejects(execute); assert.equal(writes, scenario === "drift" ? 1 : 0); }
+    }
+    const manifestPath = join(directory, "development-candidate.json");
+    const manifest = JSON.parse(await readFile(manifestPath)); manifest.schemaVersion = 2;
+    await writeFile(manifestPath, JSON.stringify(manifest));
+    await assert.rejects(verifyCandidateDirectory(directory, version, sourceSha), /inventory/);
+  } finally { await rm(root, { recursive: true, force: true }); }
 });

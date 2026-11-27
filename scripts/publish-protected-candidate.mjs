@@ -1,3 +1,4 @@
+import { assertActionsCandidatePolicy } from "./actions-candidate-policy.mjs";
 import { assertProviderPreflight, canonicalPublicAssetUrl, allowedRedirect, fail, parseStrictJson, sha256, verifyCandidateDirectory } from "./protected-candidate-lib.mjs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -46,11 +47,11 @@ async function request(fetchImpl, url, init, label, limit, { allowRedirect = fal
   try { const expired = controller.signal.aborted ? Promise.reject(new Error("deadline")) : new Promise((_, reject) => controller.signal.addEventListener("abort", () => reject(new Error("deadline")), { once: true })); response = await Promise.race([fetchImpl(url, { ...init, signal: controller.signal }), expired]); if (!response || !Number.isSafeInteger(response.status) || response.status < 100 || response.status > 599) fail(`${label} has an invalid response.`); if (allowRedirect && response.status >= 300 && response.status < 400) { discardRedirectBody(response); return { kind: "redirect", response }; } return { kind: "body", response, body: await bytes(response, limit, label, controller.signal) }; } catch (error) { if (error instanceof Error && error.message.startsWith("Protected candidate rejected:")) throw error; fail(`${label} request failed.`); } finally { clearTimer(timer); }
 }
 
-export async function publishProtectedCandidate({ directory, version, sourceSha, repository = REPOSITORY, token, fetchImpl = fetch, requestOptions = {} }) {
+export async function publishProtectedCandidate({ directory, version, sourceSha, repository = REPOSITORY, token, fetchImpl = fetch, requestOptions = {}, policyMode = "admin", operatorPreflightSHA }) {
+  if (!["admin", "actions"].includes(policyMode) || (policyMode === "actions" && operatorPreflightSHA !== sourceSha)) fail("operator preflight binding denied.");
   if (!token) fail("the protected environment token is unavailable.");
   if (repository !== REPOSITORY) fail("repository endpoint is not allowed.");
   const { manifest, held } = await verifyCandidateDirectory(directory, version, sourceSha), tag = manifest.candidateTag;
-  if (manifest.schemaVersion !== 2) fail("new publication requires a manifest-bearing schema 2 candidate.");
   const api = async (path, method = "GET", body) => {
     if (method !== "GET") await preflight();
     const result = await request(fetchImpl, `${API}${path}`, { method, redirect: "error", headers: headers(token, body ? { "content-type": "application/json" } : {}), body: body ? JSON.stringify(body) : undefined }, "GitHub metadata", METADATA_LIMIT, requestOptions);
@@ -75,7 +76,21 @@ export async function publishProtectedCandidate({ directory, version, sourceSha,
       if (result.response.status !== 200 || result.body.length !== held.get(asset.name).length || !result.body.equals(held.get(asset.name)) || sha256(result.body) !== sha256(held.get(asset.name))) fail(`asset readback does not match ${asset.name}.`);
     }
   };
+  let approvedActionsPolicy;
   const preflight = async () => {
+    if (policyMode === "actions") {
+      const [branch, environment, branchPolicies, checks] = await Promise.all([
+        api(`/repos/${repository}/branches/develop`),
+        api(`/repos/${repository}/environments/development-candidate`),
+        api(`/repos/${repository}/environments/development-candidate/deployment-branch-policies?per_page=100`),
+        api(`/repos/${repository}/commits/${sourceSha}/check-runs?per_page=100`),
+      ]);
+      if ([branch, environment, branchPolicies, checks].some(value => value.status !== 200)) fail("required visible GitHub policy is unavailable.");
+      const current = assertActionsCandidatePolicy({ branch: branch.value, environment: environment.value, branchPolicies: branchPolicies.value, checks: checks.value }, sourceSha, operatorPreflightSHA);
+      if (approvedActionsPolicy !== undefined && current !== approvedActionsPolicy) fail("approved provider policy changed.");
+      approvedActionsPolicy = current;
+      return;
+    }
     const [immutable, branch, protection, environment, policies] = await Promise.all([api(`/repos/${repository}/immutable-releases`), api(`/repos/${repository}/branches/develop`), api(`/repos/${repository}/branches/develop/protection`), api(`/repos/${repository}/environments/development-candidate`), api(`/repos/${repository}/environments/development-candidate/deployment-branch-policies`)]);
     if ([immutable, branch, protection, environment, policies].some((value) => value.status !== 200)) fail("required GitHub provider protection is unavailable.");
     assertProviderPreflight({ immutable: immutable.value, branch: branch.value, protection: protection.value, environment: environment.value, branchPolicies: policies.value?.branch_policies });
@@ -87,6 +102,7 @@ export async function publishProtectedCandidate({ directory, version, sourceSha,
     let object = ref.value?.object; if (object?.type !== "tag") fail("candidate tag is not annotated."); for (let depth = 0; depth < 4 && object?.type === "tag"; depth += 1) { if (!FULL_SHA.test(object.sha)) fail("candidate tag identity is invalid."); const tagObject = await api(`/repos/${repository}/git/tags/${object.sha}`); if (tagObject.status !== 200) fail("candidate tag cannot be dereferenced."); object = tagObject.value?.object; }
     if (object?.type !== "commit" || object.sha !== sourceSha) fail("candidate tag does not resolve to frozen commit."); await inventory(release.value, false); return { result: "readback-only", tag, sourceSha };
   }
+  if (policyMode === "actions" ? manifest.schemaVersion !== 3 : manifest.schemaVersion !== 2) fail("new publication requires a manifest-bearing schema 2 candidate (schema 3 for scoped Actions publication).");
   if (release.status !== 404 || ref.status !== 404) fail("existing tag or release collision is not safe to create.");
   const annotated = await api(`/repos/${repository}/git/tags`, "POST", { tag, message: `Protected development candidate ${version}`, object: sourceSha, type: "commit", tagger: { name: "service-lasso candidate publisher", email: "noreply@service-lasso.invalid", date: new Date().toISOString() } });
   if (annotated.status !== 201 || !FULL_SHA.test(annotated.value?.sha)) fail("annotated candidate tag creation failed.");
@@ -99,6 +115,6 @@ export async function publishProtectedCandidate({ directory, version, sourceSha,
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const result = await publishProtectedCandidate({ directory: resolve(argument("--directory", process.argv)), version: argument("--version", process.argv), sourceSha: argument("--source-sha", process.argv), repository: argument("--repository", process.argv), token: process.env.DEVELOPMENT_CANDIDATE_TOKEN });
+  const result = await publishProtectedCandidate({ directory: resolve(argument("--directory", process.argv)), version: argument("--version", process.argv), sourceSha: argument("--source-sha", process.argv), repository: argument("--repository", process.argv), token: process.env.GH_TOKEN ?? process.env.DEVELOPMENT_CANDIDATE_TOKEN, policyMode: process.argv.includes("--policy-mode") ? argument("--policy-mode", process.argv) : "admin", operatorPreflightSHA: process.argv.includes("--operator-preflight-sha") ? argument("--operator-preflight-sha", process.argv) : undefined });
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }

@@ -105,17 +105,21 @@ for the exact boundary.
 
 ## Candidate distribution
 
-An explicit GitHub Actions dispatch from `develop` can build a reviewable
-candidate archive. It produces `service-lassoctl-<version>.tgz`,
-`candidate.json`, and `SHA256SUMS.txt`, then runs clean-consumer smoke on
-Windows, Linux, and macOS against a local fixture. This is surrogate client
-evidence, not a packaged-Core runtime check. The record pins the source commit
-and candidate tag; never select an asset called `latest` for Core packaging.
-These artifacts do
-do not publish npm, deploy anything, or establish GA. If all three smoke jobs
-pass, the workflow creates the recorded candidate Git tag and a clearly marked
-GitHub prerelease on that exact source commit. The prerelease is durable review
-material for Core #1461, not a GA release.
+The existing protected `release.yml` dispatch selects Windows x64 and Linux x64
+native archives, the portable Node archive, and a checksum-bound canonical
+`@cli` provider manifest. Schema3 binds this scope; historical schema1/2 retain
+independent verification/recovery. macOS native qualification is deferred and
+is never reported as passed; Darwin source and grant requirements remain.
+
+The owner first verifies immutable releases, strict enforced develop protection,
+the exact six required Actions checks, and the development-candidate custom
+develop-only environment policy with its wait timer. Dispatch binds that exact
+SHA in `operator_preflight_sha`. The built-in Actions token rereads visible
+policy and successful exact-SHA checks before each mutation. Native host smoke
+and Linux actual Core acceptance precede same-byte assembly, private draft
+verification and immutable public readback. Publication is a development
+candidate, not GA, deployment or npm publication. Portable record platform
+compatibility describes the Node package; it is not native platform proof.
 
 The dispatch workflow remains at `.github/workflows/release.yml` so GitHub can
 resolve the workflow identity that was registered on the default branch. A
