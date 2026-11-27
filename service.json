@@ -1,0 +1,36 @@
+{
+  "id": "@cli",
+  "name": "Service Lasso CLI",
+  "description": "On-demand standalone Service Lasso command provider.",
+  "role": "provider",
+  "enabled": true,
+  "version": "0.1.0",
+  "artifact": {
+    "kind": "archive",
+    "source": {
+      "type": "github-release",
+      "repo": "service-lasso/service-lasso-cli",
+      "channel": "latest"
+    },
+    "platforms": {
+      "win32-x64": {
+        "assetName": "service-lassoctl-{version}-win32-x64.tar.gz",
+        "archiveType": "tar.gz",
+        "command": "./service-lassoctl.exe",
+        "args": []
+      },
+      "linux-x64": {
+        "assetName": "service-lassoctl-{version}-linux-x64.tar.gz",
+        "archiveType": "tar.gz",
+        "command": "./service-lassoctl",
+        "args": []
+      },
+      "darwin-arm64": {
+        "assetName": "service-lassoctl-{version}-darwin-arm64.tar.gz",
+        "archiveType": "tar.gz",
+        "command": "./service-lassoctl",
+        "args": []
+      }
+    }
+  }
+}

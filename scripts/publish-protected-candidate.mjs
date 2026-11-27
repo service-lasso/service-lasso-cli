@@ -50,6 +50,7 @@ export async function publishProtectedCandidate({ directory, version, sourceSha,
   if (!token) fail("the protected environment token is unavailable.");
   if (repository !== REPOSITORY) fail("repository endpoint is not allowed.");
   const { manifest, held } = await verifyCandidateDirectory(directory, version, sourceSha), tag = manifest.candidateTag;
+  if (manifest.schemaVersion !== 2) fail("new publication requires a manifest-bearing schema 2 candidate.");
   const api = async (path, method = "GET", body) => {
     if (method !== "GET") await preflight();
     const result = await request(fetchImpl, `${API}${path}`, { method, redirect: "error", headers: headers(token, body ? { "content-type": "application/json" } : {}), body: body ? JSON.stringify(body) : undefined }, "GitHub metadata", METADATA_LIMIT, requestOptions);

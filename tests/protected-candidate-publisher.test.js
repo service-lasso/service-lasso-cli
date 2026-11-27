@@ -140,7 +140,7 @@ test("CLI30 archive and identity boundaries fail closed after checksum rebinding
 
 test("CLI30 schema rejects duplicates, unexpected fields and forged source identity", () => {
   const assets = expectedAssets(version).map((asset) => ({ ...asset, sha256: "b".repeat(64), size: 1 }));
-  const valid = { schemaVersion: 1, version, candidateTag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}`, source: { repository: "service-lasso/service-lasso-cli", commit: sourceSha }, checksums: { algorithm: "sha256", file: "SHA256SUMS.txt", entries: ["development-candidate.json", ...assets.map((asset) => asset.name)].sort() }, assets };
+  const valid = { schemaVersion: 2, version, candidateTag: `cli-v${version}-candidate-${sourceSha.slice(0, 7)}`, source: { repository: "service-lasso/service-lasso-cli", commit: sourceSha }, checksums: { algorithm: "sha256", file: "SHA256SUMS.txt", entries: ["development-candidate.json", ...assets.map((asset) => asset.name)].sort() }, assets };
   validateManifest(valid, version, sourceSha);
   assert.throws(() => validateManifest({ ...valid, attacker: true }, version, sourceSha));
   assert.throws(() => validateManifest({ ...valid, assets: [...assets, assets[0]] }, version, sourceSha));
@@ -704,5 +704,58 @@ test("CLI30 publication rejects actual push and PR archives even after closed ou
       await assert.rejects(publishProtectedCandidate({ directory, version, sourceSha, token: "secret-sentinel", fetchImpl: async () => { requests += 1; throw new Error("unexpected request"); } }), /dispatch publication identity/);
       assert.equal(requests, 0);
     }
+  });
+});
+
+test("CLI67 release manifest binds only exact native archives and immutable candidate identity", async () => {
+  await withCandidate(async (_root, directory) => {
+    const { manifest, held } = await verifyCandidateDirectory(directory, version, sourceSha);
+    const service = JSON.parse(held.get("service.json"));
+    assert.equal(service.id, "@cli");
+    assert.equal(service.role, "provider");
+    assert.equal(service.version, version);
+    assert.deepEqual(service.artifact.source, { type: "github-release", repo: "service-lasso/service-lasso-cli", tag: manifest.candidateTag });
+    assert.equal(service.execconfig, undefined);
+    assert.equal(service.actions, undefined);
+    assert.deepEqual(Object.keys(service.artifact.platforms), ["win32-x64", "linux-x64", "darwin-arm64"]);
+    for (const [target, platform] of Object.entries(service.artifact.platforms)) {
+      const archive = manifest.assets.find((asset) => asset.kind === "native" && asset.target === target);
+      assert.equal(platform.assetName, archive.name);
+      assert.equal(platform.sha256, sha256(held.get(archive.name)));
+      assert.equal(platform.archiveType, "tar.gz");
+      assert.equal(platform.command, `./service-lassoctl${target === "win32-x64" ? ".exe" : ""}`);
+    }
+    for (const change of [
+      (value) => { value.artifact.source = { type: "github-release", repo: "service-lasso/service-lasso-cli", channel: "latest" }; },
+      (value) => { value.artifact.platforms["linux-x64"].sha256 = "0".repeat(64); },
+      (value) => { value.artifact.platforms["linux-x64"].command = "node"; },
+      (value) => { value.artifact.platforms["linux-x64"].assetName = `service-lassoctl-${version}.tgz`; },
+      (value) => { value.artifact.platforms.default = value.artifact.platforms["linux-x64"]; },
+      (value) => { value.role = "service"; },
+    ]) {
+      const forged = structuredClone(service);
+      change(forged);
+      await writeFile(join(directory, "service.json"), `${JSON.stringify(forged)}\n`);
+      await rebindCandidate(directory);
+      await assert.rejects(verifyCandidateDirectory(directory, version, sourceSha), /release service manifest does not bind/);
+    }
+  });
+});
+
+
+test("CLI67 historical schema 1 stays verifiable but cannot be newly published", async () => {
+  await withCandidate(async (_root, directory) => {
+    const path = join(directory, "development-candidate.json");
+    const manifest = JSON.parse(await readFile(path, "utf8"));
+    manifest.schemaVersion = 1;
+    manifest.assets = manifest.assets.filter((asset) => asset.name !== "service.json");
+    manifest.checksums.entries = manifest.checksums.entries.filter((name) => name !== "service.json");
+    await rm(join(directory, "service.json"));
+    await writeFile(path, JSON.stringify(manifest));
+    await rebindCandidate(directory);
+    assert.equal((await verifyCandidateDirectory(directory, version, sourceSha)).manifest.schemaVersion, 1);
+    await assert.rejects(publishProtectedCandidate({ directory, version, sourceSha, token: "fixture", fetchImpl: () => { throw new Error("unexpected provider call"); } }), /manifest-bearing schema 2/);
+    manifest.schemaVersion = 2;
+    assert.throws(() => validateManifest(manifest, version, sourceSha), /inventory/);
   });
 });
