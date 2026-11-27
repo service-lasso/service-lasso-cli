@@ -1,3 +1,13 @@
+# Current issue #69 Actions publication scope
+
+The owner selects Windows x64/Linux x64 native plus portable schema3 through the existing release.yml. macOS is deferred, not passed. SPEC-CLI-SCOPED-CANDIDATE supersedes historical all-three/custom-token scheduling below for this prospective route. Preserve legacy verifier/admin mode and exact collision recovery.
+
+Operator wrapper must independently GET and verify immutable releases, exact develop SHA, required PR policy including schema-complete empty bypasses/admin enforcement/strict six named checks/no force pushes and the named environment/custom develop-only branch policy/timer1, immediately before dispatch. Bind the exact SHA as operator_preflight_sha. No broad OAuth credential is stored in Actions. The job uses builtin contents:write/actions:read/checks:read token; it does not pretend admin-only reads succeeded. It independently rereads GET branch/source/check enforcement and all six app15368 exact-SHA successful check runs, environment timer and complete custom develop-only policy before every write. Read failures/policy drift fail closed. Root owns separately applying branch protection and dispatch/public receipts after reviewed source merge.
+
+The six exact push check names are: Node 22 CLI checks (ubuntu-latest), Node 22 CLI checks (windows-latest), Native SEA direct execution (Linux x64), Native SEA direct execution (Windows x64), Completion shell checks (ubuntu-latest), Direct real-Core reads (ubuntu-latest). Existing CI emits all on develop push; Darwin results are not selected qualification.
+
+## Historical issue #30 admin-token proposal (retained)
+
 # Automated protected CLI development publication — issue #30
 
 The owner selected no human development release approver and authorised development publication. This proposal records that choice without qualifying any candidate. Parent applies reviewed provider controls; source authors do not mutate settings or credentials. GA, promotion and deployment remain separate owner decisions.

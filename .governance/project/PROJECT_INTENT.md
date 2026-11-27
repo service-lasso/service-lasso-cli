@@ -272,3 +272,7 @@ SPEC-CLI-PLATFORM-E2E maps shared verified platform-private setup before raw wri
 ## CLI #67 release-native provider manifest
 
 SPEC-CLI-SERVICE-RELEASE maps CLI67-MANIFEST/BINDING/PROVENANCE/PROOF to root @cli provider manifest and protected closed native assembly/verification. Fixture/no-publish tests only; native availability, publication/dispatch, promotion and deployment retain their existing gates.
+
+## CLI #69 selected Windows/Linux candidate
+
+SPEC-CLI-SCOPED-CANDIDATE prospectively selects explicit schema3 Windows/Linux native release plus portable archive and @cli manifest through existing release.yml. Built-in Actions token uses SHA-bound operator admin preflight plus repeated independent visible-policy checks. Darwin source/historical schemas remain; macOS deferred, not passed. Source merge and separately owner-dispatched public qualification remain distinct.

@@ -27,18 +27,16 @@ test("candidate packager creates a checksum-bound Node 22 archive and clean-cons
 function assertProtectedCandidateWorkflow(workflow) {
   assert.deepEqual(Object.keys(workflow.on ?? {}), ["workflow_dispatch"]);
   assert.equal(workflow.permissions?.contents, "read");
-  assert.equal(workflow.jobs?.identity?.if, "github.ref == 'refs/heads/develop'");
-  assert.deepEqual(workflow.jobs?.native?.strategy?.matrix?.include?.map(({ target }) => target), ["win32-x64", "linux-x64", "darwin-arm64"]);
+  assert.equal(workflow.jobs?.identity?.if, "github.ref == 'refs/heads/develop' && inputs.operator_preflight_sha == github.sha");
+  assert.deepEqual(workflow.jobs?.native?.strategy?.matrix?.include?.map(({ target }) => target), ["win32-x64", "linux-x64"]);
   const nativeBuild = workflow.jobs?.native?.steps?.find((step) => step.name === "Build target executable once, record dispatch context, and prove its no-Node fixture journey")?.run ?? "";
   assert.equal((nativeBuild.match(/npm run package:native/g) ?? []).length, 1, "each target must build its executable once");
   assert.match(nativeBuild, /write-native-ci-context\.mjs --directory native-assets --event-name workflow_dispatch/);
   assert.match(nativeBuild, /--tested-base-sha "" --merge-context-sha "\$\{\{ needs\.identity\.outputs\.source_sha \}\}"/);
   assert.match(nativeBuild, /verify-native-ci-provenance\.mjs .*--expected-event workflow_dispatch/);
   const nativeSteps = workflow.jobs?.native?.steps ?? [];
-  const prerequisite = nativeSteps.find(step => step.name === "Retain blocked Darwin external qualification prerequisite");
-  assert.equal(prerequisite?.if, "runner.os == 'macOS'");
-  assert.notEqual(prerequisite?.["continue-on-error"], true);
-  assert.match(prerequisite?.run ?? "", /node scripts\/record-darwin-qualification-block\.mjs/);
+  assert.equal(nativeSteps.some(step => /Darwin/.test(step.name ?? "")), false);
+  assert.equal(workflow.on.workflow_dispatch.inputs.operator_preflight_sha.required, true);
   const nativeSmoke = nativeSteps.find((step) => step.name === "Record actual native smoke close result")?.run ?? "";
   assert.match(nativeSmoke, /run-native-qualification-phase\.mjs .*--phase smoke/);
   assert.match(nativeSmoke, /node scripts\/smoke-native\.mjs .*--expected-version "\$\{\{ needs\.identity\.outputs\.candidate_version \}\}" --write-host-acceptance/);
@@ -48,8 +46,6 @@ function assertProtectedCandidateWorkflow(workflow) {
   assert.match(custody, /SERVICE_LASSO_HOST_PORT_REGISTRY_PATH=/);
   assert.match(custody, /prepare-native-qualification-receipt\.mjs/);
   assert.ok(nativeSteps.findIndex((step) => step.name === "Establish isolated native qualification custody before dependencies") < nativeSteps.findIndex((step) => step.run === "npm ci"));
-  const darwinRoute = nativeSteps.find((step) => step.name === "Compile and exercise Darwin process-exit rejection source checks")?.run ?? "";
-  assert.match(darwinRoute, /go test \.\/\.\.\./);
   const primaryRoute = nativeSteps.find((step) => step.name === "Record expected unavailable controlled primary-route result")?.run ?? "";
   assert.match(primaryRoute, /run-native-qualification-phase\.mjs .*--phase route/);
   assert.match(primaryRoute, /controlled source admission/);
@@ -67,7 +63,14 @@ function assertProtectedCandidateWorkflow(workflow) {
   assert.equal(workflow.jobs?.publish?.environment?.name, "development-candidate");
   assert.equal(workflow.jobs?.publish?.permissions?.contents, "write");
   assert.match(workflow.jobs?.publish?.steps?.find((step) => step.name === "Preflight and write only accepted immutable bytes")?.run ?? "", /npm run publish:protected-candidate/);
-  assert.equal(workflow.jobs?.publish?.steps?.find((step) => step.name === "Preflight and write only accepted immutable bytes")?.env?.DEVELOPMENT_CANDIDATE_TOKEN, "${{ secrets.DEVELOPMENT_CANDIDATE_TOKEN }}");
+  const publisher = workflow.jobs.publish.steps.find(step => step.name === "Preflight and write only accepted immutable bytes");
+  assert.equal(publisher.env.GH_TOKEN, "${{ github.token }}");
+  assert.equal(publisher.env.OPERATOR_PREFLIGHT_SHA, "${{ inputs.operator_preflight_sha }}");
+  assert.deepEqual(workflow.jobs.publish.permissions, { contents: "write", actions: "read", checks: "read" });
+  assert.match(publisher.run, /--policy-mode actions --operator-preflight-sha "\$OPERATOR_PREFLIGHT_SHA"/);
+  assert.match(workflow.jobs.assemble.steps.find(step => step.name === "Create the manifest and checksums from accepted bytes only").run, /--scope windows-linux/);
+  const coreCheckout = nativeSteps.find(step => step.with?.repository === "service-lasso/service-lasso");
+  assert.equal(coreCheckout.with.ref, "1f6ca2126099fa14cce18ede0afeb98b802570ab");
   for (const job of Object.values(workflow.jobs ?? {})) {
     for (const step of job.steps ?? []) {
       assert.notEqual(step.with?.["persist-credentials"], true);

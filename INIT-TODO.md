@@ -331,3 +331,7 @@ SPEC-CLI-PLATFORM-E2E maps shared verified platform-private setup before raw wri
 ## CLI #67 release-native provider manifest
 
 SPEC-CLI-SERVICE-RELEASE maps CLI67-MANIFEST/BINDING/PROVENANCE/PROOF to root @cli provider manifest and protected closed native assembly/verification. Fixture/no-publish tests only; native availability, publication/dispatch, promotion and deployment retain their existing gates.
+
+## CLI #69 Windows/Linux Actions publisher
+
+SPEC-CLI-SCOPED-CANDIDATE CLI69-SCOPE/PROOF/POLICY/GATES: explicit schema3 scope, legacy read/recovery, exact qualified Core CI pin, built-in Actions token/live visible checks and operator SHA acknowledgement. Source implementation/proofs/review pending; root owns provider settings, dispatch/public receipt and later Core pin. No Darwin grant or GA claim.
