@@ -267,3 +267,8 @@ SPEC-CLI-PORTABLE-E2E maps build-once ordinary7source packaging, hash-bound clea
 ## CLI #55 matching-host ordinary E2E
 
 SPEC-CLI-PLATFORM-E2E maps shared verified platform-private setup before raw writes, literal Node/npm CLI and controlled private environment, actual source+portable Windows/macOS/Linux CI. Core1925 exact merged pin pending; no native/GA adoption or publication authority.
+
+
+## CLI #67 release-native provider manifest
+
+SPEC-CLI-SERVICE-RELEASE maps CLI67-MANIFEST/BINDING/PROVENANCE/PROOF to root @cli provider manifest and protected closed native assembly/verification. Fixture/no-publish tests only; native availability, publication/dispatch, promotion and deployment retain their existing gates.

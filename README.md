@@ -170,3 +170,14 @@ bash -n service-lassoctl-completion.bash
 service-lassoctl completion zsh > service-lassoctl-completion.zsh
 zsh -n service-lassoctl-completion.zsh
 ```
+
+### Core provider release manifest
+
+Root `service.json` describes the on-demand `@cli` provider. Protected candidate
+assembly stamps its exact candidate version/tag and native archive SHA-256 values
+into the released `service.json`, included in the closed asset/checksum inventory.
+Core consumes the standalone Go/SEA archive for its matching OS and architecture;
+there is no portable npm fallback or daemon lifecycle. All sibling helpers and
+original provenance remain in those native archives. Source discovery metadata
+is not an immutable release pin. Assembly requires all existing native acceptance
+gates; fixture tests do not qualify native availability or authorize publication.

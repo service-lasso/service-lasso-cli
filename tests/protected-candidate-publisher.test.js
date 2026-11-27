@@ -706,3 +706,38 @@ test("CLI30 publication rejects actual push and PR archives even after closed ou
     }
   });
 });
+
+test("CLI67 release manifest binds only exact native archives and immutable candidate identity", async () => {
+  await withCandidate(async (_root, directory) => {
+    const { manifest, held } = await verifyCandidateDirectory(directory, version, sourceSha);
+    const service = JSON.parse(held.get("service.json"));
+    assert.equal(service.id, "@cli");
+    assert.equal(service.role, "provider");
+    assert.equal(service.version, version);
+    assert.deepEqual(service.artifact.source, { type: "github-release", repo: "service-lasso/service-lasso-cli", tag: manifest.candidateTag });
+    assert.equal(service.execconfig, undefined);
+    assert.equal(service.actions, undefined);
+    assert.deepEqual(Object.keys(service.artifact.platforms), ["win32-x64", "linux-x64", "darwin-arm64"]);
+    for (const [target, platform] of Object.entries(service.artifact.platforms)) {
+      const archive = manifest.assets.find((asset) => asset.kind === "native" && asset.target === target);
+      assert.equal(platform.assetName, archive.name);
+      assert.equal(platform.sha256, sha256(held.get(archive.name)));
+      assert.equal(platform.archiveType, "tar.gz");
+      assert.equal(platform.command, `./service-lassoctl${target === "win32-x64" ? ".exe" : ""}`);
+    }
+    for (const change of [
+      (value) => { value.artifact.source = { type: "github-release", repo: "service-lasso/service-lasso-cli", channel: "latest" }; },
+      (value) => { value.artifact.platforms["linux-x64"].sha256 = "0".repeat(64); },
+      (value) => { value.artifact.platforms["linux-x64"].command = "node"; },
+      (value) => { value.artifact.platforms["linux-x64"].assetName = `service-lassoctl-${version}.tgz`; },
+      (value) => { value.artifact.platforms.default = value.artifact.platforms["linux-x64"]; },
+      (value) => { value.role = "service"; },
+    ]) {
+      const forged = structuredClone(service);
+      change(forged);
+      await writeFile(join(directory, "service.json"), `${JSON.stringify(forged)}\n`);
+      await rebindCandidate(directory);
+      await assert.rejects(verifyCandidateDirectory(directory, version, sourceSha), /release service manifest does not bind/);
+    }
+  });
+});
